@@ -20,7 +20,8 @@ OBJS = angle.o \
 	   point.o \
 	   lightcyl.o \
 	   pulsar.o \
-	   bfield.o
+	   bfield.o \
+	   cylinder.o
 
 all: $(LIBFILE)
 

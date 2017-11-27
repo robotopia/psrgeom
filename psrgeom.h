@@ -78,7 +78,6 @@ void set_angle_cos( angle *ang, double Cos );
 void rotatex( angle *th, angle *ph, angle *th_out, angle *ph_out, angle *rot );
 
 
-
 /**** Point functions ****/
 
 void set_point_xyz( point *p, double x, double y, double z, int flags );
@@ -106,5 +105,8 @@ double Bdotrxy( point *x, pulsar *psr );
 /**** Other functions ****/
 
 double light_cylinder( double P );
+void move_around_cyl( point *start_pt, angle *xi, double zdist,
+                      point *end_pt );
+
 
 #endif
