@@ -18,7 +18,8 @@ LIBFILE = lib$(LIBRARY).a
 HDRFILE = $(LIBRARY).h
 OBJS = angle.o \
 	   point.o \
-	   lightcyl.o
+	   lightcyl.o \
+	   pulsar.o
 
 all: $(LIBFILE)
 

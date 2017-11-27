@@ -45,6 +45,16 @@ typedef struct point_t {
     double  rhosq;  // distance from z axis squared = x^2 + y^2
 } point;
 
+typedef struct pulsar_t {
+    angle    ra;    // Right Ascension
+    angle    dec;   // Declination
+    double   P;     // Rotation period
+    //double   Pdot;  // First time derivative of rotation period
+    double   r;     // Stellar radius
+    double   rL;    // Light cylinder radius
+    angle    al;    // Angle between the rotation and magnetic axes
+    angle    ze;    // Angle between the rotation axis and the line of sight
+} pulsar;
 
 
 /**** Angle functions ****/
@@ -72,6 +82,15 @@ void set_point_sph( point *p, double r, angle *th, angle *ph, int flags );
 void copy_point( point *src, point *dest );
 
 
+
+/**** Pulsar functions ****/
+void set_pulsar( pulsar *psr, angle *ra, angle *dec, double P, double r,
+        angle *al, angle *ze );
+pulsar *create_pulsar( angle *ra, angle *dec, double P, double r,
+        angle *al, angle *ze );
+void destroy_pulsar( pulsar *psr );
+
+void set_pulsar_period( pulsar *psr, double P );
 
 /**** Other functions ****/
 
