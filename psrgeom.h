@@ -52,6 +52,7 @@ typedef struct pulsar_t {
     //double   Pdot;  // First time derivative of rotation period
     double   r;     // Stellar radius
     double   rL;    // Light cylinder radius
+    double   rL2;   // = rL^2 (because it comes up quite often)
     angle    al;    // Angle between the rotation and magnetic axes
     angle    ze;    // Angle between the rotation axis and the line of sight
 } pulsar;

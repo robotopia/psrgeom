@@ -57,7 +57,8 @@ void destroy_pulsar( pulsar *psr )
 
 void set_pulsar_period( pulsar *psr, double P )
 {
-    psr->P  = P;
-    psr->rL = light_cylinder( P );
+    psr->P   = P;
+    psr->rL  = light_cylinder( P );
+    psr->rL2 = psr->rL * psr->rL;
 }
 
