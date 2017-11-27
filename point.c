@@ -65,6 +65,31 @@ void set_point_sph( point *p, double r, angle *th, angle *ph, int flags )
         p->rhosq = p->x[0]*p->x[0] + p->x[1]*p->x[1];
 }
 
+void set_point_cyl( point *p, double rh, angle *ph, double z, int flags )
+/* Populate a point structure given cylindrical coordinates
+ */
+{
+    // Calculate cartesian coordinates
+    if (flags & POINT_SET_X)
+        p->x[0] = rh * ph->cos;
+    if (flags & POINT_SET_Y)
+        p->x[1] = rh * ph->sin;
+    if (flags & POINT_SET_Z)
+        p->x[2] = z;
+
+    // Calculate spherical coordinates
+    if (flags & POINT_SET_R)
+        p->r = sqrt( rh*rh + z*z );
+    if (flags & POINT_SET_TH)
+        set_angle_rad( &p->th, atan2( rh, z ) );
+    if (flags & POINT_SET_PH)
+        copy_angle( ph, &p->ph );
+
+    // Calculate cylindrical distance rho squared
+    if (flags & POINT_SET_RHOSQ)
+        p->rhosq = rh*rh;
+}
+
 void copy_point( point *src, point *dest )
 /* Copy a point from one struct to another
  */

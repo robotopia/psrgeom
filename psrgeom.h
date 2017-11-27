@@ -25,8 +25,6 @@
 #define POINT_SET_SPH    0x38  /* 00111000 */
 #define POINT_SET_ALL    0x7F  /* 01111111 */
 
-
-
 /**** Structures ****/
 
 typedef struct angle_t
@@ -36,6 +34,11 @@ typedef struct angle_t
     double cos; // The cosine of the angle
     double sin; // The sine of the angle
 } angle;
+
+#define  ANGLE_ZERO  (angle){0.0,0.0,1.0,0.0}
+#define  ANGLE_RIGHT (angle){90.0,PI/2.0,0.0,1.0}
+#define  ANGLE_HALF  (angle){180.0,PI,-1.0,0.0}
+#define  ANGLE_FULL  (angle){360.0,2.0*PI,1.0,0.0}
 
 typedef struct point_t {
     double  x[3];   // x,y,z coordinates
@@ -80,6 +83,7 @@ void rotatex( angle *th, angle *ph, angle *th_out, angle *ph_out, angle *rot );
 
 void set_point_xyz( point *p, double x, double y, double z, int flags );
 void set_point_sph( point *p, double r, angle *th, angle *ph, int flags );
+void set_point_cyl( point *p, double rh, angle *ph, double z, int flags );
 void copy_point( point *src, point *dest );
 
 
