@@ -93,6 +93,12 @@ void destroy_pulsar( pulsar *psr );
 
 void set_pulsar_period( pulsar *psr, double P );
 
+
+/**** Magnetic field functions ****/
+void Bfield( point *x, pulsar *psr, point *dx );
+double Bdotrxy( point *x, pulsar *psr );
+
+
 /**** Other functions ****/
 
 double light_cylinder( double P );

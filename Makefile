@@ -19,7 +19,8 @@ HDRFILE = $(LIBRARY).h
 OBJS = angle.o \
 	   point.o \
 	   lightcyl.o \
-	   pulsar.o
+	   pulsar.o \
+	   bfield.o
 
 all: $(LIBFILE)
 
