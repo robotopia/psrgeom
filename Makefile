@@ -23,14 +23,21 @@ OBJS = angle.o \
 	   bfield.o \
 	   cylinder.o
 
-all: $(LIBFILE)
+all: $(LIBFILE) man-pages
 
 $(LIBFILE): $(OBJS)
 	ar rcs $@ $^
 
+man-pages:
+	$(MAKE) -C man
+
 install:
 	cp $(LIBFILE) /usr/local/lib
 	cp $(HDRFILE) /usr/local/include
+	cp man/*.gz /usr/share/man/man3
+
+clean-man-pages:
+	$(RM) man/*.gz
 
 clean:
 	$(RM) *.o $(LIBFILE)
