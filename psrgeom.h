@@ -61,6 +61,7 @@ typedef struct pulsar_t {
 } pulsar;
 
 
+
 /**** Angle functions ****/
 
 angle *create_angle();
@@ -78,6 +79,7 @@ void set_angle_cos( angle *ang, double Cos );
 void rotatex( angle *th, angle *ph, angle *th_out, angle *ph_out, angle *rot );
 
 
+
 /**** Point functions ****/
 
 void set_point_xyz( point *p, double x, double y, double z, int flags );
@@ -87,7 +89,9 @@ void copy_point( point *src, point *dest );
 
 
 
+
 /**** Pulsar functions ****/
+
 void set_pulsar( pulsar *psr, angle *ra, angle *dec, double P, double r,
         angle *al, angle *ze );
 pulsar *create_pulsar( angle *ra, angle *dec, double P, double r,
@@ -97,9 +101,14 @@ void destroy_pulsar( pulsar *psr );
 void set_pulsar_period( pulsar *psr, double P );
 
 
+
+
 /**** Magnetic field functions ****/
+
 void Bfield( point *x, pulsar *psr, point *dx );
 double Bdotrxy( point *x, pulsar *psr );
+
+
 
 
 /**** Other functions ****/
