@@ -85,6 +85,7 @@ void set_angle_cos( angle *ang, double Cos );
 void rotate_about_axis( point *in, point *out, angle *rot, char axis,
                         int flags );
 
+void min_phase_diff( angle *a1, angle *a2, angle *diff );
 
 
 /**** Point functions ****/
