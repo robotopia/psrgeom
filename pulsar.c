@@ -60,5 +60,7 @@ void set_pulsar_period( pulsar *psr, double P )
     psr->P   = P;
     psr->rL  = light_cylinder( P );
     psr->rL2 = psr->rL * psr->rL;
+
+    set_angle_rad( &psr->Om, 2.0*PI/P );
 }
 

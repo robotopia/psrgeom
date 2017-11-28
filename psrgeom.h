@@ -52,6 +52,7 @@ typedef struct pulsar_t {
     angle    ra;    // Right Ascension
     angle    dec;   // Declination
     double   P;     // Rotation period
+    angle    Om;    // Rotation frequency = 2π/P
     //double   Pdot;  // First time derivative of rotation period
     double   r;     // Stellar radius
     double   rL;    // Light cylinder radius
