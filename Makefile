@@ -21,7 +21,8 @@ OBJS = angle.o \
 	   lightcyl.o \
 	   pulsar.o \
 	   bfield.o \
-	   cylinder.o
+	   cylinder.o \
+	   dipole.o
 
 all: $(LIBFILE) man-pages
 
@@ -34,7 +35,7 @@ man-pages:
 install:
 	cp $(LIBFILE) /usr/local/lib
 	cp $(HDRFILE) /usr/local/include
-	cp man/*.gz /usr/share/man/man3
+	cp man/*.gz /usr/local/man/man3
 
 clean-man-pages:
 	$(RM) man/*.gz

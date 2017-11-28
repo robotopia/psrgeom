@@ -16,6 +16,7 @@
  ****************************************************************************/
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 #include "psrgeom.h"
 
@@ -108,16 +109,40 @@ void set_angle_cos( angle *ang, double Cos )
     ang->cos   = Cos;
 }
 
-void rotatex( angle *th, angle *ph, angle *th_out, angle *ph_out, angle *rot )
-/* Rotate a direction defined by (th,ph) about the x-axis by amount "rot"
+
+void rotate_about_axis( point *in, point *out, angle *rot, char axis,
+                        int flags )
+/* Rotate a point about the specified "axis" by amount "rot".
+ * Assumes only that the Cartesian points of *in are defined.
  */
 {
-    // Make a local copy of theta so as not to break if output pointers
-    // equal input pointers
-    angle t;
-    copy_angle( th, &t );
+    double newx, newy, newz;
+    switch (axis)
+    {
+        case 'x':
+        case 'X':
+            newx = in->x[0];
+            newy = in->x[1]*rot->cos - in->x[2]*rot->sin;
+            newz = in->x[1]*rot->sin + in->x[2]*rot->cos;
+            break;
+        case 'y':
+        case 'Y':
+            newx =  in->x[0]*rot->cos + in->x[2]*rot->sin;
+            newy =  in->x[1];
+            newz = -in->x[0]*rot->sin + in->x[2]*rot->cos;
+            break;
+        case 'z':
+        case 'Z':
+            newx = in->x[0]*rot->cos - in->x[1]*rot->sin;
+            newy = in->x[0]*rot->sin + in->x[1]*rot->cos;
+            newz = in->x[2];
+            break;
+        default:
+            fprintf( stderr, "error: rotate_about_axis: unrecognised axis "
+                             "'%c'\n", axis );
+            exit(EXIT_FAILURE);
+            break;
+    }
 
-    set_angle_cos( th_out, t.sin*ph->sin*rot->sin + t.cos*rot->cos );
-    set_angle_rad( ph_out, atan2( t.sin*ph->sin*rot->cos - t.cos*rot->sin,
-                                  t.sin*ph->cos ) );
+    set_point_xyz( out, newx, newy, newz, flags );
 }

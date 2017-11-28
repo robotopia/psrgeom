@@ -77,7 +77,8 @@ void set_angle_deg( angle *ang, double deg );
 void set_angle_sin( angle *ang, double Sin );
 void set_angle_cos( angle *ang, double Cos );
 
-void rotatex( angle *th, angle *ph, angle *th_out, angle *ph_out, angle *rot );
+void rotate_about_axis( point *in, point *out, angle *rot, char axis,
+                        int flags );
 
 
 
@@ -110,6 +111,14 @@ void Bfield( point *x, pulsar *psr, point *dx );
 double Bdotrxy( point *x, pulsar *psr );
 
 
+
+
+/**** Dipole field functions ****/
+
+void obs_to_mag_frame( point *xo, pulsar *psr, angle *ph, point *xm );
+void mag_to_obs_frame( point *xm, pulsar *psr, angle *ph, point *xo );
+
+double calc_dipole_R( point *xm );
 
 
 /**** Other functions ****/
