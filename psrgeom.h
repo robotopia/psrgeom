@@ -1,6 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
+#include <stdio.h>
 #include <math.h>
 
 #define _USE_MATH_DEFINES
@@ -13,17 +14,21 @@
 
 #define  NDEP            3     // Number of dimensions
 
-#define POINT_SET_NONE   0x0   /* 00000000 */
-#define POINT_SET_X      0x1   /* 00000001 */
-#define POINT_SET_Y      0x2   /* 00000010 */
-#define POINT_SET_Z      0x4   /* 00000100 */
-#define POINT_SET_R      0x8   /* 00001000 */
-#define POINT_SET_TH     0x10  /* 00010000 */
-#define POINT_SET_PH     0x20  /* 00100000 */
-#define POINT_SET_RHOSQ  0x40  /* 01000000 */
-#define POINT_SET_XYZ    0x7   /* 00000111 */
-#define POINT_SET_SPH    0x38  /* 00111000 */
-#define POINT_SET_ALL    0x7F  /* 01111111 */
+#define  POINT_SET_NONE   0x0   /* 00000000 */
+#define  POINT_SET_X      0x1   /* 00000001 */
+#define  POINT_SET_Y      0x2   /* 00000010 */
+#define  POINT_SET_Z      0x4   /* 00000100 */
+#define  POINT_SET_R      0x8   /* 00001000 */
+#define  POINT_SET_TH     0x10  /* 00010000 */
+#define  POINT_SET_PH     0x20  /* 00100000 */
+#define  POINT_SET_RHOSQ  0x40  /* 01000000 */
+#define  POINT_SET_XYZ    0x7   /* 00000111 */
+#define  POINT_SET_SPH    0x38  /* 00111000 */
+#define  POINT_SET_ALL    0x7F  /* 01111111 */
+
+#define  DIR_INWARD      0
+#define  DIR_OUTWARD     1
+
 
 /**** Structures ****/
 
@@ -109,7 +114,8 @@ void set_pulsar_period( pulsar *psr, double P );
 
 void Bfield( point *x, pulsar *psr, point *dx );
 double Bdotrxy( point *x, pulsar *psr );
-
+void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
+                FILE *write_xyz, point *foot_pt );
 
 
 
