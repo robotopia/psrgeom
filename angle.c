@@ -146,3 +146,24 @@ void rotate_about_axis( point *in, point *out, angle *rot, char axis,
 
     set_point_xyz( out, newx, newy, newz, flags );
 }
+
+
+void min_phase_diff( angle *a1, angle *a2, angle *diff )
+/* Calculate the minimum absolute phase difference between two angles.
+ *
+ * Inputs:
+ *   angle *a1    : any arbitrary angle
+ *   angle *a2    : any arbitrary angle
+ *
+ * Outputs:
+ *   angle *diff  : the angle between a1 and a2
+ */
+{
+    double phase_diff_deg = fabs( a1->deg - a2->deg );
+    phase_diff_deg = fmod( phase_diff_deg, 360.0 ); //  0   < x < 360
+    phase_diff_deg = (phase_diff_deg > 180.0 ?
+                      phase_diff_deg - 360.0 :
+                      phase_diff_deg);              // -180 < x < 180
+    phase_diff_deg = fabs( phase_diff_deg );        //  0   < x < 180
+    set_angle_deg( diff, phase_diff_deg );
+}
