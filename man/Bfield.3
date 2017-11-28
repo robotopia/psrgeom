@@ -14,7 +14,8 @@ The
 .BR Bfield ()
 function calculates the magnetic field \fIB\fP at the point \fIx\fP around
 pulsar \fIpsr\fP when the magnetic axis is instantaneously in the xz-plane
-(towards positive x).
+(towards positive x). This is equivalent to the vacuum Deutsch (1955) solution
+in which the finite light travel time is taken into account.
 .PP
 The function assumes only that the Cartesian coordinates of \fIx\fP contain
 meaningful values. Similarly, \fIpsr\fP is assumed to have meaningful values
@@ -25,6 +26,8 @@ radius, r. The Cartesian points correspond to a unit vector which is parallel
 to the magnetic field at point \fIx\fP. The radius, \fIB.r\fP, is the
 magnetic field strength at point \fIx\fP normalised to the magnitude of the
 dipole moment.
+.PP
+The formulae used to calculate the magnetic field are due to Paul Arendt.
 .SH RETURN VALUE
 The
 .BR Bfield ()
