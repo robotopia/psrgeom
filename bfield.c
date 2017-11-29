@@ -16,8 +16,6 @@
 #include <math.h>
 #include "psrgeom.h"
 
-void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
-
 void Bfield( point *x, pulsar *psr, point *B )
 /* This returns the normalised vector B (cast as a "point"), i.e. the magnetic
  * field direction at the point *x around pulsar *psr, revolving about the
@@ -112,13 +110,10 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
 
     // Trace this line outwards with a 4 stage Runge-Kutta
 
-    // If we care about the light cylinder radius as an upper limit,
-    // check to see if we've reached it.
-    int stop = 0;
     int temp_drctn = direction; // In case we've gone too far
     double precision = 1.0e-14;
 
-    while (!stop)
+    while (1) // Indefinite loop until surface is reached
     {
         // Keep track of the previous point
         copy_point( &x, &old_x );
@@ -145,34 +140,49 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
             exit(EXIT_FAILURE);
         }
 
-        // Zero in on the exact point (to machine precision) on
-        // the pulsar surface
+        // Just check to see if we've happened to land exactly on the surface
+        if (x.r == psr->r)
+            break;
 
-        // Only worry if we're getting sufficiently close...
-        if (x.r < psr->r*(1.0 + 4.0*tmult))
+        // Otherwise, only do anything special if we've crossed the surface
+        if ((x.r - psr->r) / (old_x.r - psr->r) < 0.0) // then x and old_x are
+                                                       // on opposite sides of
+                                                       // the surface
         {
             if (temp_drctn == DIR_INWARD)
             {
                 if ((fabs(x.r - old_x.r) <= precision*psr->r))
                 {
-                    stop = 1;
+                    break;
                 }
-                else if (x.r <= psr->r) // then we're now below the surface
+                else if (x.r < psr->r) // we should be below the surface
                 {
                     temp_drctn = DIR_OUTWARD;
                     tstep /= 2.0;
+                }
+                else
+                {
+                    fprintf( stderr, "error: footpoint: logic error! The "
+                                     "point should be below the surface\n" );
+                    exit(EXIT_FAILURE);
                 }
             }
             else // (temp_drctn == DIR_OUTWARD)
             {
                 if ((fabs(x.r - old_x.r) <= precision*psr->r))
                 {
-                    stop = 1;
+                    break;
                 }
-                else if (x.r >= psr->r) // then we're now above the surface
+                else if (x.r > psr->r) // we should be above the surface
                 {
                     temp_drctn = DIR_INWARD;
                     tstep /= 2.0;
+                }
+                else
+                {
+                    fprintf( stderr, "error: footpoint: logic error! The "
+                                     "point should be above the surface\n" );
+                    exit(EXIT_FAILURE);
                 }
             }
         }
