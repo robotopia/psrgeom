@@ -149,42 +149,19 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
                                                        // on opposite sides of
                                                        // the surface
         {
-            if (temp_drctn == DIR_INWARD)
+            if ((fabs(x.r - old_x.r) <= precision*psr->r))
+                break;
+
+            if (temp_drctn == DIR_OUTWARD)
+                temp_drctn = DIR_INWARD;
+            else if (temp_drctn == DIR_INWARD)
+                temp_drctn = DIR_OUTWARD;
+            else
             {
-                if ((fabs(x.r - old_x.r) <= precision*psr->r))
-                {
-                    break;
-                }
-                else if (x.r < psr->r) // we should be below the surface
-                {
-                    temp_drctn = DIR_OUTWARD;
-                    tstep /= 2.0;
-                }
-                else
-                {
-                    fprintf( stderr, "error: footpoint: logic error! The "
-                                     "point should be below the surface\n" );
-                    exit(EXIT_FAILURE);
-                }
+                fprintf( stderr, "error: footpoint: unknown direction\n" );
+                exit(EXIT_FAILURE);
             }
-            else // (temp_drctn == DIR_OUTWARD)
-            {
-                if ((fabs(x.r - old_x.r) <= precision*psr->r))
-                {
-                    break;
-                }
-                else if (x.r > psr->r) // we should be above the surface
-                {
-                    temp_drctn = DIR_INWARD;
-                    tstep /= 2.0;
-                }
-                else
-                {
-                    fprintf( stderr, "error: footpoint: logic error! The "
-                                     "point should be above the surface\n" );
-                    exit(EXIT_FAILURE);
-                }
-            }
+            tstep /= 2.0;
         }
 
         // Adjust tstep proportionally to how far away from the pulsar we are
