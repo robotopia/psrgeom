@@ -126,6 +126,7 @@ void obs_to_mag_frame( point *xo, pulsar *psr, angle *ph, point *xm );
 void mag_to_obs_frame( point *xm, pulsar *psr, angle *ph, point *xo );
 
 double calc_dipole_R( point *xm );
+void dipole_footpoint( pulsar *psr, double R, angle *si, point *foot_pt );
 
 
 /**** Other functions ****/

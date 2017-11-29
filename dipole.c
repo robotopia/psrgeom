@@ -79,3 +79,31 @@ double calc_dipole_R( point *xm )
 {
     return xm->r / (xm->th.sin * xm->th.sin);
 }
+
+void dipole_footpoint( pulsar *psr, double R, angle *si, point *foot_pt )
+/* Calculates the footpoint of a magnetic field line assuming a dipole
+ * geometry.
+ *
+ * Inputs:
+ *   pulsar *psr     : The pulsar
+ *   double  R       : The maximum extent of the dipolar field line
+ *   angle  *si      : The magnetic azimuth of the dipolar field line
+ *
+ * Outputs:
+ *   point  *foot_pt : The footpoint of the magnetic field line
+ */
+{
+    // Convert magnetic azimuth to "phase"
+    angle ph;
+    set_angle_deg( &ph, si->deg + 180.0 );
+
+    // Calculate the magnetic colatitude of the footpoint
+    angle th;
+    set_angle_sin( &th, sqrt( psr->r / R ) );
+
+    // Get the point in magnetic coordinates
+    set_point_sph( foot_pt, psr->r, &th, &ph, POINT_SET_ALL );
+
+    // Convert from magnetic coordinates to the observer's frame
+    mag_to_obs_frame( foot_pt, psr, NULL, foot_pt );
+}
