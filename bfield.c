@@ -71,8 +71,9 @@ double Bdotrxy( point *x, pulsar *psr )
 {
     point B;
     Bfield( x, psr, &B );
-    return (B.x[0] * x->ph.cos +
-            B.x[1] * x->ph.sin);
+    double retval = B.x[0] * x->ph.cos +
+                    B.x[1] * x->ph.sin;
+    return retval;
 }
 
 
