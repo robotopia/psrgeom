@@ -42,11 +42,11 @@ void Bfield( point *x, pulsar *psr, point *B )
     set_angle_rad( &phase, (r - psr->r)/psr->rL );
 
     // Paul Arendt's equations
-    double a  = psr->al.cos / r5;
-    double b  = psr->al.sin * phase.cos / r3 / psr->rL2;
-    double c  = psr->al.sin * (phase.cos/r5 + phase.sin/r4/psr->rL);
-    double d  = psr->al.sin * phase.sin / r3 / psr->rL2;
-    double e  = d*psr->rL2/rr - b*psr->rL/r;
+    double a  =  1.0 / r5;
+    double b  =  psr->al.sin * phase.cos / r3 / psr->rL2;
+    double c  =  psr->al.sin * ( phase.cos/r5 + phase.sin/r4/psr->rL);
+    double d  = -psr->al.sin * phase.sin / r3 / psr->rL2;
+    double e  =  psr->al.sin * (-phase.sin/r5 + phase.cos/r4/psr->rL);
 
     set_point_xyz( B,
                    3.0*a*xz + b*(yy + zz) + c*(3.0*xx - rr) - d*xy + 3.0*e*xy,
