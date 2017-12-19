@@ -1,0 +1,51 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH DESTROY_ANGLE 3 2017-12-19 "" "Pulsar Geometry"
+.SH NAME
+destroy_angle \- free memory for an "angle" struct
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void destroy_angle( angle *" ang ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR destroy_angle ()
+function frees dynamically allocated memory for an instance of the
+\fIangle\fP struct. It should be called to free memory that was allocated
+with
+.BR create_angle ()
+,
+.BR create_angle_rad ()
+, or
+.BR create_angle_deg ()
+.
+.SH RETURN VALUE
+The
+.BR destroy_angle ()
+function does not return anything.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    angle *a = create_angle();
+
+    set_angle_rad( a, PI );
+
+    destroy_angle( a );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR create_angle (3),
+.BR create_angle_rad (3),
+.BR create_angle_deg (3),
+.BR copy_angle (3),
+.BR set_angle_rad (3),
+.BR set_angle_deg (3),
+.BR set_angle_sin (3),
+.BR set_angle_cos (3)

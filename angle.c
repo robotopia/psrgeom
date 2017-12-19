@@ -59,6 +59,14 @@ void destroy_angle( angle *ang )
 void copy_angle( angle *src, angle *dest )
 /* Copy across the contents from angle src to angle dest */
 {
+    // Error checking: NULLs disallowed
+    if (!src || !dest)
+    {
+        fprintf( stderr, "error: copy_angle: src and dest cannot be NULL\n" );
+        exit(EXIT_FAILURE);
+    }
+
+    // Copy values
     dest->rad = src->rad;
     dest->deg = src->deg;
     dest->sin = src->sin;

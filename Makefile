@@ -2,11 +2,11 @@ CC      = gcc
 LDLIBS = -lm
 
 ## Uncomment this to turn on compiler optimisation
-OPTIM   = -O3
+OPTIM   = -O2
 
 ## Uncomment these to turn on fsanitize option
 #LDLIBS = -lasan -lm
-#OPTIM   = -Wextra -O3 -fsanitize=address 
+#OPTIM   = -Wextra -O2 -fsanitize=address 
 
 ## Uncomment the following to turn on debugging options
 #DEBUG   = -g -std=gnu99
