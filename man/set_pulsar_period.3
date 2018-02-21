@@ -12,7 +12,9 @@ set_pulsar_period \- sets the period of a "pulsar" struct
 .SH DESCRIPTION
 The
 .BR set_pulsar_period ()
-function sets the period of \fIpsr\fP to the value \fIP\fP.
+function sets the period of \fIpsr\fP to the value \fIP\fP. It also sets the
+rL (light cylinder radius) field, the rL2 (light cylinder radius squared)
+field, and the Om (the rotation rate in rad/s) field.
 
 .SH RETURN VALUE
 The

@@ -115,7 +115,7 @@ void set_pulsar_period( pulsar *psr, double P );
 
 /**** Magnetic field functions ****/
 
-void Bfield( point *x, pulsar *psr, point *dx );
+void Bfield( point *x, pulsar *psr, point *B );
 void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
 double Bdotrxy( point *x, pulsar *psr );
 void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
