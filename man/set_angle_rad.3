@@ -1,0 +1,56 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH SET_ANGLE_RAD 3 2017-12-19 "" "Pulsar Geometry"
+.SH NAME
+set_angle_rad \- set the values of an "angle" struct
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void set_angle_rad(angle *" ang ", double " rad ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR set_angle_rad ()
+function sets the member values of \fIang\fP to the values corresponding
+to the angle \fIrad\fP (in radians). Specifically, the equivalent angle in
+degrees, the sine of the angle, and the cosine of the angle are calculated
+and stored in the \fIang\fP.
+
+\fIrad\fP can be any real value. The equivalent angle in degrees is \fIrad\fP
+times 180.0/PI. The sine and cosine are calculated using the functions
+supplied in
+.BR math.h.
+.SH RETURN VALUE
+The
+.BR set_angle_rad ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    angle *a = create_angle();
+
+    set_angle_rad( PI );
+
+    /* Now,
+       a->rad = PI,
+       a->deg = 90.0,
+       a->sin = 1.0,
+       a->cos = 0.0
+    */
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR create_angle (3),
+.BR create_angle_rad (3),
+.BR create_angle_deg (3),
+.BR copy_angle (3),
+.BR destroy_angle (3),
+.BR set_angle_deg (3),
+.BR set_angle_sin (3),
+.BR set_angle_cos (3)
