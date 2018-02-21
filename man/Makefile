@@ -11,7 +11,8 @@ TARGETS = Bfield.3.gz \
 		  rotate_about_axis.3.gz \
 		  min_phase_diff.3.gz \
 		  set_point_xyz.3.gz \
-		  set_point_sph.3.gz
+		  set_point_sph.3.gz \
+		  set_point_cyl.3.gz
 
 all: $(TARGETS)
 
