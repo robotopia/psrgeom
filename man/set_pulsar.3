@@ -1,0 +1,56 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH SET_PULSAR 3 2018-02-21 "" "Pulsar Geometry"
+.SH NAME
+set_pulsar \- set the values of a "pulsar" struct
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void set_pulsar(pulsar *" psr ", psr_angle *" ra ", psr_angle *" dec ", double " P ", double " r ", psr_angle *" al ", psr_angle *" ze ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR set_pulsar ()
+function sets the member fields of \fIpsr\fP to the values corresponding
+to the other provided parameters. \fIra\fP and \fIdec\fP are the right
+ascension and declination of the pulsar, respectively. \fIP\fP is the period,
+\fIr\fP is the radius, \fIal\fP is the angle between the rotation axis and the
+magnetic axis, and \fIze\fP is the angle between the rotation axis and the
+line of sight.
+
+.SH RETURN VALUE
+The
+.BR set_pulsar ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    pulsar psr;
+
+    psr_angle *ra  = create_psr_angle_deg(  69.31623 );
+    psr_angle *dec = create_psr_angle_deg( -47.25253 );
+
+    double P = 0.005757451936712637;
+    double r = 1e4;
+
+    psr_angle *al  = create_psr_angle_deg( 10.0 );
+    psr_angle *ze  = create_psr_angle_deg( 15.0 );
+
+    set_pulsar( &psr, ra, dec, P, r, al, ze );
+
+    destroy_psr_angle( ra  );
+    destroy_psr_angle( dec );
+    destroy_psr_angle( al  );
+    destroy_psr_angle( ze  );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR create_pulsar (3),
+.BR destroy_pulsar (3),
+.BR set_pulsar_period (3)
