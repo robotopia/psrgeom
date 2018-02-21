@@ -1,0 +1,48 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH BDOTRXY 3 2018-02-21 "" "Pulsar Geometry"
+.SH NAME
+Bdotrxy \- calculate a dot product at a point around a pulsar
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void Bdotrxy(point " *x ", pulsar " *psr ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR Bdotrxy ()
+function calculates the quantity (B dot r_{xy}) at point \fIx\fP around
+pulsar \fIpsr\fP, where B is the normalised magnetic field and r_{xy} is the
+unit vector pointing away from, and perpendicular to, the z-axis.
+.PP
+This function calculates the result from the Cartesian coordinates of \fIx\fP
+and its ph value.
+.SH RETURN VALUE
+The
+.BR Bdotrxy ()
+function returns the value of the calculated dot product.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    double P = 1.0;
+    double r = 1.0e4;
+
+    psr_angle al, ze;
+    set_psr_angle_deg( &al, 45.0 );
+    set_psr_angle_deg( &ze, 50.0 );
+
+    pulsar psr;
+    set_pulsar( &psr, NULL, NULL, P, r, &al, &ze );
+
+    point x;
+    set_point_xyz( &x, psr.rL, 0.0, psr.rL, POINT_SET_ALL );
+
+    Bdotrxy( &x, &psr );
+
+    exit(EXIT_SUCCESS);
+}
+.EE

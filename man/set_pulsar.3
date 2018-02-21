@@ -18,7 +18,10 @@ ascension and declination of the pulsar, respectively. \fIP\fP is the period,
 \fIr\fP is the radius, \fIal\fP is the angle between the rotation axis and the
 magnetic axis, and \fIze\fP is the angle between the rotation axis and the
 line of sight.
-
+.PP
+If \fIra\fP has a value of
+.BR NULL,
+then it is ignored. The same is true for \fIdec\fP, \fIal\fP, and \fIze\fP.
 .SH RETURN VALUE
 The
 .BR set_pulsar ()

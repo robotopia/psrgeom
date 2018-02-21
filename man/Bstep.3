@@ -1,0 +1,55 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH BSTEP 3 2018-02-21 "" "Pulsar Geometry"
+.SH NAME
+Bstep \- advance a point along a pulsar's magnetic field line
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void Bstep(point " *x1 ", pulsar " *psr ", double " tstep ", int " direction ", point *" x2 ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR Bstep ()
+function attempts to step along a magnetic field line from a starting point
+\fIx1\fP to a new point along the same line \fIx2\fP. The magnetic field is
+calculated for the pulsar \fIpsr\fP. If \fIdirection\fP is set to
+.BR DIR_OUTWARD,
+the step is taken in the same direction as the local magnetic field; if
+.BR DIR_INWARD,
+the step is taken in the opposite direction.
+.PP
+The algorithm employed is a 4th order Runge Kutte method, with a step size of
+\fItstep\fP.
+.PP
+This function only makes use of the Cartesian coordinates of \fIx1\fP
+.SH RETURN VALUE
+The
+.BR Bstep ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    double P = 1.0;
+    double r = 1.0e4;
+
+    psr_angle al, ze;
+    set_psr_angle_deg( &al, 45.0 );
+    set_psr_angle_deg( &ze, 50.0 );
+
+    pulsar psr;
+    set_pulsar( &psr, NULL, NULL, P, r, &al, &ze );
+
+    point x1, x2;
+    set_point_xyz( &x1, psr.rL, 0.0, 0.0, POINT_SET_XYZ );
+
+    double tstep = psr.rL / 1e3;
+    Bstep( &x1, &psr, tstep, DIR_OUTWARD, &x2 );
+
+    exit(EXIT_SUCCESS);
+}
+.EE

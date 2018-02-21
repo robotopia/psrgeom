@@ -41,9 +41,9 @@ int main(int argc, char *argv[])
     double P = 1.0;
     double r = 1.0e4;
 
-    angle al, ze;
-    set_angle_deg( &al, 45.0 );
-    set_angle_deg( &ze, 50.0 );
+    psr_angle al, ze;
+    set_psr_angle_deg( &al, 45.0 );
+    set_psr_angle_deg( &ze, 50.0 );
 
     pulsar psr;
     set_pulsar( &psr, NULL, NULL, P, r, &al, &ze );
