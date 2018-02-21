@@ -1,0 +1,56 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH SET_PULSAR_PERIOD 3 2018-02-21 "" "Pulsar Geometry"
+.SH NAME
+set_pulsar_period \- sets the period of a "pulsar" struct
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void set_pulsar_period(pulsar *" psr ", double " P ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR set_pulsar_period ()
+function sets the period of \fIpsr\fP to the value \fIP\fP.
+
+.SH RETURN VALUE
+The
+.BR set_pulsar_period ()
+does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    pulsar *psr;
+
+    psr_angle *ra  = create_psr_angle_deg(  69.31623 );
+    psr_angle *dec = create_psr_angle_deg( -47.25253 );
+
+    double P = 0.005757451936712637;
+    double r = 1e4;
+
+    psr_angle *al  = create_psr_angle_deg( 10.0 );
+    psr_angle *ze  = create_psr_angle_deg( 15.0 );
+
+    psr = create_pulsar( ra, dec, P, r, al, ze );
+
+    double newP = 1.45;
+    set_pulsar_period( psr, P );
+
+    destroy_psr_angle( ra  );
+    destroy_psr_angle( dec );
+    destroy_psr_angle( al  );
+    destroy_psr_angle( ze  );
+
+    destroy_pulsar( psr );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR set_pulsar (3),
+.BR create_pulsar (3),
+.BR destroy_pulsar (3)

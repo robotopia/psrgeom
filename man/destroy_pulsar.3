@@ -1,0 +1,59 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH DESTROY_PULSAR 3 2018-02-21 "" "Pulsar Geometry"
+.SH NAME
+destroy_pulsar \- deallocates memory of a "pulsar" struct
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void destroy_pulsar(pulsar *" psr ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR destroy_pulsar ()
+function allocates memory for a "pulsar" struct and sets its member fields
+to the values corresponding
+to the other provided parameters. \fIra\fP and \fIdec\fP are the right
+ascension and declination of the pulsar, respectively. \fIP\fP is the period,
+\fIr\fP is the radius, \fIal\fP is the angle between the rotation axis and the
+magnetic axis, and \fIze\fP is the angle between the rotation axis and the
+line of sight.
+
+.SH RETURN VALUE
+The
+.BR destroy_pulsar ()
+does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    pulsar *psr;
+
+    psr_angle *ra  = create_psr_angle_deg(  69.31623 );
+    psr_angle *dec = create_psr_angle_deg( -47.25253 );
+
+    double P = 0.005757451936712637;
+    double r = 1e4;
+
+    psr_angle *al  = create_psr_angle_deg( 10.0 );
+    psr_angle *ze  = create_psr_angle_deg( 15.0 );
+
+    psr = create_pulsar( ra, dec, P, r, al, ze );
+
+    destroy_psr_angle( ra  );
+    destroy_psr_angle( dec );
+    destroy_psr_angle( al  );
+    destroy_psr_angle( ze  );
+
+    destroy_pulsar( psr );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR set_pulsar (3),
+.BR create_pulsar (3),
+.BR set_pulsar_period (3)

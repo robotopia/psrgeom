@@ -1,0 +1,37 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH COPY_POINT 3 2018-02-21 "" "Pulsar Geometry"
+.SH NAME
+copy_point \- copy a point struct
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void copy_point(point *" src ", point *" dest ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR copy_point ()
+function copies all of the values in \fIsrc\fP to \fIdest\fP.
+.SH RETURN VALUE
+The
+.BR copy_point ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    point P1, P2;
+
+    set_point_xyz( &P, 1.0, 2.0, 3.0, POINT_SET_XYZ | POINT_SET_R );
+    copy_point( &P1, &P2 );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR set_point_xyz (3),
+.BR set_point_sph (3),
+.BR set_point_cyl (3)

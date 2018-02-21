@@ -14,7 +14,10 @@ TARGETS = Bfield.3.gz \
 		  set_point_sph.3.gz \
 		  set_point_cyl.3.gz \
 		  copy_point.3.gz \
-		  set_pulsar.3.gz
+		  set_pulsar.3.gz \
+		  create_pulsar.3.gz \
+		  destroy_pulsar.3.gz \
+		  set_pulsar_period.3.gz
 
 all: $(TARGETS)
 
