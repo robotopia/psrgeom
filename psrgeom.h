@@ -1,7 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
-#define PSRGEOM_VERSION "1.0.0"
+#define PSRGEOM_VERSION "1.0.1"
 
 #include <stdio.h>
 #include <math.h>
@@ -34,67 +34,67 @@
 
 /**** Structures ****/
 
-typedef struct angle_t
+typedef struct psr_angle_t
 {
     double deg; // The angle in degrees
     double rad; // The angle in radians
     double cos; // The cosine of the angle
     double sin; // The sine of the angle
-} angle;
+} psr_angle;
 
-#define  ANGLE_ZERO  (angle){0.0,0.0,1.0,0.0}
-#define  ANGLE_RIGHT (angle){90.0,PI/2.0,0.0,1.0}
-#define  ANGLE_HALF  (angle){180.0,PI,-1.0,0.0}
-#define  ANGLE_FULL  (angle){360.0,2.0*PI,1.0,0.0}
+#define  ANGLE_ZERO  (psr_angle){0.0,0.0,1.0,0.0}
+#define  ANGLE_RIGHT (psr_angle){90.0,PI/2.0,0.0,1.0}
+#define  ANGLE_HALF  (psr_angle){180.0,PI,-1.0,0.0}
+#define  ANGLE_FULL  (psr_angle){360.0,2.0*PI,1.0,0.0}
 
 typedef struct point_t {
-    double  x[3];   // x,y,z coordinates
-    double  r;      // distance from origin = sqrt(x^2 + y^2 + z^2)
-    angle   th;     // The colatitude
-    angle   ph;     // The longitude
-    double  rhosq;  // distance from z axis squared = x^2 + y^2
+    double    x[3];   // x,y,z coordinates
+    double    r;      // distance from origin = sqrt(x^2 + y^2 + z^2)
+    psr_angle th;     // The colatitude
+    psr_angle ph;     // The longitude
+    double    rhosq;  // distance from z axis squared = x^2 + y^2
 } point;
 
 typedef struct pulsar_t {
-    angle    ra;    // Right Ascension
-    angle    dec;   // Declination
+    psr_angle    ra;    // Right Ascension
+    psr_angle    dec;   // Declination
     double   P;     // Rotation period
-    angle    Om;    // Rotation frequency = 2π/P
+    psr_angle    Om;    // Rotation frequency = 2π/P
     //double   Pdot;  // First time derivative of rotation period
     double   r;     // Stellar radius
     double   rL;    // Light cylinder radius
     double   rL2;   // = rL^2 (because it comes up quite often)
-    angle    al;    // Angle between the rotation and magnetic axes
-    angle    ze;    // Angle between the rotation axis and the line of sight
+    psr_angle    al;    // Angle between the rotation and magnetic axes
+    psr_angle    ze;    // Angle between the rotation axis and the line of sight
 } pulsar;
 
 
 
 /**** Angle functions ****/
 
-angle *create_angle();
-angle *create_angle_rad( double rad );
-angle *create_angle_deg( double deg );
+psr_angle *create_psr_angle();
+psr_angle *create_psr_angle_rad( double rad );
+psr_angle *create_psr_angle_deg( double deg );
 
-void copy_angle( angle *src, angle *dest );
-void destroy_angle( angle *ang );
+void copy_psr_angle( psr_angle *src, psr_angle *dest );
+void destroy_psr_angle( psr_angle *ang );
 
-void set_angle_rad( angle *ang, double rad );
-void set_angle_deg( angle *ang, double deg );
-void set_angle_sin( angle *ang, double Sin );
-void set_angle_cos( angle *ang, double Cos );
+void set_psr_angle_rad( psr_angle *ang, double rad );
+void set_psr_angle_deg( psr_angle *ang, double deg );
+void set_psr_angle_sin( psr_angle *ang, double Sin );
+void set_psr_angle_cos( psr_angle *ang, double Cos );
 
-void rotate_about_axis( point *in, point *out, angle *rot, char axis,
+void rotate_about_axis( point *in, point *out, psr_angle *rot, char axis,
                         int flags );
 
-void min_phase_diff( angle *a1, angle *a2, angle *diff );
+void min_phase_diff( psr_angle *a1, psr_angle *a2, psr_angle *diff );
 
 
 /**** Point functions ****/
 
 void set_point_xyz( point *p, double x, double y, double z, int flags );
-void set_point_sph( point *p, double r, angle *th, angle *ph, int flags );
-void set_point_cyl( point *p, double rh, angle *ph, double z, int flags );
+void set_point_sph( point *p, double r, psr_angle *th, psr_angle *ph, int flags );
+void set_point_cyl( point *p, double rh, psr_angle *ph, double z, int flags );
 void copy_point( point *src, point *dest );
 
 
@@ -102,10 +102,10 @@ void copy_point( point *src, point *dest );
 
 /**** Pulsar functions ****/
 
-void set_pulsar( pulsar *psr, angle *ra, angle *dec, double P, double r,
-        angle *al, angle *ze );
-pulsar *create_pulsar( angle *ra, angle *dec, double P, double r,
-        angle *al, angle *ze );
+void set_pulsar( pulsar *psr, psr_angle *ra, psr_angle *dec, double P, double r,
+        psr_angle *al, psr_angle *ze );
+pulsar *create_pulsar( psr_angle *ra, psr_angle *dec, double P, double r,
+        psr_angle *al, psr_angle *ze );
 void destroy_pulsar( pulsar *psr );
 
 void set_pulsar_period( pulsar *psr, double P );
@@ -125,17 +125,17 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
 
 /**** Dipole field functions ****/
 
-void obs_to_mag_frame( point *xo, pulsar *psr, angle *ph, point *xm );
-void mag_to_obs_frame( point *xm, pulsar *psr, angle *ph, point *xo );
+void obs_to_mag_frame( point *xo, pulsar *psr, psr_angle *ph, point *xm );
+void mag_to_obs_frame( point *xm, pulsar *psr, psr_angle *ph, point *xo );
 
 double calc_dipole_R( point *xm );
-void dipole_footpoint( pulsar *psr, double R, angle *si, point *foot_pt );
+void dipole_footpoint( pulsar *psr, double R, psr_angle *si, point *foot_pt );
 
 
 /**** Other functions ****/
 
 double light_cylinder( double P );
-void move_around_cyl( point *start_pt, angle *xi, double zdist,
+void move_around_cyl( point *start_pt, psr_angle *xi, double zdist,
                       point *end_pt );
 
 

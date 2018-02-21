@@ -38,8 +38,8 @@ void Bfield( point *x, pulsar *psr, point *B )
 
     // Taking into account finite light travel time...
     // Set up so that pole is where we think it is
-    angle phase;
-    set_angle_rad( &phase, (r - psr->r)/psr->rL );
+    psr_angle phase;
+    set_psr_angle_rad( &phase, (r - psr->r)/psr->rL );
 
     // Paul Arendt's equations
     double a  =  1.0 / r5;

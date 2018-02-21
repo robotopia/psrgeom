@@ -1,0 +1,51 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH DESTROY_PSR_ANGLE 3 2017-12-19 "" "Pulsar Geometry"
+.SH NAME
+destroy_psr_angle \- free memory for an "psr_angle" struct
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void destroy_psr_angle( psr_angle *" ang ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR destroy_psr_angle ()
+function frees dynamically allocated memory for an instance of the
+\fIpsr_angle\fP struct. It should be called to free memory that was allocated
+with
+.BR create_psr_angle ()
+,
+.BR create_psr_angle_rad ()
+, or
+.BR create_psr_angle_deg ()
+.
+.SH RETURN VALUE
+The
+.BR destroy_psr_angle ()
+function does not return anything.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    psr_angle *a = create_psr_angle();
+
+    set_psr_angle_rad( a, PI );
+
+    destroy_psr_angle( a );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR create_psr_angle (3),
+.BR create_psr_angle_rad (3),
+.BR create_psr_angle_deg (3),
+.BR copy_psr_angle (3),
+.BR set_psr_angle_rad (3),
+.BR set_psr_angle_deg (3),
+.BR set_psr_angle_sin (3),
+.BR set_psr_angle_cos (3)

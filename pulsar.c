@@ -16,14 +16,14 @@
 #include <math.h>
 #include "psrgeom.h"
 
-void set_pulsar( pulsar *psr, angle *ra, angle *dec, double P, double r,
-        angle *al, angle *ze )
+void set_pulsar( pulsar *psr, psr_angle *ra, psr_angle *dec, double P, double r,
+        psr_angle *al, psr_angle *ze )
 {
     // Only set non-NULL angle arguments
     if (ra)
-        copy_angle( ra,  &psr->ra  );
+        copy_psr_angle( ra,  &psr->ra  );
     if (dec)
-        copy_angle( dec, &psr->dec );
+        copy_psr_angle( dec, &psr->dec );
 
     // Set the pulsar period and the light cylinder radius
     set_pulsar_period( psr, P );
@@ -32,13 +32,13 @@ void set_pulsar( pulsar *psr, angle *ra, angle *dec, double P, double r,
     psr->r = r;
 
     if (al)
-        copy_angle( al, &psr->al );
+        copy_psr_angle( al, &psr->al );
     if (ze)
-        copy_angle( ze, &psr->ze );
+        copy_psr_angle( ze, &psr->ze );
 }
 
-pulsar *create_pulsar( angle *ra, angle *dec, double P, double r,
-        angle *al, angle *ze )
+pulsar *create_pulsar( psr_angle *ra, psr_angle *dec, double P, double r,
+        psr_angle *al, psr_angle *ze )
 {
     // Dynamically allocate memory for a pulsar struct
     pulsar *psr = (pulsar *)malloc( sizeof(pulsar) );
@@ -61,6 +61,6 @@ void set_pulsar_period( pulsar *psr, double P )
     psr->rL  = light_cylinder( P );
     psr->rL2 = psr->rL * psr->rL;
 
-    set_angle_rad( &psr->Om, 2.0*PI/P );
+    set_psr_angle_rad( &psr->Om, 2.0*PI/P );
 }
 

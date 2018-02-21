@@ -1,17 +1,17 @@
 .\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
-.TH SET_ANGLE_COS 3 2017-12-19 "" "Pulsar Geometry"
+.TH SET_PSR_ANGLE_COS 3 2017-12-19 "" "Pulsar Geometry"
 .SH NAME
-set_angle_cos \- set the values of an "angle" struct
+set_psr_angle_cos \- set the values of an "psr_angle" struct
 .SH SYNOPSIS
 .nf
 .B #include <psrgeom.h>
 .PP
-.BI "void set_angle_cos(angle *" ang ", double " Cos ");"
+.BI "void set_psr_angle_cos(psr_angle *" ang ", double " Cos ");"
 .fi
 .PP
 .SH DESCRIPTION
 The
-.BR set_angle_cos ()
+.BR set_psr_angle_cos ()
 function sets the member values of \fIang\fP to the values corresponding
 to the angle whose cosine is \fICos\fP. Specifically, the equivalent angle in
 radians, the equivalent angle in degrees, and the sine of the angle are
@@ -25,10 +25,10 @@ First the radians value is set to the output of
 .BR acos (),
 and then the degrees and sine values are calculated from the radians
 value in the same way as
-.BR set_angle_rad ().
+.BR set_psr_angle_rad ().
 .SH RETURN VALUE
 The
-.BR set_angle_cos ()
+.BR set_psr_angle_cos ()
 function does not return any value.
 .SH EXAMPLE
 .EX
@@ -36,9 +36,9 @@ function does not return any value.
 
 int main(int argc, char *argv[])
 {
-    angle *a = create_angle();
+    psr_angle *a = create_psr_angle();
 
-    set_angle_cos( 0.0 );
+    set_psr_angle_cos( 0.0 );
 
     /* Now,
        a->rad = PI,
@@ -51,11 +51,11 @@ int main(int argc, char *argv[])
 }
 .EE
 .SH SEE ALSO
-.BR create_angle (3),
-.BR create_angle_rad (3),
-.BR create_angle_deg (3),
-.BR copy_angle (3),
-.BR destroy_angle (3),
-.BR set_angle_rad (3),
-.BR set_angle_deg (3),
-.BR set_angle_sin (3)
+.BR create_psr_angle (3),
+.BR create_psr_angle_rad (3),
+.BR create_psr_angle_deg (3),
+.BR copy_psr_angle (3),
+.BR destroy_psr_angle (3),
+.BR set_psr_angle_rad (3),
+.BR set_psr_angle_deg (3),
+.BR set_psr_angle_sin (3)

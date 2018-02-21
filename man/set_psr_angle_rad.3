@@ -1,17 +1,17 @@
 .\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
-.TH SET_ANGLE_RAD 3 2017-12-19 "" "Pulsar Geometry"
+.TH SET_PSR_ANGLE_RAD 3 2017-12-19 "" "Pulsar Geometry"
 .SH NAME
-set_angle_rad \- set the values of an "angle" struct
+set_psr_angle_rad \- set the values of an "psr_angle" struct
 .SH SYNOPSIS
 .nf
 .B #include <psrgeom.h>
 .PP
-.BI "void set_angle_rad(angle *" ang ", double " rad ");"
+.BI "void set_psr_angle_rad(psr_angle *" ang ", double " rad ");"
 .fi
 .PP
 .SH DESCRIPTION
 The
-.BR set_angle_rad ()
+.BR set_psr_angle_rad ()
 function sets the member values of \fIang\fP to the values corresponding
 to the angle \fIrad\fP (in radians). Specifically, the equivalent angle in
 degrees, the sine of the angle, and the cosine of the angle are calculated
@@ -23,7 +23,7 @@ supplied in
 .BR math.h.
 .SH RETURN VALUE
 The
-.BR set_angle_rad ()
+.BR set_psr_angle_rad ()
 function does not return any value.
 .SH EXAMPLE
 .EX
@@ -31,9 +31,9 @@ function does not return any value.
 
 int main(int argc, char *argv[])
 {
-    angle *a = create_angle();
+    psr_angle *a = create_psr_angle();
 
-    set_angle_rad( PI );
+    set_psr_angle_rad( PI );
 
     /* Now,
        a->rad = PI,
@@ -46,11 +46,11 @@ int main(int argc, char *argv[])
 }
 .EE
 .SH SEE ALSO
-.BR create_angle (3),
-.BR create_angle_rad (3),
-.BR create_angle_deg (3),
-.BR copy_angle (3),
-.BR destroy_angle (3),
-.BR set_angle_deg (3),
-.BR set_angle_sin (3),
-.BR set_angle_cos (3)
+.BR create_psr_angle (3),
+.BR create_psr_angle_rad (3),
+.BR create_psr_angle_deg (3),
+.BR copy_psr_angle (3),
+.BR destroy_psr_angle (3),
+.BR set_psr_angle_deg (3),
+.BR set_psr_angle_sin (3),
+.BR set_psr_angle_cos (3)

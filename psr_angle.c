@@ -20,49 +20,50 @@
 #include <math.h>
 #include "psrgeom.h"
 
-angle *create_angle()
+psr_angle *create_psr_angle()
 /* Allocate memory for a new instance of the angle struct, but do not populate
  * it with any value
  */
 {
-    return (angle *)malloc( sizeof(angle) );
+    return (psr_angle *)malloc( sizeof(psr_angle) );
 }
 
-angle *create_angle_rad( double rad )
+psr_angle *create_psr_angle_rad( double rad )
 /* Allocate memory for a new instance of the angle struct, and populate its
  * members from the supplied angle in radians
  */
 {
-    angle *ang = (angle *)malloc( sizeof(angle) );
-    set_angle_rad( ang, rad );
+    psr_angle *ang = (psr_angle *)malloc( sizeof(psr_angle) );
+    set_psr_angle_rad( ang, rad );
 
     return ang;
 }
 
-angle *create_angle_deg( double deg )
+psr_angle *create_psr_angle_deg( double deg )
 /* Allocate memory for a new instance of the angle struct, and populate its
  * members from the supplied angle in degrees
  */
 {
-    angle *ang = (angle *)malloc( sizeof(angle) );
-    set_angle_deg( ang, deg );
+    psr_angle *ang = (psr_angle *)malloc( sizeof(psr_angle) );
+    set_psr_angle_deg( ang, deg );
 
     return ang;
 }
 
-void destroy_angle( angle *ang )
+void destroy_psr_angle( psr_angle *ang )
 /* Free memory assigned to an angle struct */
 {
     free( ang );
 }
 
-void copy_angle( angle *src, angle *dest )
+void copy_psr_angle( psr_angle *src, psr_angle *dest )
 /* Copy across the contents from angle src to angle dest */
 {
     // Error checking: NULLs disallowed
     if (!src || !dest)
     {
-        fprintf( stderr, "error: copy_angle: src and dest cannot be NULL\n" );
+        fprintf( stderr, "error: copy_psr_angle: src and dest cannot be "
+                         "NULL\n" );
         exit(EXIT_FAILURE);
     }
 
@@ -73,7 +74,7 @@ void copy_angle( angle *src, angle *dest )
     dest->cos = src->cos;
 }
 
-void set_angle_rad( angle *ang, double rad )
+void set_psr_angle_rad( psr_angle *ang, double rad )
 /* Fill the angle struct with calculated trigonometric values derived from the
  * supplied angle in radians
  */
@@ -84,7 +85,7 @@ void set_angle_rad( angle *ang, double rad )
     ang->cos   = cos(ang->rad);
 }
 
-void set_angle_deg( angle *ang, double deg )
+void set_psr_angle_deg( psr_angle *ang, double deg )
 /* Fill the angle struct with calculated trigonometric values derived from the
  * supplied angle in degrees
  */
@@ -95,7 +96,7 @@ void set_angle_deg( angle *ang, double deg )
     ang->cos   = cos(ang->rad);
 }
 
-void set_angle_sin( angle *ang, double Sin )
+void set_psr_angle_sin( psr_angle *ang, double Sin )
 /* Fill the angle struct with calculated trigonometric values derived from the
  * supplied sin of the angle
  */
@@ -106,7 +107,7 @@ void set_angle_sin( angle *ang, double Sin )
     ang->cos   = cos(ang->rad);
 }
 
-void set_angle_cos( angle *ang, double Cos )
+void set_psr_angle_cos( psr_angle *ang, double Cos )
 /* Fill the angle struct with calculated trigonometric values derived from the
  * supplied cos of the angle
  */
@@ -118,7 +119,7 @@ void set_angle_cos( angle *ang, double Cos )
 }
 
 
-void rotate_about_axis( point *in, point *out, angle *rot, char axis,
+void rotate_about_axis( point *in, point *out, psr_angle *rot, char axis,
                         int flags )
 /* Rotate a point about the specified "axis" by amount "rot".
  * Assumes only that the Cartesian points of *in are defined.
@@ -156,15 +157,15 @@ void rotate_about_axis( point *in, point *out, angle *rot, char axis,
 }
 
 
-void min_phase_diff( angle *a1, angle *a2, angle *diff )
+void min_phase_diff( psr_angle *a1, psr_angle *a2, psr_angle *diff )
 /* Calculate the minimum absolute phase difference between two angles.
  *
  * Inputs:
- *   angle *a1    : any arbitrary angle
- *   angle *a2    : any arbitrary angle
+ *   psr_angle *a1    : any arbitrary angle
+ *   psr_angle *a2    : any arbitrary angle
  *
  * Outputs:
- *   angle *diff  : the angle between a1 and a2
+ *   psr_angle *diff  : the angle between a1 and a2
  */
 {
     double phase_diff_deg = fabs( a1->deg - a2->deg );
@@ -173,5 +174,5 @@ void min_phase_diff( angle *a1, angle *a2, angle *diff )
                       phase_diff_deg - 360.0 :
                       phase_diff_deg);              // -180 < x < 180
     phase_diff_deg = fabs( phase_diff_deg );        //  0   < x < 180
-    set_angle_deg( diff, phase_diff_deg );
+    set_psr_angle_deg( diff, phase_diff_deg );
 }

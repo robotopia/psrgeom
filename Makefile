@@ -16,7 +16,7 @@ CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG)
 LIBRARY = psrgeom
 LIBFILE = lib$(LIBRARY).a
 HDRFILE = $(LIBRARY).h
-OBJS = angle.o \
+OBJS = psr_angle.o \
 	   point.o \
 	   lightcyl.o \
 	   pulsar.o \

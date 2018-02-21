@@ -1,0 +1,49 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH COPY_PSR_ANGLE 3 2017-12-19 "" "Pulsar Geometry"
+.SH NAME
+copy_psr_angle \- copy the values from one angle struct to another
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void copy_psr_angle(psr_angle *" src ", psr_angle *" dest ");
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR copy_psr_angle ()
+function copies the values of the member variables of \fIsrc\fP to those of
+\fIdest\fP. Both \fIsrc\fP and \fIdest\fP must be valid pointers to existing
+angle structs.
+.SH RETURN VALUE
+The
+.BR copy_psr_angle ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    psr_angle *a = create_psr_angle_rad( PI );
+    psr_angle *b = create_psr_angle();
+
+    copy_psr_angle( a, b );
+
+    /* Now b contains the value of PI radians */
+
+    destroy_psr_angle( a );
+    destroy_psr_angle( b );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR create_psr_angle (3),
+.BR create_psr_angle_deg (3),
+.BR create_psr_angle_rad (3),
+.BR destroy_psr_angle (3),
+.BR set_psr_angle_rad (3),
+.BR set_psr_angle_deg (3),
+.BR set_psr_angle_sin (3),
+.BR set_psr_angle_cos (3)
