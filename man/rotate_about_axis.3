@@ -1,0 +1,49 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH ROTATE_ABOUT_AXIS 3 2017-12-19 "" "Pulsar Geometry"
+.SH NAME
+rotate_about_axis \- rotate a point about either the x-, y-, or z- axis
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void rotate_about_axis(point *" in ", point *" out ", psr_angle *" rot ",
+char " axis ", int " flags ");
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR rotate_about_axis()
+ifunction rotates the point \fIin\fP about \fIaxis\fP by an angle \fIrot\fP,
+and records the new point in \fIout\fP. The \fIflags\fP parameter specifies
+which members of the \fIout\fP are set (see, e.g., 
+.BR set_point_xyz()
+ for a list of valid flags). This function assumes that the x, y, and z fields
+of \fIin\fP have been set. \fIaxis\fP can take the values 'x', 'X', 'y', 'Y',
+'z', 'Z', and will terminate with an error if any other value is used.
+.SH RETURN VALUE
+The
+.BR rotate_about_axis ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    point a, b;
+    set_point_xyz( &a, 1.0, 0.0, 0.0, POINT_SET_ALL );
+
+    psr_angle *rot = create_psr_angle_rad( PI/2.0 );
+
+    rotate_about_axis( &a, &b, rot, 'z', POINT_SET_ALL );
+
+    /* Now b is the point (0,1,0) */
+
+    destroy_psr_angle( rot );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR create_psr_angle (3),
+.BR set_point_xyz (3)
