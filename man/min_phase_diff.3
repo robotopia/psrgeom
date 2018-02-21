@@ -1,0 +1,46 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH MIN_PHASE_DIFF 3 2018-02-21 "" "Pulsar Geometry"
+.SH NAME
+min_phase_diff \- calculate the minimum absolute phase difference between
+two angles
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void min_phase_diff(psr_angle *" a1 ", psr_angle *" a2 ", psr_angle *" diff ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR min_phase_diff()
+function calculates the minimum absolute phase difference between the angles
+\fIa1\fP and \fIa2\fP, recording the result in \fIdiff\fP. By definition,
+\fIdiff\fP must be within the interval [0,180) (in degrees).
+.SH RETURN VALUE
+The
+.BR min_phase_diff ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    psr_angle *a1 = create_psr_angle_deg( 90.0 );
+    psr_angle *a2 = create_psr_angle_deg( 275.0 );
+    psr_angle *diff = create_psr_angle( );
+
+    min_phase_diff( a1, a2, diff );
+
+    /* Now diff has a value of 175 (degrees) */
+
+    destroy_psr_angle( a1 );
+    destroy_psr_angle( a2 );
+    destroy_psr_angle( diff );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR create_psr_angle (3),
+.BR destroy_psr_angle (3)

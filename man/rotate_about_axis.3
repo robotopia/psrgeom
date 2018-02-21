@@ -1,19 +1,18 @@
 .\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
-.TH ROTATE_ABOUT_AXIS 3 2017-12-19 "" "Pulsar Geometry"
+.TH ROTATE_ABOUT_AXIS 3 2018-02-21 "" "Pulsar Geometry"
 .SH NAME
 rotate_about_axis \- rotate a point about either the x-, y-, or z- axis
 .SH SYNOPSIS
 .nf
 .B #include <psrgeom.h>
 .PP
-.BI "void rotate_about_axis(point *" in ", point *" out ", psr_angle *" rot ",
-char " axis ", int " flags ");
+.BI "void rotate_about_axis(point *" in ", point *" out ", psr_angle *" rot ", char " axis ", int " flags ");"
 .fi
 .PP
 .SH DESCRIPTION
 The
 .BR rotate_about_axis()
-ifunction rotates the point \fIin\fP about \fIaxis\fP by an angle \fIrot\fP,
+function rotates the point \fIin\fP about \fIaxis\fP by an angle \fIrot\fP,
 and records the new point in \fIout\fP. The \fIflags\fP parameter specifies
 which members of the \fIout\fP are set (see, e.g., 
 .BR set_point_xyz()

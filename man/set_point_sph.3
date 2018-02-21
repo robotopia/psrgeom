@@ -1,0 +1,70 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH SET_POINT_SPH 3 2018-02-21 "" "Pulsar Geometry"
+.SH NAME
+set_point_sph \- set the values of a "point" struct
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void set_point_sph(point *" p ", double " r ", psr_angle *" th ", psr_angle *" ph ", int " flags ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR set_point_sph ()
+function sets the member values of \fIp\fP to the values corresponding
+to the 3D point (\fIr\fP,\fIth\fP,\fIph\fP) given in spherical coordinates.
+Here, \fIth\fP is measured from the z-axis (cf. co-latitude), and \fIph\fP
+is measured from the x-axis (cf. longitude). Which member values that are set
+depend on the value of \fIflags\fP, which can take on the following values (or
+any subset therefrom, combined with bitwise 'or'):
+
+.BR POINT_SET_NONE
+|
+.BR POINT_SET_X
+|
+.BR POINT_SET_Y
+|
+.BR POINT_SET_Z
+|
+.BR POINT_SET_R
+|
+.BR POINT_SET_TH
+|
+.BR POINT_SET_PH
+|
+.BR POINT_SET_RHOSQ
+|
+.BR POINT_SET_XYZ
+|
+.BR POINT_SET_SPH
+|
+.BR POINT_SET_ALL
+.SH RETURN VALUE
+The
+.BR set_point_sph ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    point P;
+    psr_angle *th = create_psr_angle_deg( 60.0 );
+    psr_angle *ph = create_psr_angle_deg( 120.0 );
+
+    set_point_sph( &P, 1.0, th, ph, POINT_SET_XYZ | POINT_SET_R );
+
+    /* P now has Cartesian coords (-0.433013, 0.75, 0.5) */
+
+    destroy_psr_angle( th );
+    destroy_psr_angle( ph );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR set_point_xyz (3),
+.BR set_point_cyl (3),
+.BR copy_point (3)
