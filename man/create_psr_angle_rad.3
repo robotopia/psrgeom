@@ -1,0 +1,46 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH CREATE_PSR_ANGLE_RAD 3 2017-12-19 "" "Pulsar Geometry"
+.SH NAME
+create_psr_angle_rad \- allocate memory for an "psr_angle" struct
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "psr_angle *create_psr_angle_rad(double " rad ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR create_psr_angle_rad ()
+function dynamically allocates memory for an instance of the \fIpsr_angle\fP
+struct, and sets the value of the member values to the supplied angle
+\fIrad\fP in radians. Angles created this way should be deallocated by
+calling the
+.BR destroy_psr_angle ()
+function.
+.SH RETURN VALUE
+The
+.BR create_psr_angle_rad ()
+function returns a pointer to the newly allocated struct.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    psr_angle *a = create_psr_angle_rad( PI );
+
+    destroy_psr_angle( a );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR create_psr_angle (3),
+.BR create_psr_angle_deg (3),
+.BR copy_psr_angle (3),
+.BR destroy_psr_angle (3),
+.BR set_psr_angle_rad (3),
+.BR set_psr_angle_deg (3),
+.BR set_psr_angle_sin (3),
+.BR set_psr_angle_cos (3)
