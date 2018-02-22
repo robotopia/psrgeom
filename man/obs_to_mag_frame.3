@@ -1,0 +1,75 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH OBS_TO_MAG_FRAME 3 2018-02-22 "" "Pulsar Geometry"
+.SH NAME
+obs_to_mag_frame \- convert a point's coordinates from the observer frame to the magnetic frame
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void obs_to_mag_frame(point *" xo ", pulsar *" psr ", psr_angle *" ph ", point *" xm ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR obs_to_mag_frame ()
+function converts the point \fIxo\fP from the observer frame to the magnetic
+frame of the pulsar \fIpsr\fP, storing the result in the point \fIxm\fP. As
+well as the Cartesian coordinates, this function assumes that the radial
+coordinate (i.e. \fIxo.r\fP) is also properly defined. The pulsar is assumed
+to be rotating in the positive sense (cf. the direction that the fingers of
+the right hand curl when the thumb is pointed along the rotation axis) and
+is instantaneously at a rotation phase of \fIph\fP.
+.PP
+The observer frame is defined as follows: the origin is located at the centre
+of the pulsar; the (+ve) z-axis coincides with the (+ve) rotation axis; the
+x-axis is perpendicular to the z-axis, in the plane defined by the rotation
+axis and the line of sight, with a positive direction pointing most nearly
+towards the observer; and the y-axis is perpendicular to both the x- and
+z-axes, forming a right-handed system.
+.PP
+The magnetic frame is defined as the result of submitting the observer frame
+to two Euler rotations: (1) a positive rotation about the y-axis by alpha, the
+angle defined by \fIpsr.al\fP, followed by (2) a positive rotation about the
+z-axis (i.e. the original z-axis, or in other words the rotation axis) by phi,
+the angle defined by \fIph\fP. Setting \fIph\fP to
+.BR NULL
+is equivalent to supplying an angle of zero.
+.PP
+The point \fIxm\fP is set using the flag
+.BR POINT_SET_ALL
+(see, e.g.,
+.BR set_psr_angle_deg()
+).
+.SH RETURN VALUE
+The
+.BR obs_to_mag_frame ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    double P = 1.0;
+    double r = 1.0e4;
+
+    psr_angle al, ze, ph;
+    set_psr_angle_deg( &al, 45.0 );
+    set_psr_angle_deg( &ze, 50.0 );
+    set_psr_angle_deg( &ph, 60.0 );
+
+    pulsar psr;
+    set_pulsar( &psr, NULL, NULL, P, r, &al, &ze );
+
+    point xo, xm;
+    set_point_xyz( &xo, psr.rL, 0.0, 0.0, POINT_SET_ALL );
+
+    obs_to_mag_frame( &xo, &psr, &ph, &xm );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR mag_to_obs_frame (3),
+.BR calc_dipole_R (3),
+.BR dipole_footpoint (3)

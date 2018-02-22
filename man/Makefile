@@ -20,7 +20,8 @@ TARGETS = Bfield.3.gz \
 		  set_pulsar.3.gz \
 		  create_pulsar.3.gz \
 		  destroy_pulsar.3.gz \
-		  set_pulsar_period.3.gz
+		  set_pulsar_period.3.gz \
+		  obs_to_mag_frame.3.gz
 
 all: $(TARGETS)
 
