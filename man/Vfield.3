@@ -1,0 +1,82 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH VFIELD 3 2017-11-28 "" "Pulsar Geometry"
+.SH NAME
+Vfield \- calculate the velocity field around a pulsar
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void Vfield(point *" x ", pulsar *" psr ", double " v ", point *" V1 ", point *" V2 ", int *" nsols ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR Vfield ()
+function calculates the velocity field \fIV\fP at the point \fIx\fP around
+pulsar \fIpsr\fP when the magnetic axis is instantaneously in the xz-plane
+(towards positive x), assuming that the speed of the particles is fixed at
+.I v
+and that the azimuthal speed equals the rotation rate of the pulsar. It also
+assumes the field calculated in
+.BR Bfield (),
+which is equivalent to the vacuum Deutsch (1955) solution in which the finite
+light travel time is taken into account.
+.PP
+The function assumes that both the Cartesian and spherical coordinates of
+.I x
+are set. Similarly, \fIpsr\fP is assumed to have meaningful values
+of \fIal\fP, \fIrL\fP, and \fIrL2\fP.
+.PP
+There are two possible solutions for each point, which are set to
+.I V1
+and
+.I V2
+respectively. The actual number of solutions (which can be 0, 1, or 2) is
+recorded in
+.IR nsols .
+Upon return, only the Cartesian values in
+.I V1
+(and/or
+.IR V2 )
+are set, as well as the radius, r. The Cartesian points correspond to a unit
+vector which is parallel to the velocity field at point
+.IR x .
+The radius,
+.I V1.r
+(and/or
+.IR V2.r ),
+is the magnitude of the velocity.
+.SH RETURN VALUE
+The
+.BR Vfield ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    double P = 1.0;
+    double r = 1.0e4;
+
+    psr_angle al, ze;
+    set_psr_angle_deg( &al, 45.0 );
+    set_psr_angle_deg( &ze, 50.0 );
+
+    pulsar psr;
+    set_pulsar( &psr, NULL, NULL, P, r, &al, &ze );
+
+    point x, V1, V2;
+    set_point_xyz( &x, psr.rL, 0.0, 0.0, POINT_SET_ALL );
+
+    double v = SPEED_OF_LIGHT;
+    int nsols;
+
+    Vfield( &x, &psr, v, &V1, &V2, &nsols );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR Bfield (3),
+.BR psrgeom (3)

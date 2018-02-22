@@ -120,6 +120,8 @@ void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
 double Bdotrxy( point *x, pulsar *psr );
 void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
                 FILE *write_xyz, point *foot_pt );
+void Vfield( point *x, pulsar *psr, double v, point *V1, point *V2,
+             int *nsols );
 
 
 
