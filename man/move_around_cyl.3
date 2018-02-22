@@ -1,0 +1,55 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH MOVE_AROUND_CYL 3 2018-02-22 "" "Pulsar Geometry"
+.SH NAME
+move_around_cyl \- Move a point on the surface of a cylinder in an arbitrary direction
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void move_around_cyl(point *" start_pt ", psr_angle *" xi ", double " dist ", point *" end_pt ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR move_around_cyl ()
+function calculates the point that you would arrive at if you start at point
+.I start_pt
+and move a distance
+.I dist
+and with a constant pitch angle of
+.I xi
+on the surface of a cylinder aligned with the z-axis. In other words, this
+function moves a point along a helix. The final point is recorded in
+.IR end_pt .
+The pitch angle
+.I xi
+is the angle that the trajectory makes with the xy-plane.
+.PP
+This function assumes that
+.I start_pt
+has both defined Cartesian and spherical coordinates.
+.SH RETURN VALUE
+The
+.BR dipole_footpoint ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    point x1, x2;
+    set_point_xyz( &x1, 1.0, 0.0, 0.0, POINT_SET_ALL );
+
+    psr_angle *xi = create_psr_angle_deg( 45.0 );
+
+    double dist = 2.0;
+
+    move_around_cyl( &x1, xi, dist, &x2 );
+
+    destroy_psr_angle( xi );
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR psrgeom (3)

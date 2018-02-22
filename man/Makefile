@@ -25,6 +25,7 @@ TARGETS = Bfield.3.gz \
 		  mag_to_obs_frame.3.gz \
 		  calc_dipole_R.3.gz \
 		  dipole_footpoint.3.gz \
+		  move_around_cyl.3.gz \
 		  psrgeom.3.gz
 
 all: $(TARGETS)

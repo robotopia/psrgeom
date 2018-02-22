@@ -51,6 +51,9 @@ Set the values of an "psr_angle" struct
 .BR copy_point
 copy a point struct
 .TP
+.BR move_around_cyl
+Move a point on the surface of a cylinder in an arbitrary direction
+.TP
 .BR set_point_cyl
 Set the values of a "point" struct
 .TP
@@ -69,6 +72,9 @@ Set the values of a "pulsar" struct
 .TP
 .BR destroy_pulsar
 Deallocates memory of a "pulsar" struct
+.TP
+.BR light_cylinder
+calculate the light cylinder radius
 .TP
 .BR set_pulsar
 Set the values of a "pulsar" struct
@@ -113,7 +119,7 @@ Advance a point along a pulsar's magnetic field line
 Find the point that a magnetic field line penetrates the pulsar surface
 .PP
 .SH STRUCTS
-.I psr_angle:
+psr_angle:
 .EX
 
     double deg; // The angle in degrees
@@ -122,28 +128,44 @@ Find the point that a magnetic field line penetrates the pulsar surface
     double sin; // The sine of the angle
 
 .EE
-.I point
+point:
 .EX
 
-    double    x[3];   // x,y,z coordinates
-    double    r;      // distance from origin = sqrt(x^2 + y^2 + z^2)
-    psr_angle th;     // The colatitude
-    psr_angle ph;     // The longitude
-    double    rhosq;  // distance from z axis squared = x^2 + y^2
+    double     x[3];   // x,y,z coordinates
+    double     r;      // distance from origin = sqrt(x^2 + y^2 + z^2)
+    psr_angle  th;     // The colatitude
+    psr_angle  ph;     // The longitude
+    double     rhosq;  // distance from z axis squared = x^2 + y^2
 
 .EE
-.I pulsar
+pulsar:
 .EX
 
     psr_angle    ra;    // Right Ascension
     psr_angle    dec;   // Declination
-    double   P;     // Rotation period
+    double       P;     // Rotation period
     psr_angle    Om;    // Rotation frequency = 2π/P
-    //double   Pdot;  // First time derivative of rotation period
-    double   r;     // Stellar radius
-    double   rL;    // Light cylinder radius
-    double   rL2;   // = rL^2 (because it comes up quite often)
+    //double     Pdot;  // First time derivative of rotation period
+    double       r;     // Stellar radius
+    double       rL;    // Light cylinder radius
+    double       rL2;   // = rL^2 (because it comes up quite often)
     psr_angle    al;    // Angle between the rotation and magnetic axes
     psr_angle    ze;    // Angle between the rotation axis and the line of sight
 
 .EE
+.SH CONSTANTS
+.TP 16
+.B PI
+.RB "Same as " M_PI " from math.h"
+.TP
+.B SPEED_OF_LIGHT
+The speed of light (= 299792458)
+.TP
+.B DEG2RAD
+.BR PI " / 180"
+.TP
+.B RAD2DEG
+.RB "180 / " PI
+.TP
+.B NDEP
+The number of dimensions (= 3)
