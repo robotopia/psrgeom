@@ -1,0 +1,67 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH FOOTPOINT 3 2018-02-22 "" "Pulsar Geometry"
+.SH NAME
+footpoint \- find the point that a magnetic field line penetrates the pulsar surface
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void footpoint(point *" start_pt ", pulsar *" psr ", double " tmult ", int " direction ", FILE *" write_xyz ", point *" foot_pt ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR footpoint ()
+function finds the point on the surface of \fIpsr\fP through which passes the
+same magnetic field line that passes through \fIstart_pt\fP. It achieves this
+by stepping along the field line in the specified \fIdirection\fP (either
+.BR DIR_OUTWARD
+or
+.BR DIR_INWARD
+which mean 'in the same direction as' and 'in the opposite direction to' the
+local magnetic field, respectively) in steps of size \fItmult\fP times the
+stellar radius, according to a 4th order Runge Kutta method.  If
+\fIwrite_xyz\fP is not
+.BR NULL,
+the Cartesian coordinates of each point are written out to the specified file.
+The final point is recorded in \fIfoot_pt\fP.
+.PP
+The steps are carried out by successive calls to
+.BR Bstep()
+until the point drops below the stellar radius. Then, the stepping continues
+as before, but in the opposite direction and with half the step size. This
+process is iterated until the difference between the stellar radius and the
+point's radial distance from the origin drops below 1e-14 times the stellar
+radius.
+.SH RETURN VALUE
+The
+.BR footpoint ()
+function returns does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    double P = 1.0;
+    double r = 1.0e4;
+
+    psr_angle al, ze;
+    set_psr_angle_deg( &al, 45.0 );
+    set_psr_angle_deg( &ze, 50.0 );
+
+    pulsar psr;
+    set_pulsar( &psr, NULL, NULL, P, r, &al, &ze );
+
+    point x, fp;
+    set_point_xyz( &x, psr.rL/2.0, 0.0, psr.rL/2.0, POINT_SET_ALL );
+
+    footpoint( &x, &psr, 0.01, DIR_INWARD, stdout, &fp );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR Bfield (3),
+.BR Bstep (3),
+.BR Bdotrxy (3),
