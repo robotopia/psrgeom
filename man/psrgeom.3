@@ -1,0 +1,149 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH PSRGEOM 3 2018-02-22 "" "Pulsar Geometry"
+.SH NAME
+PSR Geometry \- a package for working with the magnetic field geometry around pulsars
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.fi
+.PP
+.SH FUNCTIONS
+.I Angles
+.RS 4
+.TP 24
+.BR copy_psr_angle
+Copy the values from one angle struct to another
+.TP
+.BR create_psr_angle
+Allocate memory for an "psr_angle" struct
+.TP
+.BR create_psr_angle_deg
+Allocate memory for an "psr_angle" struct
+.TP
+.BR create_psr_angle_rad
+Allocate memory for an "psr_angle" struct
+.TP
+.BR destroy_psr_angle
+Free memory for an "psr_angle" struct
+.TP
+.BR min_phase_diff
+Calculate the minimum absolute phase difference between
+.TP
+.BR rotate_about_axis
+Rotate a point about either the x-, y-, or z- axis
+.TP
+.BR set_psr_angle_cos
+Set the values of an "psr_angle" struct
+.TP
+.BR set_psr_angle_deg
+Set the values of an "psr_angle" struct
+.TP
+.BR set_psr_angle_rad
+Set the values of an "psr_angle" struct
+.TP
+.BR set_psr_angle_sin
+Set the values of an "psr_angle" struct
+.RE
+.PP
+.I Points (general)
+.RS 4
+.TP 24
+.BR copy_point
+copy a point struct
+.TP
+.BR set_point_cyl
+Set the values of a "point" struct
+.TP
+.BR set_point_sph
+Set the values of a "point" struct
+.TP
+.BR set_point_xyz
+Set the values of a "point" struct
+.RE
+.PP
+.I Pulsars
+.RS 4
+.TP 24
+.BR create_pulsar
+Set the values of a "pulsar" struct
+.TP
+.BR destroy_pulsar
+Deallocates memory of a "pulsar" struct
+.TP
+.BR set_pulsar
+Set the values of a "pulsar" struct
+.TP
+.BR set_pulsar_period
+Sets the period of a "pulsar" struct
+.RE
+.PP
+.I Magnetic field (general)
+.RS 4
+.TP 24
+.BR mag_to_obs_frame
+Convert a point's coordinates from the magnetic frame to the observer frame
+.TP
+.BR obs_to_mag_frame
+Convert a point's coordinates from the observer frame to the magnetic frame
+.RE
+.PP
+.I Magnetic field (dipole)
+.RS 4
+.TP 24
+.BR calc_dipole_R
+calculates the maximum extent of a dipole magnetic field line
+.TP
+.BR dipole_footpoint
+calculates the footpoint of a magnetic field line
+.RE
+.PP
+.I Magnetic field (Paul Arendt's formulation)
+.RS 4
+.TP 24
+.BR Bdotrxy
+Calculate a dot product at a point around a pulsar
+.TP
+.BR Bfield
+Calculate the magnetic field around a pulsar
+.TP
+.BR Bstep
+Advance a point along a pulsar's magnetic field line
+.TP
+.BR footpoint
+Find the point that a magnetic field line penetrates the pulsar surface
+.PP
+.SH STRUCTS
+.I psr_angle:
+.EX
+
+    double deg; // The angle in degrees
+    double rad; // The angle in radians
+    double cos; // The cosine of the angle
+    double sin; // The sine of the angle
+
+.EE
+.I point
+.EX
+
+    double    x[3];   // x,y,z coordinates
+    double    r;      // distance from origin = sqrt(x^2 + y^2 + z^2)
+    psr_angle th;     // The colatitude
+    psr_angle ph;     // The longitude
+    double    rhosq;  // distance from z axis squared = x^2 + y^2
+
+.EE
+.I pulsar
+.EX
+
+    psr_angle    ra;    // Right Ascension
+    psr_angle    dec;   // Declination
+    double   P;     // Rotation period
+    psr_angle    Om;    // Rotation frequency = 2π/P
+    //double   Pdot;  // First time derivative of rotation period
+    double   r;     // Stellar radius
+    double   rL;    // Light cylinder radius
+    double   rL2;   // = rL^2 (because it comes up quite often)
+    psr_angle    al;    // Angle between the rotation and magnetic axes
+    psr_angle    ze;    // Angle between the rotation axis and the line of sight
+
+.EE

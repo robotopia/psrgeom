@@ -1,0 +1,61 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH DIPOLE_FOOTPOINT 3 2018-02-22 "" "Pulsar Geometry"
+.SH NAME
+dipole_footpoint \- Calculates the footpoint of a magnetic field line
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void dipole_footpoint(pulsar *" psr ", double " R ", psr_angle *" si ", point *" foot_pt ");
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR dipole_footpoint ()
+function calculates the point that a dipole magnetic field defined by its
+maximum extent, \fIR\fP, and its magnetic aximuth, \fIsi\fP, penetrates the
+stellar surface of the pulsar \fIpsr\fP, recording the result in
+\fIfoot_pt\fP.
+.PP
+The magnetic azimuth is defined such that zero points from the magneic axis
+to the rotation axis. The magnetic colatitude, th,  of the footpoint is
+calculated from the dipole formula
+.EX
+
+    r = R * sin(th),
+
+.EE
+where r is the stellar radius (\fIpsr.r\fP). The resulting point is finally
+transformed into the observer frame.
+.SH RETURN VALUE
+The
+.BR dipole_footpoint ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    double P = 1.0;
+    double r = 1.0e4;
+
+    psr_angle al, ze, si;
+    set_psr_angle_deg( &al,  45.0 );
+    set_psr_angle_deg( &ze,  50.0 );
+    set_psr_angle_deg( &si, 150.0 );
+
+    pulsar psr;
+    set_pulsar( &psr, NULL, NULL, P, r, &al, &ze );
+    double R = psr.rL/2.0;
+
+    point foot_pt;
+    dipole_footpoint( &psr, R, &si, &foot_pt );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR obs_to_mag_frame (3),
+.BR mag_to_obs_frame (3),
+.BR calc_dipole_R (3)

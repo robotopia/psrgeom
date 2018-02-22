@@ -1,0 +1,44 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH CALC_DIPOLE_R 3 2018-02-22 "" "Pulsar Geometry"
+.SH NAME
+calc_dipole_R \- Calculates the maximum extent of a dipole magnetic field line
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "double calc_dipole_R(point *" xm ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR calc_dipole_R ()
+function calculates the maximum extent, R, of a dipole magnetic field line
+that passes through the point \fIxm\fP, assumed to be in magnetic coordinates.
+It is from the point's radial distance (\fIxm.r\fP) and its theta angle
+(\fIxm.th\fP) according to the dipole formula:
+.EX
+
+    r = R * sin(th)
+.EE
+.SH RETURN VALUE
+The
+.BR calc_dipole_R ()
+function returns the calculated value R.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    point x;
+    set_point_xyz( &x, 2.0, 0.0, 3.0, POINT_SET_ALL );
+
+    double R = calc_dipole_R( &x );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR obs_to_mag_frame (3),
+.BR mag_to_obs_frame (3),
+.BR dipole_footpoint (3)
