@@ -4,6 +4,7 @@
 ## Unreleased
 
 * Added man pages for all the functions in this library.
+* Added velocity and acceleration field calculation for any given point.
 
 ----
 ## v1.0.1 (2018-02-21)
