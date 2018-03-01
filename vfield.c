@@ -125,14 +125,27 @@ void Vfield( point *x, pulsar *psr, double v, point *V1, point *V2,
     }
 }
 
-void Afield( point *X, pulsar *psr, double v, point *A1, point *A2,
-             int *nsols )
-/* This returns the normalised vector A (cast as a "point"), i.e. the accel-
- * eration of a particle instantaneously at point x (observer frame) when the
- * magnetic axis is instantaneously in the xz-plane.
+void calc_fields( point *X, pulsar *psr, double v,
+                  point *B1,
+                  point *V1, point *V2,
+                  point *A1, point *A2,
+                  int *nsols )
+/* This returns the normalised vectors corresponding to the magnetic field, B;
+ * the velocity field, V; and the acceleration field, A. These are the fields
+ * corresponding to a particle instantaneously at point X (observer frame)
+ * when the magnetic axis is instantaneously in the xz-plane.
+ *
+ * There are two possible solutions for the velocity and acceleration, denoted
+ * V1, V2, etc. For the velocity, it is possible for there to be exactly one
+ * solution, in which case V1 will be set to it; however, in ths case, the
+ * acceleration blows up, so the acceleration can only have 0 or 2 solutions.
+ *
+ * If any of B1, V1, V2, A1, or A2 are set to NULL, they are not recorded.
+ * Moreover, this function tries to limit the calculation actually performed
+ * to only what is needed to calculate the requested fields.
  *
  * This function assumes that both the Cartesian and spherical coordinates of
- * x are set.
+ * X are set.
  *
  * Inputs:
  *   point  *X      = the location of the particle in observer coordinates
@@ -141,14 +154,33 @@ void Afield( point *X, pulsar *psr, double v, point *A1, point *A2,
  *
  * Outputs:
  *   int    *nsols  = the number of solutions found (0, 1, or 2)
+ *   point  *B1     = the normalised mag. field   of the particle
+ *   point  *V1     = the normalised velocity     of the particle (sol #1)
+ *   point  *V2     = the normalised velocity     of the particle (sol #2)
  *   point  *A1     = the normalised acceleration of the particle (sol #1)
  *   point  *A2     = the normalised acceleration of the particle (sol #2)
  */
 {
+    // First, figure out how much of the following we need to calculate
+    int calcB = 0;
+    int calcV = 0;
+    int calcA = 0;
+
+    if (B1)         calcB = 1;
+    if (V1 || V2)   calcV = 1;
+    if (A1 || A2)   calcA = 1;
+
+    if (!calcB && !calcV && !calcA)
+        return;
+
     // Generic loop counters
     int i, j, k;
 
-    // This initial bit is very similar to Bfield()
+    /**********************************************************************
+     * Everything needs the calculation of B, so do this bit in any case. *
+     **********************************************************************/
+
+    // Paul Arendt's equations
     double x     = X->x[0];
     double y     = X->x[1];
     double z     = X->x[2];
@@ -176,7 +208,6 @@ void Afield( point *X, pulsar *psr, double v, point *A1, point *A2,
     psr_angle phase;
     set_psr_angle_rad( &phase, (r - psr->r)/psr->rL );
 
-    // Paul Arendt's equations
     double a[] =
     {
         1.0 / r5,
@@ -186,7 +217,110 @@ void Afield( point *X, pulsar *psr, double v, point *A1, point *A2,
         psr->al.sin * (-phase.sin/r5 + phase.cos/r4/psr->rL)
     };
 
-    // and their derivatives with respect to (x,y,z)
+    // The following are the x,y,z terms that get multiplied to the a[] terms
+    // to produce the magnetic field (see below)
+    double c[5][3] =
+    {
+        {      3.0*xz,      3.0*yz, 3.0*zz - rr },
+        {     rr - xx,         -xy,         -xz },
+        { 3.0*xx - rr,      3.0*xy,      3.0*xz },
+        {         -xy,     rr - yy,         -yz },
+        {      3.0*xy, 3.0*yy - rr,      3.0*yz }
+    };
+
+    // Now we construct the magnetic field
+    //   B[0] = a[0]*c[0][0] + a[1]*c[1][0] + ...
+    double B[3];
+    for (i = 0; i < 3; i++)
+    {
+        B[i] = 0.0;
+        for (j = 0; j < 5; j++)
+            B[i] += a[j]*c[j][i];
+    }
+
+    // Normalise B (--> Bn)
+    double Blen = sqrt( B[0]*B[0] +
+                        B[1]*B[1] +
+                        B[2]*B[2] );
+    double Bn[3];
+    for (i = 0; i < 3; i++)
+        Bn[i] = B[i] / Blen;
+
+    // If requested, record B result:
+    if (calcB)
+    {
+        for (i = 0; i < 3; i++)
+            B1->x[i] = Bn[i];
+
+        B1->r = Blen;
+    }
+
+    // Return, if there's nothing more to calculate
+    if (!calcV && !calcA)
+        return;
+
+    /***********************************************************
+     * Both V and A need the calculation of V, so do this now. * 
+     ***********************************************************/
+
+    double pdBn  = -y*Bn[0] + x*Bn[1];   // ph dot Bn
+    double Om2   = Om*Om;
+    double pdBn2 = pdBn * pdBn;          // (ph dot Bn)^2
+    double rho   = sqrt( x*x + y*y );
+    double rho2  = rho*rho;
+    double det   = Om2 * pdBn2 - 4.0*(rho2*Om2 - v*v);
+    //      ^-- This is the bit under the sqrt sign
+
+    // See how many V solutions we get
+    if (det < 0.0)
+    {
+        *nsols = 0;
+        return;
+    }
+    else if (det == 1)
+    {
+        *nsols = 1;
+        calcA = 0; /* If there's only one V solution, then the A solution
+                      corresponds to A = inf, which we don't care about */
+    }
+    else // (det >  0.0)
+    {
+        *nsols = 2;
+    }
+
+    double sqrt_det  = sqrt(det);
+    double chi       = Om2 / (2.0 * sqrt_det);
+    double VBpos     = 0.5*(-Om*pdBn + sqrt_det);
+    double VBneg     = 0.5*(-Om*pdBn - sqrt_det);
+
+    // Calulate the velocity fields
+    double Vpos[3] = { -y*Om + VBpos*Bn[0], x*Om + VBpos*Bn[1], VBpos*Bn[2] };
+    double Vneg[3] = { -y*Om + VBneg*Bn[0], x*Om + VBneg*Bn[1], VBneg*Bn[2] };
+
+    // If requested, record V results:
+    for (i = 0; i < 3; i++)
+    {
+        if (V1)
+        {
+            V1->x[i] = Vpos[i] / v;
+            V1->r    = v;
+        }
+        if (V2)
+        {
+            V2->x[i] = Vneg[i] / v;
+            V2->r    = v;
+        }
+    }
+
+    // Return, if there's nothing more to calculate
+    if (!calcA)
+        return;
+
+    /********************************************
+     * Now, all that remains is to calculate A. * 
+     ********************************************/
+
+    // Temporary values for calculating the derivates of a[] above.
     double a_temp[] =
     {
         -5.0 / r7,
@@ -202,19 +336,8 @@ void Afield( point *X, pulsar *psr, double v, point *A1, point *A2,
     for (j = 0; j < 3; j++)
         da[i][j] = a_temp[i]*X->x[j];
 
-    // The following are the x,y,z terms that get multiplied to the a[] terms
-    // to produce the magnetic field (see below)
-    double c[5][3] =
-    {
-        {      3.0*xz,      3.0*yz, 3.0*zz - rr },
-        {     rr - xx,         -xy,         -xz },
-        { 3.0*xx - rr,      3.0*xy,      3.0*xz },
-        {         -xy,     rr - yy,         -yz },
-        {      3.0*xy, 3.0*yy - rr,      3.0*yz }
-    };
-
-    // ... and their derivatives with respect to (x,y,z):
-    // dc[4][2][1] means d(c[4][2])/dy
+    // The derivatives of c[][] above, with respect to (x,y,z):
+    // e.g. dc[4][2][1] means d(c[4][2])/dy
     double dc[5][3][3] =
     {
         {
@@ -244,16 +367,6 @@ void Afield( point *X, pulsar *psr, double v, point *A1, point *A2,
         }
     };
 
-    // Now we construct the magnetic field
-    //   B[0] = a[0]*c[0][0] + a[1]*c[1][0] + ...
-    double B[3];
-    for (i = 0; i < 3; i++)
-    {
-        B[i] = 0.0;
-        for (j = 0; j < 5; j++)
-            B[i] += a[j]*c[j][i];
-    }
-
     // And now the partial derivatives of the magnetic field with respect to
     // (x,y,z)
     double dB[3][4]; /* dB[0][1] means d(B_x)/dy; dB[][3] means d/dt, which is
@@ -270,14 +383,6 @@ void Afield( point *X, pulsar *psr, double v, point *A1, point *A2,
     for (i = 0; i < 3; i++)
         dB[i][3] = Om * (-y*dB[i][0] + x*dB[i][1]);
 
-    // Normalise B (--> Bn)
-    double Blen = sqrt( B[0]*B[0] +
-                        B[1]*B[1] +
-                        B[2]*B[2] );
-    double Bn[3];
-    for (i = 0; i < 3; i++)
-        Bn[i] = B[i] / Blen;
-
     // Now calculate how Bn changes with respect to (x,y,z,t)
     double dBn[3][4];
     double Bn_dot_dB;
@@ -290,31 +395,6 @@ void Afield( point *X, pulsar *psr, double v, point *A1, point *A2,
         for (j = 0; j < 3; j++)
             dBn[j][i] = (dB[j][i] - Bn_dot_dB * Bn[j]) / Blen;
     }
-
-    // Now prepare for the calculation of the change of velocity with respect
-    // to (x,y,z,t)
-    double pdBn  = -y*Bn[0] + x*Bn[1]; // ph dot Bn
-    double Om2   = Om*Om;
-    double pdBn2 = pdBn * pdBn;
-    double rho   = sqrt( x*x + y*y );
-    double rho2  = rho*rho;
-
-    double det = Om2 * pdBn2 - 4.0*(rho2*Om2 - v*v);
-    // Make sure that we get two valid solutions
-    if (det <= 0.0)
-    {
-        *nsols = 0;
-        return;
-    }
-    else // (det >  0.0)
-    {
-        *nsols = 2;
-    }
-
-    double sqrt_det = sqrt(det);
-    double chi = Om2 / (2.0 * sqrt_det);
-    double VBpos = 0.5*(-Om*pdBn + sqrt_det);
-    double VBneg = 0.5*(-Om*pdBn - sqrt_det);
 
     double dpdBn[4] =
     {
@@ -352,10 +432,6 @@ void Afield( point *X, pulsar *psr, double v, point *A1, point *A2,
     dVpos[0][1] -= Om;
     dVneg[0][1] -= Om;
 
-    // Calulate the velocity fields
-    double Vpos[3] = { -y*Om + VBpos*Bn[0], x*Om + VBpos*Bn[1], VBpos*Bn[2] };
-    double Vneg[3] = { -y*Om + VBneg*Bn[0], x*Om + VBneg*Bn[1], VBneg*Bn[2] };
-
     // Calculate the acceleration fields
     double Apos[3], Aneg[3];
     for (i = 0; i < 3; i++)
@@ -370,11 +446,28 @@ void Afield( point *X, pulsar *psr, double v, point *A1, point *A2,
                           dVneg[i][3];
     };
 
-    // The flags to set for vectors
-    int F = POINT_SET_XYZ | POINT_SET_R;
+    // Calculate the magnitudes of the acceleration vectors.
+    double Apos_len = sqrt( Apos[0] * Apos[0] +
+                            Apos[1] * Apos[1] +
+                            Apos[2] * Apos[2] );
+    double Aneg_len = sqrt( Aneg[0] * Aneg[0] +
+                            Aneg[1] * Aneg[1] +
+                            Aneg[2] * Aneg[2] );
 
-    set_point_xyz( A1, Apos[0], Apos[1], Apos[2], F );
-    set_point_xyz( A2, Aneg[0], Aneg[1], Aneg[2], F );
+    // If requested, record A results:
+    for (i = 0; i < 3; i++)
+    {
+        if (A1)
+        {
+            A1->x[i] = Apos[i] / Apos_len;
+            A1->r    = Apos_len;
+        }
+        if (A2)
+        {
+            A2->x[i] = Aneg[i] / Aneg_len;
+            A2->r    = Aneg_len;
+        }
+    }
 }
 
 
