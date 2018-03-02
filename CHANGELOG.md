@@ -3,6 +3,8 @@
 ----
 ## Unreleased
 
+* Added a function for finding a magnetic field lines most extreme point.
+
 ----
 ## v1.1.0 (2018-03-02)
 
