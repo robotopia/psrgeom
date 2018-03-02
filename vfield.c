@@ -213,7 +213,7 @@ void calc_fields( point *X, pulsar *psr, double v,
         1.0 / r5,
         psr->al.sin * phase.cos / r3 / psr->rL2,
         psr->al.sin * ( phase.cos/r5 + phase.sin/r4/psr->rL),
-        psr->al.sin * phase.sin / r3 / psr->rL2,
+        -psr->al.sin * phase.sin / r3 / psr->rL2,
         psr->al.sin * (-phase.sin/r5 + phase.cos/r4/psr->rL)
     };
 
@@ -268,7 +268,7 @@ void calc_fields( point *X, pulsar *psr, double v,
     double pdBn2 = pdBn * pdBn;          // (ph dot Bn)^2
     double rho   = sqrt( x*x + y*y );
     double rho2  = rho*rho;
-    double det   = Om2 * pdBn2 - 4.0*(rho2*Om2 - v*v);
+    double det   = Om2*pdBn2 - (rho2*Om2 - v*v);
     //      ^-- This is the bit under the sqrt sign
 
     // See how many V solutions we get
@@ -288,27 +288,36 @@ void calc_fields( point *X, pulsar *psr, double v,
         *nsols = 2;
     }
 
-    double sqrt_det  = sqrt(det);
-    double chi       = Om2 / (2.0 * sqrt_det);
-    double VBpos     = 0.5*(-Om*pdBn + sqrt_det);
-    double VBneg     = 0.5*(-Om*pdBn - sqrt_det);
+    double sqrt_det = sqrt(det);
+    double VBpos    = -Om*pdBn + sqrt_det;
+    double VBneg    = -Om*pdBn - sqrt_det;
+//printf(" v1 = %.15e,\n v2 = %.15e\n", v, sqrt(rho2*Om2 + 2.0*Om*VBpos*(
 
     // Calulate the velocity fields
     double Vpos[3] = { -y*Om + VBpos*Bn[0], x*Om + VBpos*Bn[1], VBpos*Bn[2] };
     double Vneg[3] = { -y*Om + VBneg*Bn[0], x*Om + VBneg*Bn[1], VBneg*Bn[2] };
+
+    // The length of this velocity should be v, but calculate it explicitly
+    // just to make sure we're doing it correctly.
+    double Vpos_len = sqrt( Vpos[0] * Vpos[0] +
+                            Vpos[1] * Vpos[1] +
+                            Vpos[2] * Vpos[2] );
+    double Vneg_len = sqrt( Vneg[0] * Vneg[0] +
+                            Vneg[1] * Vneg[1] +
+                            Vneg[2] * Vneg[2] );
 
     // If requested, record V results:
     for (i = 0; i < 3; i++)
     {
         if (V1)
         {
-            V1->x[i] = Vpos[i] / v;
-            V1->r    = v;
+            V1->x[i] = Vpos[i] / Vpos_len;
+            V1->r    = Vpos_len;
         }
         if (V2)
         {
-            V2->x[i] = Vneg[i] / v;
-            V2->r    = v;
+            V2->x[i] = Vneg[i] / Vneg_len;
+            V2->r    = Vneg_len;
         }
     }
 
@@ -403,6 +412,8 @@ void calc_fields( point *X, pulsar *psr, double v,
         -y*dBn[0][2] + x*dBn[1][2],          // d(ph.Bn)/dz
         -y*dBn[0][3] + x*dBn[1][3]           // d(ph.Bn)/dt
     };
+
+    double chi = Om2 / (2.0 * sqrt_det);
 
     double dVBpos[4] =
     {

@@ -123,6 +123,11 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
 void Vfield( point *x, pulsar *psr, double v, point *V1, point *V2,
              int *nsols );
 
+void calc_fields( point *X, pulsar *psr, double v,
+                  point *B1,
+                  point *V1, point *V2,
+                  point *A1, point *A2,
+                  int *nsols );
 
 
 /**** Dipole field functions ****/
