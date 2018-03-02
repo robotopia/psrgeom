@@ -13,6 +13,8 @@ OPTIM   = -O2
 
 CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG)
 
+TARGETS = psr_fields
+
 LIBRARY = psrgeom
 LIBFILE = lib$(LIBRARY).a
 HDRFILE = $(LIBRARY).h
@@ -25,10 +27,12 @@ OBJS = psr_angle.o \
 	   dipole.o \
 	   vfield.o
 
-all: $(LIBFILE) man-pages
+all: $(TARGETS) $(LIBFILE) man-pages
 
 $(LIBFILE): $(OBJS)
 	ar rcs $@ $^
+
+$(TARGETS): $(OBJS)
 
 man-pages:
 	$(MAKE) -C man
@@ -36,10 +40,11 @@ man-pages:
 install:
 	cp $(LIBFILE) /usr/local/lib
 	cp $(HDRFILE) /usr/local/include
+	cp $(TARGETS) /usr/local/bin
 	cp man/*.gz /usr/local/man/man3
 
 clean-man-pages:
 	$(RM) man/*.gz
 
 clean:
-	$(RM) *.o $(LIBFILE)
+	$(RM) *.o $(LIBFILE) $(TARGETS)
