@@ -7,7 +7,8 @@
  *
  * Description:
  *   This source file implements the functions for calculating the magnetic
- *   field.
+ *   field, the velocity field, and the acceleration field, as well as a
+ *   handful of related quantities.
  *
  ****************************************************************************/
 
@@ -15,6 +16,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "psrgeom.h"
+
 
 void calc_fields( point *X, pulsar *psr, double v,
                   point *B1,
@@ -163,21 +165,26 @@ void calc_fields( point *X, pulsar *psr, double v,
     //      ^-- This is the bit under the sqrt sign
 
     // See how many V solutions we get
+    int nsol; // Use this as a place holder for nsols for now
     if (det < 0.0)
     {
-        *nsols = 0;
+        nsol = 0;
         return;
     }
     else if (det == 1)
     {
-        *nsols = 1;
+        nsol = 1;
         calcA = 0; /* If there's only one V solution, then the A solution
                       corresponds to A = inf, which we don't care about */
     }
     else // (det >  0.0)
     {
-        *nsols = 2;
+        nsol = 2;
     }
+
+    // If the caller wants to know nsols, they can request it
+    if (nsols)
+        *nsols = nsol;
 
     double sqrt_det = sqrt(det);
     double VBpos    = -Om*pdBn + sqrt_det;
@@ -373,3 +380,159 @@ void calc_fields( point *X, pulsar *psr, double v,
 
 
 
+double Bdotrxy( point *x, pulsar *psr )
+/* Returns the dot product of B, the normalised magnetic field, and r_{xy},
+ * the vector pointing cylindrically outward, at point *x.
+ * This quantity is useful because the last open magnetic field lines have
+ * this quantity equal to zero at the light cylinder.
+ */
+{
+    point B;
+    calc_fields( x, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
+    double retval = B.x[0] * x->ph.cos +
+                    B.x[1] * x->ph.sin;
+    return retval;
+}
+
+
+
+void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
+                FILE *write_xyz, point *foot_pt )
+/* This uses Runge-Kutta (RK4) to follow the magnetic field line outward from
+ * an initial starting point "start_pt"
+ *
+ * Inputs:
+ *   start_pt  : the initial starting point
+ *   psr       : the pulsar (includes geometric information)
+ *   tmult     : the rate at which to progress in RK4 (fraction of psr radius)
+ *   direction : progress inwards or outwards along field lines
+ *               {DIR_INWARD, DIR_OUTWARD}
+ *   write_xyz : file handle where to write x,y,z values
+ *               (if NULL, no output is written)
+ * Outputs:
+ *   foot_pt  : the final point reached during RK algorithm
+ */
+{
+    // Error checking: foot_pt must be a valid pointer to a point struct
+    if (!foot_pt)
+    {
+        fprintf( stderr, "error: footpoint: foot_pt cannot be NULL\n" );
+        exit(EXIT_FAILURE);
+    }
+
+    point x, old_x;
+
+    double tstep;
+
+    copy_point( start_pt, &x );
+    tstep = tmult * x.r;
+
+    // Trace this line outwards with a 4 stage Runge-Kutta
+
+    int temp_drctn = direction; // In case we've gone too far
+    double precision = 1.0e-14;
+
+    while (1) // Indefinite loop until surface is reached
+    {
+        // Keep track of the previous point
+        copy_point( &x, &old_x );
+
+        // Write out the current xyz position, if requested,
+        // but only if we're still moving "forward"
+        if (write_xyz && (temp_drctn == direction))
+            fprintf( write_xyz, "%.14e %.14e %.14e\n", x.x[0], x.x[1], x.x[2] );
+
+        // Take a single RK4 step along the magnetic field
+        Bstep( &old_x, psr, tstep, temp_drctn, &x );
+
+        // Recalculate the various distances to the new point
+        set_point_xyz( &x, x.x[0], x.x[1], x.x[2],
+                POINT_SET_SPH | POINT_SET_RHOSQ );
+
+        /* Figure out whether to stop or not */
+
+        // Error checking: this algorithm should have stopped long before
+        // tstep reaches underflow
+        if ((tstep/2.0 <= 0.0) || (tstep/2.0 >= tstep))
+        {
+            fprintf( stderr, "error: Bline: tstep underflow\n" );
+            exit(EXIT_FAILURE);
+        }
+
+        // Just check to see if we've happened to land exactly on the surface
+        if (x.r == psr->r)
+            break;
+
+        // Otherwise, only do anything special if we've crossed the surface
+        if ((x.r - psr->r) / (old_x.r - psr->r) < 0.0) // then x and old_x are
+                                                       // on opposite sides of
+                                                       // the surface
+        {
+            if ((fabs(x.r - old_x.r) <= precision*psr->r))
+                break;
+
+            if (temp_drctn == DIR_OUTWARD)
+                temp_drctn = DIR_INWARD;
+            else if (temp_drctn == DIR_INWARD)
+                temp_drctn = DIR_OUTWARD;
+            else
+            {
+                fprintf( stderr, "error: footpoint: unknown direction\n" );
+                exit(EXIT_FAILURE);
+            }
+            tstep /= 2.0;
+        }
+
+        // Adjust tstep proportionally to how far away from the pulsar we are
+        tstep *= x.r / old_x.r;
+    }
+
+    // Make the final point available to the caller
+    copy_point( &x, foot_pt );
+}
+
+
+void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
+/* This follows a magnetic field from a given starting point according to one
+ * step of the RK4 algorithm.
+ *
+ * Inputs:
+ *   x1       : the starting point
+ *   psr      : the pulsar (includes geometric information)
+ *   tstep    : the size of the RK4 step to take
+ *   direction: whether to follow the line DIR_INWARD or DIR_OUTWARD
+ *
+ * Outputs:
+ *   x2       : the ending point
+ */
+{
+    point slop1, slop2, slop3, slope;
+    point xp1, xp2;
+
+    double sgn = (direction ? 1.0 : -1.0);
+    int i; // Generic loop counter
+
+    // First stage
+    calc_fields( x1, psr, 0.0, &slop1, NULL, NULL, NULL, NULL, NULL );
+    for (i = 0; i < NDEP; i++)
+        xp1.x[i] = x1->x[i] + 0.5*sgn*slop1.x[i]*tstep;
+
+    // Second stage
+    calc_fields( &xp1, psr, 0.0, &slop2, NULL, NULL, NULL, NULL, NULL );
+    for (i = 0; i < NDEP; i++)
+        xp2.x[i] = x1->x[i] + 0.5*sgn*slop2.x[i]*tstep;
+
+    // Third stage
+    calc_fields( &xp2, psr, 0.0, &slop3, NULL, NULL, NULL, NULL, NULL );
+    for (i = 0; i < NDEP; i++)
+        xp1.x[i] = x1->x[i] + sgn*slop3.x[i]*tstep;
+
+    // Last stage
+    calc_fields( &xp1, psr, 0.0, &slope, NULL, NULL, NULL, NULL, NULL );
+    for (i = 0; i < NDEP; i++)
+    {
+        x2->x[i] = x1->x[i] +
+            tstep*sgn*(    slope.x[i] +     slop1.x[i] +
+                       2.0*slop2.x[i] + 2.0*slop3.x[i]) / 6.0;
+    }
+}

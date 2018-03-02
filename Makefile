@@ -22,10 +22,9 @@ OBJS = psr_angle.o \
 	   point.o \
 	   lightcyl.o \
 	   pulsar.o \
-	   bfield.o \
+	   fields.o \
 	   cylinder.o \
-	   dipole.o \
-	   vfield.o
+	   dipole.o
 
 all: $(TARGETS) $(LIBFILE) man-pages
 

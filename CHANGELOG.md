@@ -3,8 +3,11 @@
 ----
 ## Unreleased
 
-* Added man pages for all the functions in this library.
-* Added velocity and acceleration field calculation for any given point.
+----
+## v1.1.0 (2018-03-02)
+
+* Added/updated man pages for all the functions in this library.
+* Removed deprecated Bfield() and Vfield() functions (which were subsumed into calc\_fields())
 
 ----
 ## v1.0.4 (2018-03-02)

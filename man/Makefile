@@ -1,8 +1,7 @@
-TARGETS = Bfield.3.gz \
+TARGETS = calc_fields.3.gz \
 		  Bstep.3.gz \
 		  Bdotrxy.3.gz \
 		  footpoint.3.gz \
-          Vfield.3.gz \
 		  create_psr_angle.3.gz \
 		  create_psr_angle_rad.3.gz \
 		  create_psr_angle_deg.3.gz \

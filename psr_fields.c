@@ -33,10 +33,9 @@ int main()
     // Get the number of velocity solutions
     int nsols;
 
-    // Test both Bfield() and calc_fields() to make sure they return the same
-    // thing
     point B;
     point V1, V2;
+    point A1, A2;
 
     /*
     do
@@ -50,7 +49,7 @@ int main()
     */
 
     printf( "# Made with PSRGEOM %s\n", PSRGEOM_VERSION );
-    printf( "#x y z Bx By Bz V1x V1y V1z V2x V2y V2z\n" );
+    printf( "#x y z Bx By Bz V1x V1y V1z V2x V2y V2z A1x A1y A1z A2x A2y A2z\n" );
 
     double i, j, k;
     for (i = -1; i <= 1; i += 0.2)
@@ -64,15 +63,16 @@ int main()
 
         if (X.rhosq > psr.rL2) continue;
 
-        //Bfield( &X, &psr, &B_Bfield );
-        calc_fields( &X, &psr, v, &B, &V1, &V2, NULL, NULL, &nsols );
+        calc_fields( &X, &psr, v, &B, &V1, &V2, &A1, &A2, &nsols );
 
         if (nsols > 0)
         {
             printf( "%lf %lf %lf  ", i, j, k );
             printf( "%.15e %.15e %.15e  ",  B.x[0],  B.x[1],  B.x[2] );
             printf( "%.15e %.15e %.15e  ", V1.x[0], V1.x[1], V1.x[2] );
-            printf( "%.15e %.15e %.15e\n", V2.x[0], V2.x[1], V2.x[2] );
+            printf( "%.15e %.15e %.15e  ", V2.x[0], V2.x[1], V2.x[2] );
+            printf( "%.15e %.15e %.15e  ", A1.x[0], A1.x[1], A1.x[2] );
+            printf( "%.15e %.15e %.15e\n", A2.x[0], A2.x[1], A2.x[2] );
         }
     }
 

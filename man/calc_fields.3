@@ -1,0 +1,105 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH CALC_FIELDS 3 2018-03-02 "" "Pulsar Geometry"
+.SH NAME
+calc_fields \- calculate the fields around a pulsar
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void calc_fields(point *" x ", pulsar *" psr ", double " v ", point *" B ", point *" V1 ", point *" V2 ", point *" A1 ", point *" A2 ", int *" nsols ", );"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR calc_fields ()
+function calculates the magnetic field
+.IR B ,
+the velocity fields
+.IR V1 ", " V2 ,
+and the acceleration fields
+.IR A1 ", " A2 ,
+at the point
+.I x
+around pulsar
+.I psr
+when the magnetic axis is instantaneously in the xz-plane
+(towards positive x). This is equivalent to the vacuum Deutsch (1955) solution
+in which the finite light travel time is taken into account.
+.PP
+The function assumes only that the Cartesian coordinates of \fIx\fP contain
+meaningful values. Similarly, \fIpsr\fP is assumed to have meaningful values
+of \fIal\fP, \fIrL\fP, and \fIrL2\fP.
+.PP
+Upon return, only the Cartesian values in
+.IR B ", " V1 ", " V2 ", " A1 ", and " A2
+are set, as well as their radii, r. The Cartesian points correspond to a unit
+vector which is parallel to the magnetic field at point
+.IR x .
+The radius of
+.I B
+is the magnetic field strength normalised to the magnitude of the dipole
+moment; the radius of
+.IR V1 " and " V2
+should equal the particle speed,
+.IR v ,
+and the radius of
+.IR A1 " and " A2
+equals the magnitude of the accelerations.
+.PP
+There are two possible solutions for the velocity field, which takes the
+rotation of the pulsar into account. The actual number of solutions found
+(either 0, 1, or 2) is returned in
+.IR nsols .
+.I V1
+corresponds to the solution in which the particle is moving along its magnetic
+field line in the same direction as the magnetic field, while
+.I V2
+corresponds to a particle moving in the opposite direction.
+.IR A1 " and " A2
+are the acceleration vectors corresponding to
+.IR V1 " and " V2
+respectively.
+.PP
+Setting any of
+.IR B ", " V1 ", " V2 ", " A1 ", or " A2
+to
+.B NULL
+is allowed. Only those calculations necessary for calculating the 
+.RB non- NULL
+parameters are actually performed.
+.PP
+The formulae used to calculate the magnetic field are due to Paul Arendt.
+.SH RETURN VALUE
+The
+.BR calc_fields ()
+function does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    double P = 1.0;
+    double r = 1.0e4;
+
+    psr_angle al, ze;
+    set_psr_angle_deg( &al, 45.0 );
+    set_psr_angle_deg( &ze, 50.0 );
+
+    pulsar psr;
+    set_pulsar( &psr, NULL, NULL, P, r, &al, &ze );
+
+    point x, B, V1, V2, A1, A2;
+    set_point_xyz( &x, psr.rL, 0.0, 0.0, POINT_SET_ALL );
+
+    double v = SPEED_OF_LIGHT;
+
+    calc_fields( &x, &psr, v, &B, &V1, &V2, &A1, &A2 );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR Bstep (3),
+.BR Bdotrxy (3),
+.BR footpoint (3)

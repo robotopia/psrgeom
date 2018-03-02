@@ -1,7 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
-#define PSRGEOM_VERSION "1.0.4"
+#define PSRGEOM_VERSION "1.1.0"
 
 #include <stdio.h>
 #include <math.h>
@@ -115,19 +115,16 @@ void set_pulsar_period( pulsar *psr, double P );
 
 /**** Magnetic field functions ****/
 
-void Bfield( point *x, pulsar *psr, point *B );
-void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
-double Bdotrxy( point *x, pulsar *psr );
-void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
-                FILE *write_xyz, point *foot_pt );
-void Vfield( point *x, pulsar *psr, double v, point *V1, point *V2,
-             int *nsols );
-
 void calc_fields( point *X, pulsar *psr, double v,
                   point *B1,
                   point *V1, point *V2,
                   point *A1, point *A2,
                   int *nsols );
+
+void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
+double Bdotrxy( point *x, pulsar *psr );
+void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
+                FILE *write_xyz, point *foot_pt );
 
 
 /**** Dipole field functions ****/
