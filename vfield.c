@@ -291,7 +291,6 @@ void calc_fields( point *X, pulsar *psr, double v,
     double sqrt_det = sqrt(det);
     double VBpos    = -Om*pdBn + sqrt_det;
     double VBneg    = -Om*pdBn - sqrt_det;
-//printf(" v1 = %.15e,\n v2 = %.15e\n", v, sqrt(rho2*Om2 + 2.0*Om*VBpos*(
 
     // Calulate the velocity fields
     double Vpos[3] = { -y*Om + VBpos*Bn[0], x*Om + VBpos*Bn[1], VBpos*Bn[2] };
