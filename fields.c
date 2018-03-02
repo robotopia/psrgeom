@@ -492,6 +492,104 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
 }
 
 
+void farpoint( point *start_pt, pulsar *psr, double tmult,
+                FILE *write_xyz, point *far_pt )
+/* This uses Runge-Kutta (RK4) to follow the magnetic field line outward from
+ * an initial starting point "start_pt". It seeks the point (x,y,z) such that
+ * x^2+y^2 is maximised.
+ *
+ * Inputs:
+ *   start_pt  : the initial starting point
+ *   psr       : the pulsar (includes geometric information)
+ *   tmult     : the rate at which to progress in RK4 (fraction of psr radius)
+ *   write_xyz : file handle where to write x,y,z values
+ *               (if NULL, no output is written)
+ * Outputs:
+ *   far_pt    : the final point reached during RK algorithm
+ */
+{
+    // Error checking: far_pt must be a valid pointer to a point struct
+    if (!far_pt)
+    {
+        fprintf( stderr, "error: farpoint: far_pt cannot be NULL\n" );
+        exit(EXIT_FAILURE);
+    }
+
+    point x, old_x;
+
+    double tstep;
+
+    copy_point( start_pt, &x );
+    tstep = tmult * x.r;
+
+    // Trace this line outwards with a 4 stage Runge-Kutta.
+    // "Outwards" means the direction such that the quantity
+    //
+    // UP TO HERE!!!
+
+    int temp_drctn = direction; // In case we've gone too far
+    double precision = 1.0e-14;
+
+    while (1) // Indefinite loop until surface is reached
+    {
+        // Keep track of the previous point
+        copy_point( &x, &old_x );
+
+        // Write out the current xyz position, if requested,
+        // but only if we're still moving "forward"
+        if (write_xyz && (temp_drctn == direction))
+            fprintf( write_xyz, "%.14e %.14e %.14e\n", x.x[0], x.x[1], x.x[2] );
+
+        // Take a single RK4 step along the magnetic field
+        Bstep( &old_x, psr, tstep, temp_drctn, &x );
+
+        // Recalculate the various distances to the new point
+        set_point_xyz( &x, x.x[0], x.x[1], x.x[2],
+                POINT_SET_SPH | POINT_SET_RHOSQ );
+
+        /* Figure out whether to stop or not */
+
+        // Error checking: this algorithm should have stopped long before
+        // tstep reaches underflow
+        if ((tstep/2.0 <= 0.0) || (tstep/2.0 >= tstep))
+        {
+            fprintf( stderr, "error: Bline: tstep underflow\n" );
+            exit(EXIT_FAILURE);
+        }
+
+        // Just check to see if we've happened to land exactly on the surface
+        if (x.r == psr->r)
+            break;
+
+        // Otherwise, only do anything special if we've crossed the surface
+        if ((x.r - psr->r) / (old_x.r - psr->r) < 0.0) // then x and old_x are
+                                                       // on opposite sides of
+                                                       // the surface
+        {
+            if ((fabs(x.r - old_x.r) <= precision*psr->r))
+                break;
+
+            if (temp_drctn == DIR_OUTWARD)
+                temp_drctn = DIR_INWARD;
+            else if (temp_drctn == DIR_INWARD)
+                temp_drctn = DIR_OUTWARD;
+            else
+            {
+                fprintf( stderr, "error: footpoint: unknown direction\n" );
+                exit(EXIT_FAILURE);
+            }
+            tstep /= 2.0;
+        }
+
+        // Adjust tstep proportionally to how far away from the pulsar we are
+        tstep *= x.r / old_x.r;
+    }
+
+    // Make the final point available to the caller
+    copy_point( &x, foot_pt );
+}
+
+
 void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
 /* This follows a magnetic field from a given starting point according to one
  * step of the RK4 algorithm.
