@@ -7,6 +7,11 @@
 * Added velocity and acceleration field calculation for any given point.
 
 ----
+## v1.0.4 (2018-03-02)
+
+* Fixed known bugs with the calculation of the acceleration field
+
+----
 ## v1.0.3 (2018-03-02)
 
 * Added a small, utility program, "psr\_fields", which prints out the B and V fields as columns of numbers

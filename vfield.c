@@ -412,22 +412,22 @@ void calc_fields( point *X, pulsar *psr, double v,
         -y*dBn[0][3] + x*dBn[1][3]           // d(ph.Bn)/dt
     };
 
-    double chi = Om2 / (2.0 * sqrt_det);
+    double chi = Om2 / sqrt_det;
 
     double dVBpos[4] =
     {
-        -0.5*Om*dpdBn[0] + chi*(pdBn*dpdBn[0] - 4.0*x), // d(VB)/dx
-        -0.5*Om*dpdBn[1] + chi*(pdBn*dpdBn[1] - 4.0*y), // d(VB)/dy
-        -0.5*Om*dpdBn[2] + chi*(pdBn*dpdBn[2]),         // d(VB)/dz
-        -0.5*Om*dpdBn[3] + chi*(pdBn*dpdBn[3])          // d(VB)/dt
+        -Om*dpdBn[0] + chi*(pdBn*dpdBn[0] - 2.0*x), // d(VB)/dx
+        -Om*dpdBn[1] + chi*(pdBn*dpdBn[1] - 2.0*y), // d(VB)/dy
+        -Om*dpdBn[2] + chi*(pdBn*dpdBn[2]),         // d(VB)/dz
+        -Om*dpdBn[3] + chi*(pdBn*dpdBn[3])          // d(VB)/dt
     };
 
     double dVBneg[4] =
     {
-        -0.5*Om*dpdBn[0] - chi*(pdBn*dpdBn[0] - 4.0*x), // d(VB)/dx
-        -0.5*Om*dpdBn[1] - chi*(pdBn*dpdBn[1] - 4.0*y), // d(VB)/dy
-        -0.5*Om*dpdBn[2] - chi*(pdBn*dpdBn[2]),         // d(VB)/dz
-        -0.5*Om*dpdBn[3] - chi*(pdBn*dpdBn[3])          // d(VB)/dt
+        -Om*dpdBn[0] - chi*(pdBn*dpdBn[0] - 2.0*x), // d(VB)/dx
+        -Om*dpdBn[1] - chi*(pdBn*dpdBn[1] - 2.0*y), // d(VB)/dy
+        -Om*dpdBn[2] - chi*(pdBn*dpdBn[2]),         // d(VB)/dz
+        -Om*dpdBn[3] - chi*(pdBn*dpdBn[3])          // d(VB)/dt
     };
 
     double dVpos[3][4], dVneg[3][4];

@@ -1,7 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
-#define PSRGEOM_VERSION "1.0.3"
+#define PSRGEOM_VERSION "1.0.4"
 
 #include <stdio.h>
 #include <math.h>
