@@ -40,7 +40,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o );
 void parse_format( char *format, struct tokens *tok );
 
 void print_col_headers( FILE *f, char *format );
-void print_token_values( FILE *f, struct tokens *tok );
+void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
+                        point *B, point *V1, point *V2, point *A1, point *A2,
+                        double BdR, double xscale, double vscale );
 
 int main( int argc, char *argv[] )
 {
@@ -111,6 +113,7 @@ int main( int argc, char *argv[] )
     point B;
     point V1, V2;
     point A1, A2;
+    double BdR = NAN;
 
     print_psrg_header( f, argc, argv );
 
@@ -146,64 +149,20 @@ int main( int argc, char *argv[] )
             else if (tok.calcB)
                 calc_fields( &X, &psr, v, &B, NULL, NULL, NULL, NULL, &nsols );
 
+            if (tok.calcA || tok.calcV || tok.calcB)
+            {
+                BdR = B.x[0] * X.ph.cos +
+                      B.x[1] * X.ph.sin;
+            }
+
             int n;
             for (n = 0; n < tok.n; n++)
             {
-                // Print X's
-                if (!strncmp( tok.token[n], "Xx", 2 ))
-                    fprintf( f, "%.15e ", xscale*X.x[0] );
-                if (!strncmp( tok.token[n], "Xy", 2 ))
-                    fprintf( f, "%.15e ", xscale*X.x[1] );
-                if (!strncmp( tok.token[n], "Xz", 2 ))
-                    fprintf( f, "%.15e ", xscale*X.x[2] );
-
-                // Print B's
-                if (!strncmp( tok.token[n], "Bx", 2 ))
-                    fprintf( f, "%.15e ", vscale*B.x[0] );
-                if (!strncmp( tok.token[n], "By", 2 ))
-                    fprintf( f, "%.15e ", vscale*B.x[1] );
-                if (!strncmp( tok.token[n], "Bz", 2 ))
-                    fprintf( f, "%.15e ", vscale*B.x[2] );
-
-                // Print V's
-                if (!strncmp( tok.token[n], "Vx1", 3 ))
-                    fprintf( f, "%.15e ", vscale*V1.x[0] );
-                if (!strncmp( tok.token[n], "Vy1", 3 ))
-                    fprintf( f, "%.15e ", vscale*V1.x[1] );
-                if (!strncmp( tok.token[n], "Vz1", 3 ))
-                    fprintf( f, "%.15e ", vscale*V1.x[2] );
-                if (!strncmp( tok.token[n], "Vx2", 3 ))
-                    fprintf( f, "%.15e ", vscale*V2.x[0] );
-                if (!strncmp( tok.token[n], "Vy2", 3 ))
-                    fprintf( f, "%.15e ", vscale*V2.x[1] );
-                if (!strncmp( tok.token[n], "Vz2", 3 ))
-                    fprintf( f, "%.15e ", vscale*V2.x[2] );
-
-                // Print A's
-                if (!strncmp( tok.token[n], "Ax1", 3 ))
-                    fprintf( f, "%.15e ", vscale*A1.x[0] );
-                if (!strncmp( tok.token[n], "Ay1", 3 ))
-                    fprintf( f, "%.15e ", vscale*A1.x[1] );
-                if (!strncmp( tok.token[n], "Az1", 3 ))
-                    fprintf( f, "%.15e ", vscale*A1.x[2] );
-                if (!strncmp( tok.token[n], "Ax2", 3 ))
-                    fprintf( f, "%.15e ", vscale*A2.x[0] );
-                if (!strncmp( tok.token[n], "Ay2", 3 ))
-                    fprintf( f, "%.15e ", vscale*A2.x[1] );
-                if (!strncmp( tok.token[n], "Az2", 3 ))
-                    fprintf( f, "%.15e ", vscale*A2.x[2] );
-
+                print_token_value( f, &tok, n, &X, &B, &V1, &V2, &A1, &A2,
+                                   BdR, xscale, vscale );
+                fprintf( f, " " );
             }
-
-            if (nsols > 0)
-            {
-                fprintf( f, "%.15e %.15e %.15e  ",  X.x[0],  X.x[1],  X.x[2] );
-                fprintf( f, "%.15e %.15e %.15e  ",  scale*B.x[0],  scale*B.x[1],  scale*B.x[2] );
-                fprintf( f, "%.15e %.15e %.15e  ", V1.x[0], V1.x[1], V1.x[2] );
-                fprintf( f, "%.15e %.15e %.15e  ", V2.x[0], V2.x[1], V2.x[2] );
-                fprintf( f, "%.15e %.15e %.15e  ", A1.x[0], A1.x[1], A1.x[2] );
-                fprintf( f, "%.15e %.15e %.15e\n", A2.x[0], A2.x[1], A2.x[2] );
-            }
+            fprintf( f, "\n" );
         }
     }
     else
@@ -441,7 +400,7 @@ void parse_format( char *format, struct tokens *tok )
                     {
                         tok->token[tok->n][char_num] = c;
                         tok->n++;
-                        tok.calcB = 1;
+                        tok->calcB = 1;
                     }
             }
             char_num = 0;
@@ -455,4 +414,59 @@ void print_col_headers( FILE *f, char *format )
 {
     // Print out a line to file handle f
     fprintf( f, "# %s\n", format );
+}
+
+
+void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
+                        point *B, point *V1, point *V2, point *A1, point *A2,
+                        double BdR, double xscale, double vscale )
+{
+    // Print X
+    if (!strncmp( tok->token[n], "Xx", 2 ))
+        fprintf( f, "%.15e", xscale*X->x[0] );
+    else if (!strncmp( tok->token[n], "Xy", 2 ))
+        fprintf( f, "%.15e", xscale*X->x[1] );
+    else if (!strncmp( tok->token[n], "Xz", 2 ))
+        fprintf( f, "%.15e", xscale*X->x[2] );
+
+    // Print B's
+    else if (!strncmp( tok->token[n], "Bx", 2 ))
+        fprintf( f, "%.15e", vscale*B->x[0] );
+    else if (!strncmp( tok->token[n], "By", 2 ))
+        fprintf( f, "%.15e", vscale*B->x[1] );
+    else if (!strncmp( tok->token[n], "Bz", 2 ))
+        fprintf( f, "%.15e", vscale*B->x[2] );
+
+    // Print V's
+    else if (!strncmp( tok->token[n], "Vx1", 3 ))
+        fprintf( f, "%.15e", vscale*V1->x[0] );
+    else if (!strncmp( tok->token[n], "Vy1", 3 ))
+        fprintf( f, "%.15e", vscale*V1->x[1] );
+    else if (!strncmp( tok->token[n], "Vz1", 3 ))
+        fprintf( f, "%.15e", vscale*V1->x[2] );
+    else if (!strncmp( tok->token[n], "Vx2", 3 ))
+        fprintf( f, "%.15e", vscale*V2->x[0] );
+    else if (!strncmp( tok->token[n], "Vy2", 3 ))
+        fprintf( f, "%.15e", vscale*V2->x[1] );
+    else if (!strncmp( tok->token[n], "Vz2", 3 ))
+        fprintf( f, "%.15e", vscale*V2->x[2] );
+
+    // Print A's
+    else if (!strncmp( tok->token[n], "Ax1", 3 ))
+        fprintf( f, "%.15e", vscale*A1->x[0] );
+    else if (!strncmp( tok->token[n], "Ay1", 3 ))
+        fprintf( f, "%.15e", vscale*A1->x[1] );
+    else if (!strncmp( tok->token[n], "Az1", 3 ))
+        fprintf( f, "%.15e", vscale*A1->x[2] );
+    else if (!strncmp( tok->token[n], "Ax2", 3 ))
+        fprintf( f, "%.15e", vscale*A2->x[0] );
+    else if (!strncmp( tok->token[n], "Ay2", 3 ))
+        fprintf( f, "%.15e", vscale*A2->x[1] );
+    else if (!strncmp( tok->token[n], "Az2", 3 ))
+        fprintf( f, "%.15e", vscale*A2->x[2] );
+
+    // Print B dot Rxy
+    else if (!strncmp( tok->token[n], "BdR", 3 ))
+        fprintf( f, "%.15e", BdR );
+
 }
