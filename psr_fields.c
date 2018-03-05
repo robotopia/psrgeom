@@ -48,7 +48,7 @@ int main( int argc, char *argv[] )
     } while (X.rhosq > psr.rL2);
     */
 
-    print_header( stdout, argc, argv );
+    print_psrg_header( stdout, argc, argv );
     printf( "#x y z Bx By Bz V1x V1y V1z V2x V2y V2z A1x A1y A1z A2x A2y A2z\n" );
 
     double i, j, k;

@@ -13,10 +13,10 @@
 #include <stdio.h>
 #include "psrgeom.h"
 
-void print_header( FILE *f, int argc, char *argv[] )
+void print_psrg_header( FILE *f, int argc, char *argv[] )
 {
     char comment = '#';
-    fprintf( f, "%c Made with PSRGEOM %s\n", comment, PSRGEOM_VERSION );
+    fprintf( f, "%c Made with PSRGEOM v%s\n", comment, PSRGEOM_VERSION );
     fprintf( f, "%c Command line:", comment );
     int n;
     for (n = 0; n < argc; n++)

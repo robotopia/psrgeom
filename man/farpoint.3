@@ -1,0 +1,70 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH FARPOINT 3 2018-03-05 "" "Pulsar Geometry"
+.SH NAME
+farpoint \- find the most cylindrically extreme point of a magnetic field line
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void farpoint(point *" start_pt ", pulsar *" psr ", double " tmult ", FILE *" write_xyz ", point *" far_pt ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR farpoint ()
+function finds the point around pulsar
+.I psr
+which has the largest perpendicular distance from the rotation axis and which
+passes through the point
+.IR start_pt .
+The point is found by stepping along the field line in the appropriate
+direction in steps of size
+.I tmult
+times the stellar radius, according to a 4th order Runge Kutta method. If
+.I write_xyz
+is not
+.BR NULL ,
+the Cartesian coordinates of each point are written out to the specified file.
+The final point is recorded in
+.IR foot_pt .
+.PP
+The steps are carried out by successive calls to
+.BR Bstep()
+until the point passes the extreme point. Then, the stepping continues
+as before, but in the opposite direction and with half the step size. This
+process is iterated until the dot product of the magnetic field direction and
+the vector that points perpendicularly away from the rotation axis drops below
+1e-14 times the stellar radius.
+.SH RETURN VALUE
+The
+.BR farpoint ()
+function returns does not return any value.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    double P = 1.0;
+    double r = 1.0e4;
+
+    psr_angle al, ze;
+    set_psr_angle_deg( &al, 45.0 );
+    set_psr_angle_deg( &ze, 50.0 );
+
+    pulsar psr;
+    set_pulsar( &psr, NULL, NULL, P, r, &al, &ze );
+
+    point x, fp;
+    set_point_xyz( &x, psr.rL/2.0, 0.0, psr.rL/2.0, POINT_SET_ALL );
+
+    farpoint( &x, &psr, 0.01, stdout, &fp );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR calc_fields (3),
+.BR Bstep (3),
+.BR Bdotrxy (3),
+.BR footpoint (3)

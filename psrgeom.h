@@ -147,6 +147,6 @@ void move_around_cyl( point *start_pt, psr_angle *xi, double zdist,
                       point *end_pt );
 
 /**** PSRGEOM I/O ****/
-void print_header( FILE *f, int argc, char *argv[] );
+void print_psrg_header( FILE *f, int argc, char *argv[] );
 
 #endif

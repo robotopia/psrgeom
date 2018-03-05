@@ -1,0 +1,38 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH PRINT_PSRG_HEADER 3 2018-03-05 "" "Pulsar Geometry"
+.SH NAME
+print_psrg_header \- print out program information commented header
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void print_psrg_header(FILE *" f ", int " argc ", char *" argv "[]);"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR print_psrg_header ()
+prints out the PSRGEOM version number and the command line used to run the
+program in a header-style format, to the file stream pointed to by
+.IR f .
+.SH RETURN VALUE
+The
+.BR print_psrg_header ()
+function does not return any value.
+.SH EXAMPLE USE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    print_psrg_header( stdout, argc, argv );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH EXAMPLE OUTPUT
+.EX
+    # Made with PSRGEOM v1.1.0
+    # Command line: [command line]
+    #
+.EE
