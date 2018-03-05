@@ -146,5 +146,7 @@ double light_cylinder( double P );
 void move_around_cyl( point *start_pt, psr_angle *xi, double zdist,
                       point *end_pt );
 
+/**** PSRGEOM I/O ****/
+void print_header( FILE *f, int argc, char *argv[] );
 
 #endif

@@ -4,6 +4,7 @@
 ## Unreleased
 
 * Added a function for finding a magnetic field lines most extreme point.
+* Extended the functionality of "psr\_fields" to print out a whole lot of different quantities.
 
 ----
 ## v1.1.0 (2018-03-02)

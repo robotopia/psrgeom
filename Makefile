@@ -24,7 +24,8 @@ OBJS = psr_angle.o \
 	   pulsar.o \
 	   fields.o \
 	   cylinder.o \
-	   dipole.o
+	   dipole.o \
+	   psrio.o
 
 all: $(TARGETS) $(LIBFILE) man-pages
 

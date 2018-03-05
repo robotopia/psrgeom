@@ -6,7 +6,7 @@
 // Random number between -x and x
 #define  RANDU(x)  ((2.0*(double)rand()/(double)RAND_MAX-1.0)*(x))
 
-int main()
+int main( int argc, char *argv[] )
 {
     // Set up pulsar
     pulsar psr;
@@ -48,7 +48,7 @@ int main()
     } while (X.rhosq > psr.rL2);
     */
 
-    printf( "# Made with PSRGEOM %s\n", PSRGEOM_VERSION );
+    print_header( stdout, argc, argv );
     printf( "#x y z Bx By Bz V1x V1y V1z V2x V2y V2z A1x A1y A1z A2x A2y A2z\n" );
 
     double i, j, k;
