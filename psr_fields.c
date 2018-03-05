@@ -84,7 +84,6 @@ int main( int argc, char *argv[] )
     tok.calcA = 0;
     tok.n     = 0;
     parse_format( o.format, &tok );
-    fprintf(stderr, "tok.n = %d\n", tok.n );
 
     // Set up pulsar
     pulsar psr;
@@ -125,8 +124,8 @@ int main( int argc, char *argv[] )
         // Figure out grid spacing
         double dx    = 2.0 * o.rho_max * psr.rL / (double)(o.npoints - 1);
         double xmin  = -o.rho_max * psr.rL;
-        double vscale = o.vsize * dx;
         double xscale = (o.rL_norm ? 1.0/psr.rL : 1.0);
+        double vscale = o.vsize * dx * xscale;
 
         int i, j, k;
         for (i = 0; i < o.npoints; i++)
