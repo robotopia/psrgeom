@@ -455,7 +455,7 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
         // tstep reaches underflow
         if ((tstep/2.0 <= 0.0) || (tstep/2.0 >= tstep))
         {
-            fprintf( stderr, "error: Bline: tstep underflow\n" );
+            fprintf( stderr, "error: footpoint: tstep underflow\n" );
             exit(EXIT_FAILURE);
         }
 
@@ -477,7 +477,8 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
                 temp_drctn = DIR_OUTWARD;
             else
             {
-                fprintf( stderr, "error: footpoint: unknown direction\n" );
+                fprintf( stderr, "error: footpoint: unknown direction (%d)\n",
+                                 direction );
                 exit(EXIT_FAILURE);
             }
             tstep /= 2.0;
@@ -489,6 +490,105 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
 
     // Make the final point available to the caller
     copy_point( &x, foot_pt );
+}
+
+
+int cmp_extreme( point *x, pulsar *psr, double precision )
+/* This function attempts to compare the point x with the location of the
+ * extreme point of the magnetic field line of pulsar psr that passes through
+ * x. If you would have to follow the magnetic field line in the same
+ * direction as the magnetic field to get to the extreme from x, then 1 is
+ * returned. If you would have to follow the magnetic field line in the
+ * opposite direction, then -1 is returned. If you are at the extreme exactly
+ * (i.e. within the specified precision) then 0 is returned.
+ *
+ * The extreme points are identified as those at which the magnetic field is
+ * perpendicular to the "cylindrically outward pointing" vector (i.e. where
+ * the quantity Bdotrxy() vanishes) and which is pointing generally downward
+ * (i.e. B.z is negative).
+ *
+ * Inputs:
+ *   x         : The point in question, whose relationship to the extreme
+ *               point is sought.
+ *   psr       : The pulsar (includes geometric information).
+ *   precision : The precision with which we consider x to equal the extreme
+ *               point.
+ * Return values:
+ *   DIR_OUTWARD : The extreme point is "in front" of x, in the sense that you
+ *                 would have to progress along the field line in the same
+ *                 direction as the magnetic field to reach it.
+ *   DIR_INWARD  : The extreme point is "behind" x, in the sense that you
+ *                 would have to progress along the field line in the opposite
+ *                 direction as the magnetic field to reach it.
+ *   DIR_STOP    : x is an extreme point (i.e. B dot r_{xy} equals 0.0 to
+ *                 double precision.
+ */
+{
+    // Get the magnetic field
+    point B;
+    calc_fields( x, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
+
+    // Calling Bdotrxy() would re-calculate the magnetic field unnecessarily,
+    // so duplicate the code here.
+    double Bdr = B.x[0] * x->ph.cos +
+                 B.x[1] * x->ph.sin;
+
+    /* Figure out which segment of the magnetic field line x is on.
+      
+       If 0 < alpha < 90 (deg):
+          Seg 1 = from origin to the point with maximum z value
+          Seg 2 = from max z point to extreme point
+          Seg 3 = from extreme point to point with minimum z value
+          Seg 4 = from min z point to origin
+
+       If 90 < alpha < 180 (deg):
+          Seg 1 = from origin to the point with minimum z value
+          Seg 2 = from min z point to extreme point
+          Seg 3 = from extreme point to point with maximum z value
+          Seg 4 = from max z point to origin
+
+       We'll call the extreme point itself Seg 0.
+    */
+
+    int seg;
+    if (psr->al.deg <= 90.0)
+    {
+        if (B.x[2] > 0.0)
+        {
+            if (x->x[2] > 0.0)          seg = 1;
+            else                        seg = 4;
+        }
+        else
+        {
+            if (fabs(Bdr) <= precision) seg = 0;
+            else if (Bdr > 0.0)         seg = 2;
+            else /* (Bdr < 0.0) */      seg = 3;
+        }
+    }
+    else // al > 90.0 deg
+    {
+        if (B.x[2] < 0.0)
+        {
+            if (x->x[2] < 0.0)  seg = 1;
+            else                seg = 4;
+        }
+        else
+        {
+            if (fabs(Bdr) <= precision) seg = 0;
+            else if (Bdr > 0.0)         seg = 2;
+            else /* (Bdr < 0.0) */      seg = 3;
+        }
+    }
+
+    // Now sum up
+    if (seg == 0)
+        return DIR_STOP; // We hit the extreme point!
+
+    if (seg == 1 || seg == 2)
+        return DIR_OUTWARD; // The extreme point is "in front" of x
+
+    // seg must be either 3 or 4
+    return DIR_INWARD; // The extreme point is "behind" x
 }
 
 
@@ -522,71 +622,62 @@ void farpoint( point *start_pt, pulsar *psr, double tmult,
     copy_point( start_pt, &x );
     tstep = tmult * x.r;
 
-    // Trace this line outwards with a 4 stage Runge-Kutta.
-    // "Outwards" means the direction such that the quantity
-    //
-    // UP TO HERE!!!
+    // Trace this line along the magnetic field line with a 4 stage Runge-
+    // Kutta in the specified direction.
 
-    int temp_drctn = direction; // In case we've gone too far
     double precision = 1.0e-14;
+    int direction, prev_direction, init_direction = DIR_STOP;
 
     while (1) // Indefinite loop until surface is reached
     {
+        // On the first time through the while loop, set up directions
+        if (init_direction == DIR_STOP)
+        {
+            direction      = cmp_extreme( &x, psr, precision );
+            init_direction = direction;
+        }
+
+        // Check to see if we've landed on the extreme.
+        if (direction == DIR_STOP)
+            break;
+
         // Keep track of the previous point
         copy_point( &x, &old_x );
-
-        // Write out the current xyz position, if requested,
-        // but only if we're still moving "forward"
-        if (write_xyz && (temp_drctn == direction))
-            fprintf( write_xyz, "%.14e %.14e %.14e\n", x.x[0], x.x[1], x.x[2] );
+        prev_direction = direction;
 
         // Take a single RK4 step along the magnetic field
-        Bstep( &old_x, psr, tstep, temp_drctn, &x );
+        Bstep( &old_x, psr, tstep, direction, &x );
 
         // Recalculate the various distances to the new point
         set_point_xyz( &x, x.x[0], x.x[1], x.x[2],
                 POINT_SET_SPH | POINT_SET_RHOSQ );
 
-        /* Figure out whether to stop or not */
+        // Find where the extreme point is in relation to the new x.
+        direction = cmp_extreme( &x, psr, precision );
+
+        // Write out the current xyz position, if requested,
+        // but only if we're still moving in the original direction
+        if (write_xyz && (direction == init_direction))
+            fprintf( write_xyz, "%.14e %.14e %.14e\n", x.x[0], x.x[1], x.x[2] );
 
         // Error checking: this algorithm should have stopped long before
         // tstep reaches underflow
         if ((tstep/2.0 <= 0.0) || (tstep/2.0 >= tstep))
         {
-            fprintf( stderr, "error: Bline: tstep underflow\n" );
+            fprintf( stderr, "error: farpoint: tstep underflow\n" );
             exit(EXIT_FAILURE);
         }
 
-        // Just check to see if we've happened to land exactly on the surface
-        if (x.r == psr->r)
-            break;
-
-        // Otherwise, only do anything special if we've crossed the surface
-        if ((x.r - psr->r) / (old_x.r - psr->r) < 0.0) // then x and old_x are
-                                                       // on opposite sides of
-                                                       // the surface
-        {
-            if ((fabs(x.r - old_x.r) <= precision*psr->r))
-                break;
-
-            if (temp_drctn == DIR_OUTWARD)
-                temp_drctn = DIR_INWARD;
-            else if (temp_drctn == DIR_INWARD)
-                temp_drctn = DIR_OUTWARD;
-            else
-            {
-                fprintf( stderr, "error: footpoint: unknown direction\n" );
-                exit(EXIT_FAILURE);
-            }
+        // If we've changed direction, then halve the step size
+        if (direction != prev_direction)
             tstep /= 2.0;
-        }
 
         // Adjust tstep proportionally to how far away from the pulsar we are
         tstep *= x.r / old_x.r;
     }
 
     // Make the final point available to the caller
-    copy_point( &x, foot_pt );
+    copy_point( &x, far_pt );
 }
 
 
@@ -607,7 +698,25 @@ void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
     point slop1, slop2, slop3, slope;
     point xp1, xp2;
 
-    double sgn = (direction ? 1.0 : -1.0);
+    if (direction == DIR_STOP)
+    {
+        fprintf( stderr, "warning: Bstep: direction set to DIR_STOP\n" );
+        copy_point( x1, x2 );
+        return;
+    }
+
+    double sgn;
+    if (direction == DIR_OUTWARD)
+        sgn = 1.0;
+    else if (direction == DIR_INWARD)
+        sgn = -1.0;
+    else
+    {
+        fprintf( stderr, "error: Bstep: unrecognised direction (%d)\n",
+                         direction );
+        exit(EXIT_FAILURE);
+    }
+
     int i; // Generic loop counter
 
     // First stage

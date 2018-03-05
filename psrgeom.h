@@ -1,7 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
-#define PSRGEOM_VERSION "1.1.0"
+#define PSRGEOM_VERSION "1.1.1"
 
 #include <stdio.h>
 #include <math.h>
@@ -28,8 +28,9 @@
 #define  POINT_SET_SPH    0x38  /* 00111000 */
 #define  POINT_SET_ALL    0x7F  /* 01111111 */
 
-#define  DIR_INWARD      0
+#define  DIR_INWARD      -1
 #define  DIR_OUTWARD     1
+#define  DIR_STOP        0
 
 
 /**** Structures ****/
@@ -123,8 +124,11 @@ void calc_fields( point *X, pulsar *psr, double v,
 
 void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
 double Bdotrxy( point *x, pulsar *psr );
+int cmp_extreme( point *x, pulsar *psr, double precision );
 void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
                 FILE *write_xyz, point *foot_pt );
+void farpoint( point *start_pt, pulsar *psr, double tmult,
+               FILE *write_xyz, point *far_pt );
 
 
 /**** Dipole field functions ****/
