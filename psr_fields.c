@@ -84,6 +84,7 @@ int main( int argc, char *argv[] )
     tok.calcA = 0;
     tok.n     = 0;
     parse_format( o.format, &tok );
+    fprintf(stderr, "tok.n = %d\n", tok.n );
 
     // Set up pulsar
     pulsar psr;
@@ -340,6 +341,7 @@ void parse_format( char *format, struct tokens *tok )
                     // char_num stays at 0
                     break;
             }
+            format++;
         }
         else if (char_num == 1) // Parse the 2nd character
         {
@@ -357,12 +359,14 @@ void parse_format( char *format, struct tokens *tok )
                     }
                     else
                         char_num++;
+                    format++;
                     break;
                 case 'd': // only allowed after 'B'
                     if (tok->token[tok->n][0] == 'B')
                     {
                         tok->token[tok->n][char_num] = c;
                         char_num++;
+                        format++;
                     }
                     else
                         char_num = 0;
@@ -384,14 +388,16 @@ void parse_format( char *format, struct tokens *tok )
                         tok->calcB = 1;
                         tok->token[tok->n][char_num] = c;
                         tok->n++;
+                        format++;
                     }
-                    if (tok->token[tok->n][0] == 'A')
+                    else if (tok->token[tok->n][0] == 'A')
                     {
                         tok->calcA = 1;
                         tok->calcV = 1;
                         tok->calcB = 1;
                         tok->token[tok->n][char_num] = c;
                         tok->n++;
+                        format++;
                     }
                     break;
                 case 'R':
@@ -401,11 +407,11 @@ void parse_format( char *format, struct tokens *tok )
                         tok->token[tok->n][char_num] = c;
                         tok->n++;
                         tok->calcB = 1;
+                        format++;
                     }
             }
             char_num = 0;
         }
-        format++;
     } while (c != '\0' && tok->n < MAX_NTOKENS);
 }
 
@@ -438,31 +444,31 @@ void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
         fprintf( f, "%.15e", vscale*B->x[2] );
 
     // Print V's
-    else if (!strncmp( tok->token[n], "Vx1", 3 ))
+    else if (!strncmp( tok->token[n], "VxP", 3 ))
         fprintf( f, "%.15e", vscale*V1->x[0] );
-    else if (!strncmp( tok->token[n], "Vy1", 3 ))
+    else if (!strncmp( tok->token[n], "VyP", 3 ))
         fprintf( f, "%.15e", vscale*V1->x[1] );
-    else if (!strncmp( tok->token[n], "Vz1", 3 ))
+    else if (!strncmp( tok->token[n], "VzP", 3 ))
         fprintf( f, "%.15e", vscale*V1->x[2] );
-    else if (!strncmp( tok->token[n], "Vx2", 3 ))
+    else if (!strncmp( tok->token[n], "VxN", 3 ))
         fprintf( f, "%.15e", vscale*V2->x[0] );
-    else if (!strncmp( tok->token[n], "Vy2", 3 ))
+    else if (!strncmp( tok->token[n], "VyN", 3 ))
         fprintf( f, "%.15e", vscale*V2->x[1] );
-    else if (!strncmp( tok->token[n], "Vz2", 3 ))
+    else if (!strncmp( tok->token[n], "VzN", 3 ))
         fprintf( f, "%.15e", vscale*V2->x[2] );
 
     // Print A's
-    else if (!strncmp( tok->token[n], "Ax1", 3 ))
+    else if (!strncmp( tok->token[n], "AxP", 3 ))
         fprintf( f, "%.15e", vscale*A1->x[0] );
-    else if (!strncmp( tok->token[n], "Ay1", 3 ))
+    else if (!strncmp( tok->token[n], "AyP", 3 ))
         fprintf( f, "%.15e", vscale*A1->x[1] );
-    else if (!strncmp( tok->token[n], "Az1", 3 ))
+    else if (!strncmp( tok->token[n], "AzP", 3 ))
         fprintf( f, "%.15e", vscale*A1->x[2] );
-    else if (!strncmp( tok->token[n], "Ax2", 3 ))
+    else if (!strncmp( tok->token[n], "AxN", 3 ))
         fprintf( f, "%.15e", vscale*A2->x[0] );
-    else if (!strncmp( tok->token[n], "Ay2", 3 ))
+    else if (!strncmp( tok->token[n], "AyN", 3 ))
         fprintf( f, "%.15e", vscale*A2->x[1] );
-    else if (!strncmp( tok->token[n], "Az2", 3 ))
+    else if (!strncmp( tok->token[n], "AzN", 3 ))
         fprintf( f, "%.15e", vscale*A2->x[2] );
 
     // Print B dot Rxy

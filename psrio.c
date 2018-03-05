@@ -11,6 +11,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "psrgeom.h"
 
 void print_psrg_header( FILE *f, int argc, char *argv[] )
@@ -20,6 +21,11 @@ void print_psrg_header( FILE *f, int argc, char *argv[] )
     fprintf( f, "%c Command line:", comment );
     int n;
     for (n = 0; n < argc; n++)
-        fprintf( f, " %s", argv[n] );
+    {
+        if (strstr( argv[n], " " ) == NULL)
+            fprintf( f, " %s", argv[n] );
+        else
+            fprintf( f, " \"%s\"", argv[n] );
+    }
     fprintf( f, "\n%c\n", comment );
 }
