@@ -15,36 +15,12 @@ struct opts
     double  al_deg;    // alpha angle in deg
     double  ze_deg;    // zeta angle in deg
     double  P_sec;     // period, in sec
-    char   *format;    // output format string
-    int     grid_type; // grid type (cart, cyl2, or cyl3)
-    int     rL_norm;   // bool: normalise to light cylinder radius?
-    int     rL_lim;    // bool: limit to within light cylinder?
-    int     npoints;   // number of points on one side of grid
+    double  tmult;     // RK4 step size, as a fraction of lt cyl radius
     char   *outfile;   // name of output file (NULL means stdout)
-    double  rho_max;   // largest rho to consider for gridpoints
-    double  vsize;     // ratio of vector size to grid cell size
-};
-
-#define MAX_NTOKENS  64
-
-struct tokens {
-    char token[MAX_NTOKENS][3];
-    int calcB;
-    int calcV;
-    int calcA;
-    int n;
 };
 
 void usage();
 void parse_cmd_line( int argc, char *argv[], struct opts *o );
-void parse_format( char *format, struct tokens *tok );
-
-void print_col_headers( FILE *f, char *format );
-void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
-                        point *B, point *V1, point *V2, point *A1, point *A2,
-                        double BdR, double xscale, double vscale );
-void print_all_tokens( FILE *f, struct tokens *tok, point *X, pulsar *psr,
-                       double xscale, double vscale );
 
 int main( int argc, char *argv[] )
 {
@@ -53,15 +29,8 @@ int main( int argc, char *argv[] )
     o.al_deg    = NAN;
     o.P_sec     = NAN;
     o.ze_deg    = NAN;
-    o.format    = NULL;
-    o.grid_type = GT_CART;
-    o.rL_norm   = 0;
-    o.rL_lim    = 0;
-    o.npoints   = 0; /* Set to 0 now, because the true default depends on
-                        value of grid_type */
+    o.tmult     = 0.01;
     o.outfile   = NULL;
-    o.rho_max   = 1.0;
-    o.vsize     = 0.5;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -78,14 +47,6 @@ int main( int argc, char *argv[] )
             exit(EXIT_FAILURE);
         }
     }
-
-    // Set up tokens
-    struct tokens tok;
-    tok.calcB = 0;
-    tok.calcV = 0;
-    tok.calcA = 0;
-    tok.n     = 0;
-    parse_format( o.format, &tok );
 
     // Set up pulsar
     pulsar psr;
@@ -104,100 +65,14 @@ int main( int argc, char *argv[] )
 
     // Set up grid point
     point X;
-    double xscale = (o.rL_norm ? 1.0/psr.rL : 1.0);
 
     print_psrg_header( f, argc, argv );
 
-    if (o.grid_type == GT_CART)
-    {
-        print_col_headers( f, o.format );
-
-        // Figure out grid spacing
-        double dx     = 2.0 * o.rho_max * psr.rL / (double)(o.npoints - 1);
-        double xmin   = -o.rho_max * psr.rL;
-        double vscale = o.vsize * dx * xscale;
-
-        int i, j, k;
-        for (i = 0; i < o.npoints; i++)
-        for (j = 0; j < o.npoints; j++)
-        for (k = 0; k < o.npoints; k++)
-        {
-            // Set the point at this gridpoint
-            set_point_xyz( &X, (double)i*dx + xmin,
-                               (double)j*dx + xmin,
-                               (double)k*dx + xmin,
-                               POINT_SET_ALL );
-
-            // If selected, ignore points outside of light cylinder
-            if (o.rL_lim && (X.rhosq > psr.rL2))
-                continue;
-
-            print_all_tokens( f, &tok, &X, &psr, xscale, vscale );
-        }
-    }
-    else if (o.grid_type == GT_CYL3)
-    {
-        double dtheta  = 2.0 * PI / (double)(o.npoints);
-        int    rpoints = (int)(1.0 / dtheta) + 1;
-        double dx      = o.rho_max * psr.rL / (double)rpoints;
-        double zmin    = -o.rho_max * psr.rL;
-        double vscale  = o.vsize * dx * xscale;
-        psr_angle ph;
-
-        int i, j, k;
-        for (i = 0; i < rpoints;     i++)
-        for (j = 0; j < o.npoints;   j++)
-        for (k = 0; k < 2*rpoints-1; k++)
-        {
-            // Only do one point on the cylindrical axis
-            if (i == 0 && j != 0 && k != 0)
-                continue;
-
-            // Calculate the phi angle of this point
-            set_psr_angle_rad( &ph, dtheta*(double)j );
-
-            // Set the point at this gridpoint
-            set_point_cyl( &X, (double)i*dx,
-                               &ph,
-                               (double)k*dx + zmin,
-                               POINT_SET_ALL );
-
-            // If selected, ignore points outside of light cylinder
-            if (o.rL_lim && (X.rhosq > psr.rL2))
-                continue;
-
-            print_all_tokens( f, &tok, &X, &psr, xscale, vscale );
-        }
-    }
-    else /* if (o.grid_type == GT_CYL2) */
-    {
-        double dtheta  = 2.0 * PI / (double)(o.npoints);
-        int    rpoints = (int)(1.0 / dtheta) + 1;
-        double dx      = o.rho_max * psr.rL / (double)rpoints;
-        double zmin    = -o.rho_max * psr.rL;
-        double vscale  = o.vsize * dx * xscale;
-        psr_angle ph;
-
-        int j, k;
-        for (j = 0; j < o.npoints;   j++)
-        for (k = 0; k < 2*rpoints+1; k++)
-        {
-            // Calculate the phi angle of this point
-            set_psr_angle_rad( &ph, dtheta*(double)j );
-
-            // Set the point at this gridpoint
-            set_point_cyl( &X, o.rho_max * psr.rL,
-                               &ph,
-                               (double)k*dx + zmin,
-                               POINT_SET_ALL );
-
-            // If selected, ignore points outside of light cylinder
-            if (o.rL_lim && (X.rhosq > psr.rL2))
-                continue;
-
-            print_all_tokens( f, &tok, &X, &psr, xscale, vscale );
-        }
-    }
+    // Set the point at this gridpoint
+    set_point_xyz( &X, 0.4*psr.rL,
+                       0.4*psr.rL,
+                       0.4*psr.rL,
+                       POINT_SET_ALL );
 
     // Clean up
     destroy_psr_angle( ra  );
@@ -205,7 +80,6 @@ int main( int argc, char *argv[] )
     destroy_psr_angle( al  );
     destroy_psr_angle( ze  );
 
-    free( o.format );
     free( o.outfile );
 
     if (o.outfile != NULL)
