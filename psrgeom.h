@@ -126,9 +126,9 @@ void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
 double Bdotrxy( point *x, pulsar *psr );
 int cmp_extreme( point *x, pulsar *psr, double precision );
 void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
-                FILE *write_xyz, int rL_norm, point *foot_pt );
+                FILE *write_xyz, int rL_norm, double rL_lim, point *foot_pt );
 void farpoint( point *start_pt, pulsar *psr, double tmult,
-               FILE *write_xyz, int rL_norm, point *far_pt );
+               FILE *write_xyz, int rL_norm, double rL_lim, point *far_pt );
 
 
 /**** Dipole field functions ****/

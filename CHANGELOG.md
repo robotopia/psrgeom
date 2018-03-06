@@ -5,6 +5,7 @@
 
 * Added a program for plotting magnetic field lines
 * Added an option to footpoint() and farpoint() functions to normalise the output coordinates to the light cylinder radius.
+* Added an option to footpoint() and farpoint() functions to stop if the point gets too far out.
 
 ----
 ## v1.1.1 (2018-03-06)

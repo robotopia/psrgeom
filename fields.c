@@ -397,7 +397,7 @@ double Bdotrxy( point *x, pulsar *psr )
 
 
 void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
-                FILE *write_xyz, int rL_norm, point *foot_pt )
+                FILE *write_xyz, int rL_norm, double rL_lim, point *foot_pt )
 /* This uses Runge-Kutta (RK4) to follow the magnetic field line outward from
  * an initial starting point "start_pt"
  *
@@ -410,6 +410,7 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
  *   write_xyz : file handle where to write x,y,z values
  *               (if NULL, no output is written)
  *   rL_norm   : (bool) normalise written-out points to lt cyl radius
+ *   rL_lim    : the rho limit. If the points go beyond this limit, stop.
  * Outputs:
  *   foot_pt  : the final point reached during RK algorithm
  */
@@ -433,11 +434,17 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
     int temp_drctn = direction; // In case we've gone too far
     double precision = 1.0e-14;
     double xscale = (rL_norm ? 1.0/psr->rL : 1.0);
+    double rho_lim = rL_lim * psr->rL;
+    double rhosq_lim = rho_lim * rho_lim;
 
     while (1) // Indefinite loop until surface is reached
     {
         // Keep track of the previous point
         copy_point( &x, &old_x );
+
+        // If the point has strayed too far afield, stop
+        if (x.rhosq > rhosq_lim)
+            break;
 
         // Write out the current xyz position, if requested,
         // but only if we're still moving "forward"
@@ -596,7 +603,7 @@ int cmp_extreme( point *x, pulsar *psr, double precision )
 
 
 void farpoint( point *start_pt, pulsar *psr, double tmult,
-                FILE *write_xyz, int rL_norm, point *far_pt )
+                FILE *write_xyz, int rL_norm, double rL_lim, point *far_pt )
 /* This uses Runge-Kutta (RK4) to follow the magnetic field line outward from
  * an initial starting point "start_pt". It seeks the point (x,y,z) such that
  * x^2+y^2 is maximised.
@@ -608,6 +615,7 @@ void farpoint( point *start_pt, pulsar *psr, double tmult,
  *   write_xyz : file handle where to write x,y,z values
  *               (if NULL, no output is written)
  *   rL_norm   : (bool) normalise written-out points to lt cyl radius
+ *   rL_lim    : the rho limit. If the points go beyond this limit, stop.
  * Outputs:
  *   far_pt    : the final point reached during RK algorithm
  */
@@ -632,6 +640,8 @@ void farpoint( point *start_pt, pulsar *psr, double tmult,
     double precision = 1.0e-14;
     int direction, prev_direction, init_direction = DIR_STOP;
     double xscale = (rL_norm ? 1.0/psr->rL : 1.0);
+    double rho_lim = rL_lim * psr->rL;
+    double rhosq_lim = rho_lim * rho_lim;
 
     while (1) // Indefinite loop until surface is reached
     {
@@ -641,6 +651,10 @@ void farpoint( point *start_pt, pulsar *psr, double tmult,
             direction      = cmp_extreme( &x, psr, precision );
             init_direction = direction;
         }
+
+        // If the point has strayed too far afield, stop
+        if (x.rhosq > rhosq_lim)
+            break;
 
         // Check to see if we've landed on the extreme.
         if (direction == DIR_STOP)
