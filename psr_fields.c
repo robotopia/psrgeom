@@ -43,6 +43,8 @@ void print_col_headers( FILE *f, char *format );
 void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
                         point *B, point *V1, point *V2, point *A1, point *A2,
                         double BdR, double xscale, double vscale );
+void print_all_tokens( FILE *f, struct tokens *tok, point *X, pulsar *psr,
+                       double xscale, double vscale );
 
 int main( int argc, char *argv[] )
 {
@@ -102,18 +104,7 @@ int main( int argc, char *argv[] )
 
     // Set up grid point
     point X;
-
-    // Set up particle speed
-    double v = SPEED_OF_LIGHT;
-
-    // Get the number of velocity solutions
-    int nsols;
-
-
-    point B;
-    point V1, V2;
-    point A1, A2;
-    double BdR = NAN;
+    double xscale = (o.rL_norm ? 1.0/psr.rL : 1.0);
 
     print_psrg_header( f, argc, argv );
 
@@ -122,9 +113,8 @@ int main( int argc, char *argv[] )
         print_col_headers( f, o.format );
 
         // Figure out grid spacing
-        double dx    = 2.0 * o.rho_max * psr.rL / (double)(o.npoints - 1);
-        double xmin  = -o.rho_max * psr.rL;
-        double xscale = (o.rL_norm ? 1.0/psr.rL : 1.0);
+        double dx     = 2.0 * o.rho_max * psr.rL / (double)(o.npoints - 1);
+        double xmin   = -o.rho_max * psr.rL;
         double vscale = o.vsize * dx * xscale;
 
         int i, j, k;
@@ -142,33 +132,71 @@ int main( int argc, char *argv[] )
             if (o.rL_lim && (X.rhosq > psr.rL2))
                 continue;
 
-            if (tok.calcA)
-                calc_fields( &X, &psr, v, &B, &V1, &V2, &A1, &A2, &nsols );
-            else if (tok.calcV)
-                calc_fields( &X, &psr, v, &B, &V1, &V2, NULL, NULL, &nsols );
-            else if (tok.calcB)
-                calc_fields( &X, &psr, v, &B, NULL, NULL, NULL, NULL, &nsols );
-
-            if (tok.calcA || tok.calcV || tok.calcB)
-            {
-                BdR = B.x[0] * X.ph.cos +
-                      B.x[1] * X.ph.sin;
-            }
-
-            int n;
-            for (n = 0; n < tok.n; n++)
-            {
-                print_token_value( f, &tok, n, &X, &B, &V1, &V2, &A1, &A2,
-                                   BdR, xscale, vscale );
-                fprintf( f, " " );
-            }
-            fprintf( f, "\n" );
+            print_all_tokens( f, &tok, &X, &psr, xscale, vscale );
         }
     }
-    else
+    else if (o.grid_type == GT_CYL3)
     {
-        double dtheta = 2.0 * PI / (double)(o.npoints);
-        double dx     = dtheta * o.rho_max;
+        double dtheta  = 2.0 * PI / (double)(o.npoints);
+        int    rpoints = (int)(1.0 / dtheta) + 1;
+        double dx      = o.rho_max * psr.rL / (double)rpoints;
+        double zmin    = -o.rho_max * psr.rL;
+        double vscale  = o.vsize * dx * xscale;
+        psr_angle ph;
+
+        int i, j, k;
+        for (i = 0; i < rpoints;     i++)
+        for (j = 0; j < o.npoints;   j++)
+        for (k = 0; k < 2*rpoints-1; k++)
+        {
+            // Only do one point on the cylindrical axis
+            if (i == 0 && j != 0 && k != 0)
+                continue;
+
+            // Calculate the phi angle of this point
+            set_psr_angle_rad( &ph, dtheta*(double)j );
+
+            // Set the point at this gridpoint
+            set_point_cyl( &X, (double)i*dx,
+                               &ph,
+                               (double)k*dx + zmin,
+                               POINT_SET_ALL );
+
+            // If selected, ignore points outside of light cylinder
+            if (o.rL_lim && (X.rhosq > psr.rL2))
+                continue;
+
+            print_all_tokens( f, &tok, &X, &psr, xscale, vscale );
+        }
+    }
+    else /* if (o.grid_type == GT_CYL2) */
+    {
+        double dtheta  = 2.0 * PI / (double)(o.npoints);
+        int    rpoints = (int)(1.0 / dtheta) + 1;
+        double dx      = o.rho_max * psr.rL / (double)rpoints;
+        double zmin    = -o.rho_max * psr.rL;
+        double vscale  = o.vsize * dx * xscale;
+        psr_angle ph;
+
+        int j, k;
+        for (j = 0; j < o.npoints;   j++)
+        for (k = 0; k < 2*rpoints-1; k++)
+        {
+            // Calculate the phi angle of this point
+            set_psr_angle_rad( &ph, dtheta*(double)j );
+
+            // Set the point at this gridpoint
+            set_point_cyl( &X, o.rho_max * psr.rL,
+                               &ph,
+                               (double)k*dx + zmin,
+                               POINT_SET_ALL );
+
+            // If selected, ignore points outside of light cylinder
+            if (o.rL_lim && (X.rhosq > psr.rL2))
+                continue;
+
+            print_all_tokens( f, &tok, &X, &psr, xscale, vscale );
+        }
     }
 
     // Clean up
@@ -474,4 +502,37 @@ void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
     else if (!strncmp( tok->token[n], "BdR", 3 ))
         fprintf( f, "%.15e", BdR );
 
+}
+
+
+
+void print_all_tokens( FILE *f, struct tokens *tok, point *X, pulsar *psr,
+                       double xscale, double vscale )
+{
+    point B, V1, V2, A1, A2;
+    int nsols;
+    double BdR = NAN;
+    double v = SPEED_OF_LIGHT;
+
+    if (tok->calcA)
+        calc_fields( X, psr, v, &B, &V1, &V2, &A1, &A2, &nsols );
+    else if (tok->calcV)
+        calc_fields( X, psr, v, &B, &V1, &V2, NULL, NULL, &nsols );
+    else if (tok->calcB)
+        calc_fields( X, psr, v, &B, NULL, NULL, NULL, NULL, &nsols );
+
+    if (tok->calcA || tok->calcV || tok->calcB)
+    {
+        BdR = B.x[0] * X->ph.cos +
+              B.x[1] * X->ph.sin;
+    }
+
+    int n;
+    for (n = 0; n < tok->n; n++)
+    {
+        print_token_value( f, tok, n, X, &B, &V1, &V2, &A1, &A2,
+                BdR, xscale, vscale );
+        fprintf( f, " " );
+    }
+    fprintf( f, "\n" );
 }
