@@ -180,7 +180,7 @@ int main( int argc, char *argv[] )
 
         int j, k;
         for (j = 0; j < o.npoints;   j++)
-        for (k = 0; k < 2*rpoints-1; k++)
+        for (k = 0; k < 2*rpoints+1; k++)
         {
             // Calculate the phi angle of this point
             set_psr_angle_rad( &ph, dtheta*(double)j );
@@ -388,6 +388,18 @@ void parse_format( char *format, struct tokens *tok )
                         char_num++;
                     format++;
                     break;
+                case 'r':
+                case 'h':
+                case 't':
+                case 'p':
+                    if (tok->token[tok->n][0] == 'X')
+                    {
+                        tok->token[tok->n][char_num] = c;
+                        tok->n++;
+                        format++;
+                    }
+                    char_num = 0;
+                    break;
                 case 'd': // only allowed after 'B'
                     if (tok->token[tok->n][0] == 'B')
                     {
@@ -461,6 +473,14 @@ void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
         fprintf( f, "%.15e", xscale*X->x[1] );
     else if (!strncmp( tok->token[n], "Xz", 2 ))
         fprintf( f, "%.15e", xscale*X->x[2] );
+    else if (!strncmp( tok->token[n], "Xr", 2 ))
+        fprintf( f, "%.15e", xscale*X->r );
+    else if (!strncmp( tok->token[n], "Xh", 2 ))
+        fprintf( f, "%.15e", xscale*sqrt(X->rhosq) );
+    else if (!strncmp( tok->token[n], "Xt", 2 ))
+        fprintf( f, "%.15e", X->th.rad );
+    else if (!strncmp( tok->token[n], "Xp", 2 ))
+        fprintf( f, "%.15e", X->ph.rad );
 
     // Print B's
     else if (!strncmp( tok->token[n], "Bx", 2 ))
