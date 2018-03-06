@@ -13,7 +13,8 @@ OPTIM   = -O2
 
 CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG)
 
-TARGETS = psr_fields
+TARGETS = psr_fields \
+		  psr_lines
 
 LIBRARY = psrgeom
 LIBFILE = lib$(LIBRARY).a

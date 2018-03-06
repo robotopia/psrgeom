@@ -147,7 +147,7 @@ int main( int argc, char *argv[] )
         int i, j, k;
         for (i = 0; i < rpoints;     i++)
         for (j = 0; j < o.npoints;   j++)
-        for (k = 0; k < 2*rpoints-1; k++)
+        for (k = 0; k < 2*rpoints+1; k++)
         {
             // Only do one point on the cylindrical axis
             if (i == 0 && j != 0 && k != 0)

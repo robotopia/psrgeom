@@ -397,7 +397,7 @@ double Bdotrxy( point *x, pulsar *psr )
 
 
 void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
-                FILE *write_xyz, point *foot_pt )
+                FILE *write_xyz, int rL_norm, point *foot_pt )
 /* This uses Runge-Kutta (RK4) to follow the magnetic field line outward from
  * an initial starting point "start_pt"
  *
@@ -409,6 +409,7 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
  *               {DIR_INWARD, DIR_OUTWARD}
  *   write_xyz : file handle where to write x,y,z values
  *               (if NULL, no output is written)
+ *   rL_norm   : (bool) normalise written-out points to lt cyl radius
  * Outputs:
  *   foot_pt  : the final point reached during RK algorithm
  */
@@ -431,6 +432,7 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
 
     int temp_drctn = direction; // In case we've gone too far
     double precision = 1.0e-14;
+    double xscale = (rL_norm ? 1.0/psr->rL : 1.0);
 
     while (1) // Indefinite loop until surface is reached
     {
@@ -440,7 +442,8 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
         // Write out the current xyz position, if requested,
         // but only if we're still moving "forward"
         if (write_xyz && (temp_drctn == direction))
-            fprintf( write_xyz, "%.14e %.14e %.14e\n", x.x[0], x.x[1], x.x[2] );
+            fprintf( write_xyz, "%.15e %.15e %.15e\n",
+                     xscale*x.x[0], xscale*x.x[1], xscale*x.x[2] );
 
         // Take a single RK4 step along the magnetic field
         Bstep( &old_x, psr, tstep, temp_drctn, &x );
@@ -593,7 +596,7 @@ int cmp_extreme( point *x, pulsar *psr, double precision )
 
 
 void farpoint( point *start_pt, pulsar *psr, double tmult,
-                FILE *write_xyz, point *far_pt )
+                FILE *write_xyz, int rL_norm, point *far_pt )
 /* This uses Runge-Kutta (RK4) to follow the magnetic field line outward from
  * an initial starting point "start_pt". It seeks the point (x,y,z) such that
  * x^2+y^2 is maximised.
@@ -604,6 +607,7 @@ void farpoint( point *start_pt, pulsar *psr, double tmult,
  *   tmult     : the rate at which to progress in RK4 (fraction of psr radius)
  *   write_xyz : file handle where to write x,y,z values
  *               (if NULL, no output is written)
+ *   rL_norm   : (bool) normalise written-out points to lt cyl radius
  * Outputs:
  *   far_pt    : the final point reached during RK algorithm
  */
@@ -627,6 +631,7 @@ void farpoint( point *start_pt, pulsar *psr, double tmult,
 
     double precision = 1.0e-14;
     int direction, prev_direction, init_direction = DIR_STOP;
+    double xscale = (rL_norm ? 1.0/psr->rL : 1.0);
 
     while (1) // Indefinite loop until surface is reached
     {
@@ -658,7 +663,8 @@ void farpoint( point *start_pt, pulsar *psr, double tmult,
         // Write out the current xyz position, if requested,
         // but only if we're still moving in the original direction
         if (write_xyz && (direction == init_direction))
-            fprintf( write_xyz, "%.14e %.14e %.14e\n", x.x[0], x.x[1], x.x[2] );
+            fprintf( write_xyz, "%.15e %.15e %.15e\n",
+                     xscale*x.x[0], xscale*x.x[1], xscale*x.x[2] );
 
         // Error checking: this algorithm should have stopped long before
         // tstep reaches underflow
