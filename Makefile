@@ -41,7 +41,8 @@ install:
 	cp $(LIBFILE) /usr/local/lib
 	cp $(HDRFILE) /usr/local/include
 	cp $(TARGETS) /usr/local/bin
-	cp man/*.gz /usr/local/man/man3
+	cp man/*.3.gz /usr/local/man/man3
+	cp man/*.7.gz /usr/local/man/man7
 
 clean-man-pages:
 	$(RM) man/*.gz

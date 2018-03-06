@@ -28,7 +28,8 @@ TARGETS = calc_fields.3.gz \
 		  dipole_footpoint.3.gz \
 		  move_around_cyl.3.gz \
 		  print_psrg_header.3.gz \
-		  psrgeom.3.gz
+		  psrgeom.3.gz \
+		  psr_fields.7.gz
 
 all: $(TARGETS)
 

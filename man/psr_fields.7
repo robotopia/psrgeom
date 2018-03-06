@@ -1,0 +1,186 @@
+.Dd March 6, 2018
+.Dt PSR_FIELDS 7
+.Os
+.Sh NAME
+.Nm psr_fields
+.Nd calculate pulsar fields
+.Sh SYNOPSIS
+.Nm
+.Op Fl a Ar alpha
+.Op Fl P Ar period
+.Op Fl z Ar zeta
+.Op Fl f Ar format
+.Op Fl g Ar gt
+.Op Fl h
+.Op Fl l
+.Op Fl L
+.Op Fl N Ar npoints
+.Op Fl o Ar outfile
+.Op Fl r Ar rho
+.Op Fl v Ar vsize
+.Sh DESCRIPTION
+.Nm
+calculates the magnetic, velocity, and acceleration fields (and some other
+derived values) around a pulsar. It uses the formulation of Paul Arendt, which
+is equivalent to the vacuum Deutsch solution. For each calculated point in
+3D space, it outputs the field components as text, according to the specified
+.Ar format
+string. The coordinate system used associates the z-axis with the pulsar's
+rotation axis, and the magnetic axis as lying in the xz-plane.
+.Pp
+Command line flags can be used to control which points are evaluated, and the
+geometry of the pulsar.
+.Bl -tag -width "-N npoints"
+.It Fl a Ar alpha
+The angle between the rotation and magetic axes in degrees (required)
+.It Fl P Ar period
+The rotation period of the pulsar, in seconds (required)
+.It Fl z Ar zeta
+The angle between the rotation axis and the line of sight in degrees (required)
+.It Fl f Ar format
+The output format string. For details, see below. (default:
+.Dq Xx Xy Xz \&Bx By Bz
+)
+.It Fl g Ar gt
+The grid type.
+.Ar gt
+can be
+.Sq cart
+,
+.Sq cyl2
+, or
+.Sq cyl3
+(default:
+.Sq cart
+)
+.It Fl h
+Displays usage help and exits
+.It Fl l
+Limit to points within the pulsar's light cylinder
+.It Fl L
+Normalise distances to the light cylinder radius
+.It Fl N Ar npoints
+The number of points along a side of the grid. With grid type
+.Sq cart
+, this
+effectively sets the grid spacing size to be
+.br
+2 *
+.Ar rho
+* rL / (
+.Ar npoints
+- 1 ),
+.br
+where rL is the light cylinder radius. With grid type
+.Sq cyl2
+or
+.Sq cyl3
+, the
+grid spacing is set to be
+.br
+2 * pi *
+.Ar rho
+/
+.Ar npoints
+\&.
+.br
+(default: 11 for
+.Sq cart
+, 24 for
+.Sq cyl2
+/
+.Sq cyl3
+)
+.It Fl o Ar outfile
+The name of the output file to write to. If not set, output will be written to
+stdout.
+.It Fl r Ar rho
+The largest
+.Ar rho
+to consider, as a fraction of the light cylinder radius, i.e. rho = sqrt(x^2 +
+y^2)/rL (default: 1.0)
+.It Fl v Ar vsize
+Normalise vector outputs so that their length is
+.Ar vsize
+times the distance between grid points (default: 0.5)
+.El
+.Sh FORMAT SPECIFIERS
+The
+.Ar format
+string can be made up of the following multi-character tokens:
+.Bl -tag -width "'XXX'"
+.It Sq Xx
+The x-coordinate of the location
+.It Sq Xy
+The y-coordinate of the location
+.It Sq Xz
+The z-coordinate of the location
+.It Sq \&Xr
+The radial coordinate of the location
+.It Sq Xh
+The perpendicular distance of the location from the z-axis
+.It Sq Xt
+The colatitude of the location (in radians)
+.It Sq Xp
+The azimuth of the location (in radians)
+.It Sq \&Bx
+The x-component of the magnetic field
+.It Sq By
+The y-component of the magnetic field
+.It Sq Bz
+The z-component of the magnetic field
+.It Sq VxP
+The x-component of the velocity field that corresponds to a particle flowing
+in the same direction as the magnetic field.
+.It Sq VyP
+The y-component of the velocity field that corresponds to a particle flowing
+in the same direction as the magnetic field.
+.It Sq VzP
+The z-component of the velocity field that corresponds to a particle flowing
+in the same direction as the magnetic field.
+.It Sq VxN
+The x-component of the velocity field that corresponds to a particle flowing
+in the opposite direction as the magnetic field.
+.It Sq VyN
+The y-component of the velocity field that corresponds to a particle flowing
+in the opposite direction as the magnetic field.
+.It Sq VzN
+The z-component of the velocity field that corresponds to a particle flowing
+in the opposite direction as the magnetic field.
+.It Sq AxP
+The x-component of the acceleration field that corresponds to a particle
+flowing in the same direction as the magnetic field.
+.It Sq AyP
+The y-component of the acceleration field that corresponds to a particle
+flowing in the same direction as the magnetic field.
+.It Sq AzP
+The z-component of the acceleration field that corresponds to a particle
+flowing in the same direction as the magnetic field.
+.It Sq AxN
+The x-component of the acceleration field that corresponds to a particle
+flowing in the opposite direction as the magnetic field.
+.It Sq AyN
+The y-component of the acceleration field that corresponds to a particle
+flowing in the opposite direction as the magnetic field.
+.It Sq AzN
+The z-component of the acceleration field that corresponds to a particle
+flowing in the opposite direction as the magnetic field.
+.It Sq BdR
+The dot product of the (normalised) magnetic field with the unit vector that
+points cylindrically outward.
+.El
+.Pp
+The format string is parsed strictly from left to right. Any character that
+does not form part of one of the above specifiers (including whitespace
+characters) is silently ignored. Thus,
+.Dq AxNAyNAzN
+is a valid format string containing specifiers for three acceleration
+components.
+.Sh BUGS
+No bugs known at present.
+.Sh AUTHOR
+Sam McSweeney
+.br
+Curtin University
+.br
+sammy.mcsweeney@gmail.com
