@@ -17,7 +17,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <nmead.h>
+#include <time.h>
 #include "psrgeom.h"
+
+// The following struct is for conveniently passing information to the
+// Nelder-Mead optimisation function
+struct nm_cost_args
+{
+    pulsar    *psr;
+    psr_angle *phase;
+    int        direction;
+};
 
 double psr_cost_lofl( point *X, pulsar *psr )
 /* This calculates the "cost" associated with how close X's magnetic field
@@ -171,4 +182,116 @@ double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction )
 
     // Return the calculated cost
     return cost;
+}
+
+double psr_cost_total_nmead( int n, const double *xyz, void *varg )
+/* A cost function for use with the Nelder-Mead algorithm, as implemented in
+ * the nmead library. This cost function combines the costs associated with
+ * the last open field lines (psr_cost_lofl) and the line of sight
+ * (psr_cost_los).
+ *
+ * Arguments:
+ *   n    = number of parameters to be fitted = 3 (i.e., x,y,z)
+ *   xyz  = an array of three doubles, representing a point's position in
+ *          Cartesian coordinates
+ *   arg  = a pointer to a custom struct that contains:
+ *          (1) a pointer to a pulsar struct
+ *          (2) a pointer to a psr_angle struct (the phase)
+ *          (3) a direction (either DIR_OUTWARD or DIR_INWARD)
+ */
+{
+    // Force n to equal 3
+    if (n != 3)
+    {
+        fprintf( stderr, "error: psr_cost_total_nmead: n (=%d) must "
+                         "equal 3\n", n );
+        exit(EXIT_FAILURE);
+    }
+
+    // Convert the parameters to a point
+    point X;
+    set_point_xyz( &X, xyz[0], xyz[1], xyz[2], POINT_SET_ALL );
+
+    // "Deconstruct" the data argument "arg"
+    struct nm_cost_args *arg       = (struct nm_cost_args *)varg;
+    pulsar              *psr       = arg->psr;
+    psr_angle           *phase     = arg->phase;
+    int                  direction = arg->direction;
+
+    // Get the two associated costs
+    double cost_lofl = psr_cost_lofl( &X, psr );
+    double cost_los  = psr_cost_los( &X, psr, phase, direction );
+
+    // Combine them in the simplest way possible, and return the result
+    return cost_lofl + cost_los;
+}
+
+void find_emission_point( pulsar *psr, psr_angle *phase, int direction, 
+                          point *emit_pt )
+/* This function finds the point which satisfies the dual contraints of
+ *   1) sitting on a last open field line, and
+ *   2) producing emission that is beamed along the line of sight.
+ * It uses Nelder-Mead optimisation, as implemented in the nmead library.
+ *
+ * The initial point to feed in should be as close to the correct point as
+ * possible, to minimise the time spent converging on the answer. Here,
+ * however, we just randomise the initial guess, which can be improved upon
+ * later if need be.
+ *
+ * Inputs:
+ *   pulsar *psr      : a pointer to a pulsar struct
+ *   psr_angle *phase : the rotation phase of interest
+ *   int direction    : either DIR_OUTWARD or DIR_INWARD (for particles
+ *                      flowing along or against the magnetic field,
+ *                      respectively)
+ * Outputs:
+ *   point *emit_pt   : the emission point that the Nelder-Mead algorithm
+ *                      converged upon
+ */
+{
+    // Seed the random number generator
+    srand( time( NULL ) );
+
+    // Set up the arguments for the call to the Nelder-Mead function
+    int n = 3;     // Three parameters to fit (x,y,z)
+
+    double p0[n];  // The initial guess
+    int i;         // for looping over 0..(n-1)
+    do
+    {
+        for (i = 0; i < n; i++)
+            p0[i] = RANDU;
+    } while ((p0[0]*p0[0] + p0[1]*p0[1]) >= 1.0); /* Make sure point is within
+                                                     the light cylinder */
+    // Scale up to physical units
+    for (i = 0; i < n; i++)
+        p0[i] *= psr->rL;
+
+    // Use default Nelder-Mead algorithm parameters
+    nm_optimset optimset;
+
+    optimset.tolx     = NM_TOL_X;
+    optimset.tolf     = NM_TOL_F;
+    optimset.max_iter = NM_MAX_ITER;
+    optimset.max_eval = NM_MAX_EVAL;
+
+    // Set up a place to store the result
+    nm_point solution;
+    double solvals[n];
+    solution.x = solvals;
+
+    // Set up the data args that get passed to the cost function
+    struct nm_cost_args arg;
+    arg.psr       = psr;
+    arg.phase     = phase;
+    arg.direction = direction;
+
+    // Call the Nelder-Mead function and find the point
+    nelder_mead( p0, n, optimset, &solution, psr_cost_total_nmead, &arg );
+
+    // Pass the solution out of this function
+    set_point_xyz( emit_pt, solution.x[0],
+                            solution.x[1],
+                            solution.x[2],
+                            POINT_SET_ALL );
 }

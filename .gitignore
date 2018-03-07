@@ -2,3 +2,4 @@
 *.gz
 lib*.a
 psr_fields
+psr_lines

@@ -38,6 +38,10 @@
 #define  STOP_FOUND   0
 #define  STOP_EXCEED  1
 
+// Generate random numbers
+#define RAND(x)   ((x)*(double)rand()/(double)RAND_MAX)   /* 0 < rand < x */
+#define RANDU     (RAND(1.0) * 2.0 - 1.0)                 /* -1 < rand < 1 */
+
 /**** Structures ****/
 
 typedef struct psr_angle_t

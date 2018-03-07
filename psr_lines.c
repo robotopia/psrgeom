@@ -6,9 +6,6 @@
 #include "psrgeom.h"
 #include <time.h>
 
-// Generate a random number between -1 and 1
-#define RANDU  ((double)rand()/(double)RAND_MAX * 2.0 - 1.0)
-
 struct opts
 {
     double  al_deg;    // alpha angle in deg
