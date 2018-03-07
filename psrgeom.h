@@ -156,4 +156,9 @@ void move_around_cyl( point *start_pt, psr_angle *xi, double zdist,
 /**** PSRGEOM I/O ****/
 void print_psrg_header( FILE *f, int argc, char *argv[] );
 
+/**** Finding the emission point ****/
+
+double psr_cost_lofl( point *X, pulsar *psr );
+double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction );
+
 #endif

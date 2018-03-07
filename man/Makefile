@@ -31,6 +31,7 @@ TARGETS = calc_fields.3.gz \
 		  print_psrg_header.3.gz \
 		  psrgeom.3.gz \
 		  psr_cost_lofl.3.gz \
+		  psr_cost_los.3.gz \
 		  psr_fields.7.gz
 
 all: $(TARGETS)

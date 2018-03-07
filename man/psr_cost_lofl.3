@@ -1,0 +1,38 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH PSR_COST_LOFL 3 2018-03-07 "" "Pulsar Geometry"
+.SH NAME
+psr_cost_lofl \- Calculate the cost of a point associated with its proxmity to a last open field line
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "double psr_cost_lofl(point *" X ", pulsar *" psr ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR psr_cost_lofl ()
+function calculates the cost associated with how close
+.IR X 's
+magnetic field
+line is to a last open field line around pulsar
+.IR psr .
+Because the field lines behave
+erratically outside the light cylinder, it is impractical to always find
+the line's most distant point (i.e. perp. dist. from the z-axis) and
+use that in the calculation. Therefore, the cost is evaluated differently
+in the two following cases:
+.Pp
+    1) the field line extends beyond the light cylinder,
+.br
+    2) the field line is closed (within the light cylinder)
+.br
+In the first case, we find the point at which the field line penetrates the
+light cylinder and use the "B dot r_{xy}" quantity as a proxy for the cost.
+In the second case, we use fractional distance of the most extreme point to
+the light cylinder as a proxy for the cost.
+after they have been normalised.
+.SH RETURN VALUE
+The
+.BR psr_cost_lofl ()
+returns the calculated cost. It is guaranteed to be in the range [0,1].

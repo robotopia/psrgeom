@@ -1,0 +1,27 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH PSR_COST_LOS 3 2018-03-07 "" "Pulsar Geometry"
+.SH NAME
+psr_cost_los \- Calculate the cost of a point associated how close to parallel the velocity field is to the line of sight
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "double psr_cost_los(point *" X ", pulsar *" psr ", psr_angle *" phase ", int " direction ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR psr_cost_los ()
+function calculates the cost associated with how close emission from point
+.I X
+is from the line of sight, given a rotation phase for pulsar
+.IR psr .
+Each point has associated with it two possible velocity vectors (which
+determine the direction of the beamed emission), depending on whether the
+particle is flowing "outward" or "inward" (i.e. in the same or in the opposite
+direction as the magnetic field. Which vector field is used is set by the
+"direction" parameter.
+.SH RETURN VALUE
+The
+.BR psr_cost_los ()
+function returns the calculated cost. It is guaranteed to be in the range [0,1].
