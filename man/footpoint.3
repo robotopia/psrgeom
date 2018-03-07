@@ -1,12 +1,12 @@
 .\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
-.TH FOOTPOINT 3 2018-02-22 "" "Pulsar Geometry"
+.TH FOOTPOINT 3 2018-03-07 "" "Pulsar Geometry"
 .SH NAME
 footpoint \- find the point where a magnetic field line penetrates the pulsar surface
 .SH SYNOPSIS
 .nf
 .B #include <psrgeom.h>
 .PP
-.BI "void footpoint(point *" start_pt ", pulsar *" psr ", double " tmult ", int " direction ", FILE *" write_xyz ", point *" foot_pt ");"
+.BI "int footpoint(point *" start_pt ", pulsar *" psr ", double " tmult ", int " direction ", FILE *" write_xyz ", int " rL_norm ", double " rL_lim ", point *" foot_pt ");"
 .fi
 .PP
 .SH DESCRIPTION
@@ -24,7 +24,10 @@ stellar radius, according to a 4th order Runge Kutta method.  If
 \fIwrite_xyz\fP is not
 .BR NULL,
 the Cartesian coordinates of each point are written out to the specified file.
-The final point is recorded in \fIfoot_pt\fP.
+If
+.I rL_norm
+is non-zero, the written-out values are normalised to the light cylinder
+radius. The final point is recorded in \fIfoot_pt\fP.
 .PP
 The steps are carried out by successive calls to
 .BR Bstep()
@@ -36,7 +39,13 @@ radius.
 .SH RETURN VALUE
 The
 .BR footpoint ()
-function returns does not return any value.
+function returns
+.B STOP_FOUND
+if the footpoint was successfully found, and
+.B STOP_EXCEED
+if the threshold set by
+.I rL_lim
+was reached first.
 .SH EXAMPLE
 .EX
 #include <psrgeom.h>
@@ -56,7 +65,7 @@ int main(int argc, char *argv[])
     point x, fp;
     set_point_xyz( &x, psr.rL/2.0, 0.0, psr.rL/2.0, POINT_SET_ALL );
 
-    footpoint( &x, &psr, 0.01, DIR_INWARD, stdout, &fp );
+    footpoint( &x, &psr, 0.01, DIR_INWARD, stdout, 0, 1.0, &fp );
 
     exit(EXIT_SUCCESS);
 }

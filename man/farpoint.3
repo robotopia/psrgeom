@@ -1,12 +1,12 @@
 .\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
-.TH FARPOINT 3 2018-03-05 "" "Pulsar Geometry"
+.TH FARPOINT 3 2018-03-07 "" "Pulsar Geometry"
 .SH NAME
 farpoint \- find the most cylindrically extreme point of a magnetic field line
 .SH SYNOPSIS
 .nf
 .B #include <psrgeom.h>
 .PP
-.BI "void farpoint(point *" start_pt ", pulsar *" psr ", double " tmult ", FILE *" write_xyz ", point *" far_pt ");"
+.BI "void farpoint(point *" start_pt ", pulsar *" psr ", double " tmult ", FILE *" write_xyz ", int " rL_norm ", double " rL_lim ", point *" far_pt ");"
 .fi
 .PP
 .SH DESCRIPTION
@@ -25,7 +25,10 @@ times the stellar radius, according to a 4th order Runge Kutta method. If
 is not
 .BR NULL ,
 the Cartesian coordinates of each point are written out to the specified file.
-The final point is recorded in
+If
+.I rL_norm
+is non-zero, the written-out values are normalised to the light cylinder
+radius. The final point is recorded in
 .IR foot_pt .
 .PP
 The steps are carried out by successive calls to
@@ -38,7 +41,13 @@ the vector that points perpendicularly away from the rotation axis drops below
 .SH RETURN VALUE
 The
 .BR farpoint ()
-function returns does not return any value.
+function returns
+.B STOP_FOUND
+if the extreme point was successfully found, and
+.B STOP_EXCEED
+if the threshold set by
+.I rL_lim
+was reached first.
 .SH EXAMPLE
 .EX
 #include <psrgeom.h>
@@ -58,7 +67,7 @@ int main(int argc, char *argv[])
     point x, fp;
     set_point_xyz( &x, psr.rL/2.0, 0.0, psr.rL/2.0, POINT_SET_ALL );
 
-    farpoint( &x, &psr, 0.01, stdout, &fp );
+    farpoint( &x, &psr, 0.01, stdout, 0, 1.0, &fp );
 
     exit(EXIT_SUCCESS);
 }

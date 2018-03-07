@@ -96,6 +96,7 @@ void rotate_about_axis( point *in, point *out, psr_angle *rot, char axis,
 void min_phase_diff( psr_angle *a1, psr_angle *a2, psr_angle *diff );
 
 
+
 /**** Point functions ****/
 
 void set_point_xyz( point *p, double x, double y, double z, int flags );
@@ -103,6 +104,7 @@ void set_point_sph( point *p, double r, psr_angle *th, psr_angle *ph, int flags 
 void set_point_cyl( point *p, double rh, psr_angle *ph, double z, int flags );
 void copy_point( point *src, point *dest );
 
+double norm_dot( point *p1, point *p2 );
 
 
 

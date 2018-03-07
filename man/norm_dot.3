@@ -1,0 +1,42 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH NORM_DOT 3 2018-03-07 "" "Pulsar Geometry"
+.SH NAME
+norm_dot \- Calculate the normlised dot product
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "double norm_dot(point *" p1 ", point *" p2 ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR norm_dot ()
+function calculates the dot product of the points
+.I p1
+and
+.IR p2 ,
+after they have been normalised.
+.SH RETURN VALUE
+The
+.BR copy_point ()
+returns the calculated dot product.
+.SH EXAMPLE
+.EX
+#include <psrgeom.h>
+
+int main(int argc, char *argv[])
+{
+    point P1, P2;
+
+    set_point_xyz( &P1,  1.0, 2.0, 3.0, POINT_SET_XYZ | POINT_SET_R );
+    set_point_xyz( &P1, -1.0, 4.0, 1.0, POINT_SET_XYZ | POINT_SET_R );
+    double d = norm_dot( &P1, &P2 );
+
+    exit(EXIT_SUCCESS);
+}
+.EE
+.SH SEE ALSO
+.BR set_point_xyz (3),
+.BR set_point_sph (3),
+.BR set_point_cyl (3)

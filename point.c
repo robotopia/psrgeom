@@ -104,3 +104,17 @@ void copy_point( point *src, point *dest )
 }
 
 
+double norm_dot( point *p1, point *p2 )
+/* Calculate the normlised dot product of p1 and p2.
+ * That is,
+ *           p1     p2
+ *          ---- . ----
+ *          |p1|   |p2|
+ * This function assumes that the Cartesian coordinates and the radial
+ * coordinate are set.
+ */
+{
+    return ((p1->x[0] * p2->x[0] +
+             p1->x[1] * p2->x[1] +
+             p1->x[2] * p2->x[2]) / (p1->r * p2->r));
+}
