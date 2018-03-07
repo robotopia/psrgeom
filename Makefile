@@ -26,6 +26,7 @@ OBJS = psr_angle.o \
 	   fields.o \
 	   cylinder.o \
 	   dipole.o \
+	   emitloc.o \
 	   psrio.o
 
 all: $(TARGETS) $(LIBFILE) man-pages
