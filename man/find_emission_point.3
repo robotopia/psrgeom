@@ -1,0 +1,43 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH FIND_EMISSION_POINT 3 2018-03-07 "" "Pulsar Geometry"
+.SH NAME
+find_emission_point \- Finds the location around a pulsar that would give rise to emission seen at a particular rotation phase
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void find_emission_point(pulsar *" psr ", psr_angle *" phase ", int " direction ", point *" emit_pt ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR find_emission_point ()
+function locates the point around pulsar
+.I psr
+that satisfies two constraints:
+.Pp
+    1) It sits on a last open field line,
+.br
+    2) It produces emission that is beamed along the line of sight at rotation
+phase
+.IR phase .
+.br
+It uses Nelder-Mead optimisation, as implemented in the nmead library.
+.PP
+If
+.I direction
+is
+.BR DIR_OUTWARD ,
+then it is assumed that the emission comes from particles that flow in the
+same direction as the magnetic field. If
+.I direction
+is
+.BR DIR_INWARD ,
+then the particles are assumed to flow in the opposite direction.
+.PP
+The point that the Nelder-Mead algorithm converges upon is stored in
+.IR emit_pt .
+.SH RETURN VALUE
+The
+.BR find_emission_point ()
+function does not return anything.

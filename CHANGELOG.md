@@ -6,6 +6,7 @@
 * Generalised the Bstep() function, for arbitrary vector fields.
 * Added a function to find the emission point on a last open field line corresponding to a given rotation phase.
 * Added a function, norm\_dot(), for calculating the normalised dot product of two vectors (i.e points).
+* Include retardation in the calculation of the emission point.
 
 ----
 ## v1.1.2 (2018-03-07)
