@@ -16,6 +16,7 @@
 
 #define  NDEP            3     // Number of dimensions
 
+// The ways to set the values in a point
 #define  POINT_SET_NONE   0x0   /* 00000000 */
 #define  POINT_SET_X      0x1   /* 00000001 */
 #define  POINT_SET_Y      0x2   /* 00000010 */
@@ -28,10 +29,14 @@
 #define  POINT_SET_SPH    0x38  /* 00111000 */
 #define  POINT_SET_ALL    0x7F  /* 01111111 */
 
+// Directions for traversing field lines
 #define  DIR_INWARD      -1
 #define  DIR_OUTWARD     1
 #define  DIR_STOP        0
 
+// The possible return values of footpoint() and farpoint()
+#define  STOP_FOUND   0
+#define  STOP_EXCEED  1
 
 /**** Structures ****/
 
@@ -125,10 +130,10 @@ void calc_fields( point *X, pulsar *psr, double v,
 void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
 double Bdotrxy( point *x, pulsar *psr );
 int cmp_extreme( point *x, pulsar *psr, double precision );
-void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
-                FILE *write_xyz, int rL_norm, double rL_lim, point *foot_pt );
-void farpoint( point *start_pt, pulsar *psr, double tmult,
-               FILE *write_xyz, int rL_norm, double rL_lim, point *far_pt );
+int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
+               FILE *write_xyz, int rL_norm, double rL_lim, point *foot_pt );
+int farpoint( point *start_pt, pulsar *psr, double tmult,
+              FILE *write_xyz, int rL_norm, double rL_lim, point *far_pt );
 
 
 /**** Dipole field functions ****/

@@ -396,8 +396,8 @@ double Bdotrxy( point *x, pulsar *psr )
 
 
 
-void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
-                FILE *write_xyz, int rL_norm, double rL_lim, point *foot_pt )
+int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
+               FILE *write_xyz, int rL_norm, double rL_lim, point *foot_pt )
 /* This uses Runge-Kutta (RK4) to follow the magnetic field line outward from
  * an initial starting point "start_pt"
  *
@@ -410,9 +410,13 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
  *   write_xyz : file handle where to write x,y,z values
  *               (if NULL, no output is written)
  *   rL_norm   : (bool) normalise written-out points to lt cyl radius
- *   rL_lim    : the rho limit. If the points go beyond this limit, stop.
+ *   rL_lim    : the rho limit, normalised to the light cylinder radius.
+ *               If the points go beyond this limit, stop.
  * Outputs:
- *   foot_pt  : the final point reached during RK algorithm
+ *   foot_pt   : the final point reached during RK algorithm
+ * Return values:
+ *   STOP_FOUND  : The point was successfully found
+ *   STOP_EXCEED : The outer limit (rL_lim) was reached
  */
 {
     // Error checking: foot_pt must be a valid pointer to a point struct
@@ -421,6 +425,8 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
         fprintf( stderr, "error: footpoint: foot_pt cannot be NULL\n" );
         exit(EXIT_FAILURE);
     }
+
+    int retval = STOP_FOUND;
 
     point x, old_x;
 
@@ -444,7 +450,10 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
 
         // If the point has strayed too far afield, stop
         if (x.rhosq > rhosq_lim)
+        {
+            retval = STOP_EXCEED;
             break;
+        }
 
         // Write out the current xyz position, if requested,
         // but only if we're still moving "forward"
@@ -500,6 +509,8 @@ void footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
 
     // Make the final point available to the caller
     copy_point( &x, foot_pt );
+
+    return retval;
 }
 
 
@@ -602,8 +613,8 @@ int cmp_extreme( point *x, pulsar *psr, double precision )
 }
 
 
-void farpoint( point *start_pt, pulsar *psr, double tmult,
-                FILE *write_xyz, int rL_norm, double rL_lim, point *far_pt )
+int farpoint( point *start_pt, pulsar *psr, double tmult,
+              FILE *write_xyz, int rL_norm, double rL_lim, point *far_pt )
 /* This uses Runge-Kutta (RK4) to follow the magnetic field line outward from
  * an initial starting point "start_pt". It seeks the point (x,y,z) such that
  * x^2+y^2 is maximised.
@@ -615,9 +626,13 @@ void farpoint( point *start_pt, pulsar *psr, double tmult,
  *   write_xyz : file handle where to write x,y,z values
  *               (if NULL, no output is written)
  *   rL_norm   : (bool) normalise written-out points to lt cyl radius
- *   rL_lim    : the rho limit. If the points go beyond this limit, stop.
+ *   rL_lim    : the rho limit, normalised to the light cylinder radius.
+ *               If the points go beyond this limit, stop.
  * Outputs:
  *   far_pt    : the final point reached during RK algorithm
+ * Return values:
+ *   STOP_FOUND  : The point was successfully found
+ *   STOP_EXCEED : The outer limit (rL_lim) was reached
  */
 {
     // Error checking: far_pt must be a valid pointer to a point struct
@@ -627,6 +642,7 @@ void farpoint( point *start_pt, pulsar *psr, double tmult,
         exit(EXIT_FAILURE);
     }
 
+    int retval = STOP_FOUND;
     point x, old_x;
 
     double tstep;
@@ -654,7 +670,10 @@ void farpoint( point *start_pt, pulsar *psr, double tmult,
 
         // If the point has strayed too far afield, stop
         if (x.rhosq > rhosq_lim)
+        {
+            retval = STOP_EXCEED;
             break;
+        }
 
         // Check to see if we've landed on the extreme.
         if (direction == DIR_STOP)
@@ -698,6 +717,8 @@ void farpoint( point *start_pt, pulsar *psr, double tmult,
 
     // Make the final point available to the caller
     copy_point( &x, far_pt );
+
+    return retval;
 }
 
 
