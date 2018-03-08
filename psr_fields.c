@@ -23,6 +23,7 @@ struct opts
     int     npoints;   // number of points on one side of grid
     char   *outfile;   // name of output file (NULL means stdout)
     double  rho_max;   // largest rho to consider for gridpoints
+    double  z_max;     // largest (abs) z to consider for gridpoints
     double  vsize;     // ratio of vector size to grid cell size
 };
 
@@ -64,6 +65,7 @@ int main( int argc, char *argv[] )
                         value of grid_type */
     o.outfile   = NULL;
     o.rho_max   = 1.0;
+    o.z_max     = NAN;
     o.vsize     = 0.5;
 
     parse_cmd_line( argc, argv, &o );
@@ -123,16 +125,20 @@ int main( int argc, char *argv[] )
         double dx     = 2.0 * o.rho_max * psr.rL / (double)(o.npoints - 1);
         double xmin   = -o.rho_max * psr.rL;
         double vscale = o.vsize * dx * xscale;
+        double zmax   = fabs(o.z_max) * psr.rL;
+        double zmin   = -zmax;
+        int    nk     = floor( 2.0 * zmax / dx ) + 1;
+        double dz     = 2.0*zmax / (double)(nk-1);
 
         int i, j, k;
         for (i = 0; i < o.npoints; i++)
         for (j = 0; j < o.npoints; j++)
-        for (k = 0; k < o.npoints; k++)
+        for (k = 0; k < nk;        k++)
         {
             // Set the point at this gridpoint
             set_point_xyz( &X, (double)i*dx + xmin,
                                (double)j*dx + xmin,
-                               (double)k*dx + xmin,
+                               (double)k*dz + zmin,
                                POINT_SET_ALL );
 
             // If selected, ignore points outside of light cylinder
@@ -147,14 +153,17 @@ int main( int argc, char *argv[] )
         double dtheta  = 2.0 * PI / (double)(o.npoints);
         int    rpoints = (int)(1.0 / dtheta) + 1;
         double dx      = o.rho_max * psr.rL / (double)rpoints;
-        double zmin    = -o.rho_max * psr.rL;
+        double zmax    = fabs(o.z_max) * psr.rL;
+        double zmin    = -zmax;
+        int    nk      = floor( 2.0 * zmax / dx ) + 1;
+        double dz      = 2.0*zmax / (double)(nk-1);
         double vscale  = o.vsize * dx * xscale;
         psr_angle ph;
 
         int i, j, k;
-        for (i = 0; i < rpoints;     i++)
-        for (j = 0; j < o.npoints;   j++)
-        for (k = 0; k < 2*rpoints+1; k++)
+        for (i = 0; i < rpoints;   i++)
+        for (j = 0; j < o.npoints; j++)
+        for (k = 0; k < nk;        k++)
         {
             // Only do one point on the cylindrical axis
             if (i == 0 && j != 0 && k != 0)
@@ -166,7 +175,7 @@ int main( int argc, char *argv[] )
             // Set the point at this gridpoint
             set_point_cyl( &X, (double)i*dx,
                                &ph,
-                               (double)k*dx + zmin,
+                               (double)k*dz + zmin,
                                POINT_SET_ALL );
 
             // If selected, ignore points outside of light cylinder
@@ -181,14 +190,17 @@ int main( int argc, char *argv[] )
         double dtheta  = 2.0 * PI / (double)(o.npoints);
         int    rpoints = (int)(1.0 / dtheta) + 1;
         double dx      = o.rho_max * psr.rL / (double)rpoints;
-        double zmin    = -o.rho_max * psr.rL;
+        double zmax    = fabs(o.z_max) * psr.rL;
+        double zmin    = -zmax;
+        int    nk      = floor( 2.0 * zmax / dx ) + 1;
+        double dz      = 2.0*zmax / (double)(nk-1);
         double vscale  = o.vsize * dx * xscale;
         psr_angle ph;
 
         int j, k;
         for (j = 0; j < o.npoints;   j++)
         {
-            for (k = 0; k < 2*rpoints+1; k++)
+            for (k = 0; k < nk; k++)
             {
                 // Calculate the phi angle of this point
                 set_psr_angle_rad( &ph, dtheta*(double)j );
@@ -196,7 +208,7 @@ int main( int argc, char *argv[] )
                 // Set the point at this gridpoint
                 set_point_cyl( &X, o.rho_max * psr.rL,
                                    &ph,
-                                   (double)k*dx + zmin,
+                                   (double)k*dz + zmin,
                                    POINT_SET_ALL );
 
                 // If selected, ignore points outside of light cylinder
@@ -260,6 +272,9 @@ void usage()
     printf( "  -v  vsize    Normalise vector outputs so that their length "
                            "is \"vsize\" times the distance between grid "
                            "points (default: 0.5)\n" );
+    printf( "  -Z  z        The largest (abs) z to consider, as a fraction "
+                           "of the light cylinder radius (default: same as "
+                           "rho)\n" );
 }
 
 
@@ -267,7 +282,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:f:g:hlLN:o:p:P:r:v:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:f:g:hlLN:o:p:P:r:v:z:Z:")) != -1)
     {
         switch (c)
         {
@@ -322,6 +337,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
             case 'z':
                 o->ze_deg = atof(optarg);
                 break;
+            case 'Z':
+                o->z_max = atof(optarg);
+                break;
             case '?':
                 fprintf( stderr, "error: unknown option character '-%c'\n",
                          optopt );
@@ -341,9 +359,11 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
         exit(EXIT_FAILURE);
     }
 
+    // Set the default format, if needed
     if (o->format == NULL)
         o->format = strdup("Xx Xy Xz Bx By Bz");
 
+    // Set the default number of grid points, if needed
     if (o->npoints == 0)
     {
         if (o->grid_type == GT_CART)
@@ -351,6 +371,10 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
         else
             o->npoints = 24;
     }
+
+    // If z-max not set, set it to the same as rho
+    if (isnan( o->z_max ))
+        o->z_max = o->rho_max;
 }
 
 

@@ -178,10 +178,10 @@ double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction )
                  LoS.x[1] * V->x[1] +
                  LoS.x[2] * V->x[2];
 
-    // At the moment, -1 <= LdV <= 1, so squaring it will give us something in
-    // the correct range. But we need 0 to represent when the two vectors are
-    // parallel, so after squaring, invert.
-    cost = 1.0 - LdV*LdV;
+    // At the moment, -1 <= LdV <= 1, and we only want those with an answer
+    // of 1 (which means, we have to map 1 --> 0, with all the worse solutions
+    // being > 0).
+    cost = 1.0 - LdV;
 
     // Return the calculated cost
     return cost;
