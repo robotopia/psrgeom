@@ -148,10 +148,11 @@ double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction )
     // error
     if (nsols != 2)
     {
-        fprintf( stderr, "error: psr_cost_los: Could not find two solutions "
+        fprintf( stderr, "warning: psr_cost_los: Could not find two solutions "
                          "for the velocity field at point X (%.2e,%.2e,%.2e) "
                          "[nsols = %d]\n", X->x[0], X->x[1], X->x[2], nsols );
-        exit(EXIT_FAILURE);
+        return NAN;
+        //exit(EXIT_FAILURE);
     }
 
     // Calculate the line of sight for the given rotation phase (remember that
@@ -251,8 +252,7 @@ void find_emission_point( pulsar *psr, psr_angle *phase, int direction,
  *                      converged upon
  */
 {
-    // Seed the random number generator
-    srand( time( NULL ) );
+    // Assume that the random number generator has been already seeded
 
     // Set up the arguments for the call to the Nelder-Mead function
     int n = 3;     // Three parameters to fit (x,y,z)

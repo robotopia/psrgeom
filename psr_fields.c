@@ -187,22 +187,25 @@ int main( int argc, char *argv[] )
 
         int j, k;
         for (j = 0; j < o.npoints;   j++)
-        for (k = 0; k < 2*rpoints+1; k++)
         {
-            // Calculate the phi angle of this point
-            set_psr_angle_rad( &ph, dtheta*(double)j );
+            for (k = 0; k < 2*rpoints+1; k++)
+            {
+                // Calculate the phi angle of this point
+                set_psr_angle_rad( &ph, dtheta*(double)j );
 
-            // Set the point at this gridpoint
-            set_point_cyl( &X, o.rho_max * psr.rL,
-                               &ph,
-                               (double)k*dx + zmin,
-                               POINT_SET_ALL );
+                // Set the point at this gridpoint
+                set_point_cyl( &X, o.rho_max * psr.rL,
+                                   &ph,
+                                   (double)k*dx + zmin,
+                                   POINT_SET_ALL );
 
-            // If selected, ignore points outside of light cylinder
-            if (o.rL_lim && (X.rhosq > psr.rL2))
-                continue;
+                // If selected, ignore points outside of light cylinder
+                if (o.rL_lim && (X.rhosq > psr.rL2))
+                    continue;
 
-            print_all_tokens( f, &tok, &X, &psr, phase, xscale, vscale );
+                print_all_tokens( f, &tok, &X, &psr, phase, xscale, vscale );
+            }
+            fprintf( f, "\n" );
         }
     }
 
