@@ -18,6 +18,7 @@
 .Op Fl o Ar outfile
 .Op Fl r Ar rho
 .Op Fl v Ar vsize
+.Op Fl Z Ar z
 .Sh DESCRIPTION
 .Nm
 calculates the magnetic, velocity, and acceleration fields (and some other
@@ -103,6 +104,14 @@ y^2)/rL (default: 1.0)
 Normalise vector outputs so that their length is
 .Ar vsize
 times the distance between grid points (default: 0.5)
+.It Fl Z Ar z
+Set the z-range of plotted points from -
+.Ar z
+to
+.Ar z
+, where
+.Ar z
+is expressed in units of light cylinder radii.
 .El
 .Sh FORMAT SPECIFIERS
 The
