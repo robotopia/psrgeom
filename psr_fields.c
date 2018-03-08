@@ -15,6 +15,7 @@ struct opts
     double  al_deg;    // alpha angle in deg
     double  ze_deg;    // zeta angle in deg
     double  P_sec;     // period, in sec
+    double  ph_deg;    // phase angle in deg
     char   *format;    // output format string
     int     grid_type; // grid type (cart, cyl2, or cyl3)
     int     rL_norm;   // bool: normalise to light cylinder radius?
@@ -32,6 +33,7 @@ struct tokens {
     int calcB;
     int calcV;
     int calcA;
+    int calcVdL;
     int n;
 };
 
@@ -42,17 +44,18 @@ void parse_format( char *format, struct tokens *tok );
 void print_col_headers( FILE *f, char *format );
 void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
                         point *B, point *V1, point *V2, point *A1, point *A2,
-                        double BdR, double xscale, double vscale );
+                        double BdR, double VdL, double xscale, double vscale );
 void print_all_tokens( FILE *f, struct tokens *tok, point *X, pulsar *psr,
-                       double xscale, double vscale );
+                       psr_angle *phase, double xscale, double vscale );
 
 int main( int argc, char *argv[] )
 {
     // Set up struct for command line options and set default values
     struct opts o;
     o.al_deg    = NAN;
-    o.P_sec     = NAN;
     o.ze_deg    = NAN;
+    o.P_sec     = NAN;
+    o.ph_deg    = 0.0;
     o.format    = NULL;
     o.grid_type = GT_CART;
     o.rL_norm   = 0;
@@ -84,6 +87,7 @@ int main( int argc, char *argv[] )
     tok.calcB = 0;
     tok.calcV = 0;
     tok.calcA = 0;
+    tok.calcVdL = 0;
     tok.n     = 0;
     parse_format( o.format, &tok );
 
@@ -101,6 +105,9 @@ int main( int argc, char *argv[] )
                        outputs of this program */
 
     set_pulsar( &psr, ra, dec, P, r, al, ze );
+
+    // Set up rotation phase
+    psr_angle *phase = create_psr_angle_deg( o.ph_deg );
 
     // Set up grid point
     point X;
@@ -132,7 +139,7 @@ int main( int argc, char *argv[] )
             if (o.rL_lim && (X.rhosq > psr.rL2))
                 continue;
 
-            print_all_tokens( f, &tok, &X, &psr, xscale, vscale );
+            print_all_tokens( f, &tok, &X, &psr, phase, xscale, vscale );
         }
     }
     else if (o.grid_type == GT_CYL3)
@@ -166,7 +173,7 @@ int main( int argc, char *argv[] )
             if (o.rL_lim && (X.rhosq > psr.rL2))
                 continue;
 
-            print_all_tokens( f, &tok, &X, &psr, xscale, vscale );
+            print_all_tokens( f, &tok, &X, &psr, phase, xscale, vscale );
         }
     }
     else /* if (o.grid_type == GT_CYL2) */
@@ -195,7 +202,7 @@ int main( int argc, char *argv[] )
             if (o.rL_lim && (X.rhosq > psr.rL2))
                 continue;
 
-            print_all_tokens( f, &tok, &X, &psr, xscale, vscale );
+            print_all_tokens( f, &tok, &X, &psr, phase, xscale, vscale );
         }
     }
 
@@ -242,6 +249,8 @@ void usage()
             "               (default: 11 for cart, 24 for cyl2/cyl3)\n");
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
+    printf( "  -p  phase    The rotation phase of the observed emission, in "
+                           "degrees (default: 0)\n" );
     printf( "  -r  rho      The largest rho to consider, as a fraction of "
                            "the light cylinder radius, i.e. rho = sqrt("
                            "x^2 + y^2)/rL (default: 1.0)\n" );
@@ -255,7 +264,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:f:g:hlLN:o:P:r:v:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:f:g:hlLN:o:p:P:r:v:z:")) != -1)
     {
         switch (c)
         {
@@ -294,6 +303,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 break;
             case 'o':
                 o->outfile = strdup(optarg);
+                break;
+            case 'p':
+                o->ph_deg = atof(optarg);
                 break;
             case 'P':
                 o->P_sec = atof(optarg);
@@ -400,8 +412,9 @@ void parse_format( char *format, struct tokens *tok )
                     }
                     char_num = 0;
                     break;
-                case 'd': // only allowed after 'B'
-                    if (tok->token[tok->n][0] == 'B')
+                case 'd': // only allowed after 'B' or 'V'
+                    if (tok->token[tok->n][0] == 'B' ||
+                        tok->token[tok->n][0] == 'V')
                     {
                         tok->token[tok->n][char_num] = c;
                         char_num++;
@@ -439,13 +452,23 @@ void parse_format( char *format, struct tokens *tok )
                         format++;
                     }
                     break;
-                case 'R':
+                case 'R': // only allowed after 'Bd'
                     if (tok->token[tok->n][0] == 'B' &&
                         tok->token[tok->n][1] == 'd')
                     {
                         tok->token[tok->n][char_num] = c;
                         tok->n++;
                         tok->calcB = 1;
+                        format++;
+                    }
+                    break;
+                case 'L': // only allowed after 'Vd'
+                    if (tok->token[tok->n][0] == 'V' &&
+                        tok->token[tok->n][1] == 'd')
+                    {
+                        tok->token[tok->n][char_num] = c;
+                        tok->n++;
+                        tok->calcVdL = 1;
                         format++;
                     }
             }
@@ -464,7 +487,7 @@ void print_col_headers( FILE *f, char *format )
 
 void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
                         point *B, point *V1, point *V2, point *A1, point *A2,
-                        double BdR, double xscale, double vscale )
+                        double BdR, double VdL, double xscale, double vscale )
 {
     // Print X
     if (!strncmp( tok->token[n], "Xx", 2 ))
@@ -522,16 +545,21 @@ void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
     else if (!strncmp( tok->token[n], "BdR", 3 ))
         fprintf( f, "%.15e", BdR );
 
+    // Print V(+) dot LoS
+    else if (!strncmp( tok->token[n], "VdL", 3 ))
+        fprintf( f, "%.15e", VdL );
+
 }
 
 
 
 void print_all_tokens( FILE *f, struct tokens *tok, point *X, pulsar *psr,
-                       double xscale, double vscale )
+                       psr_angle *phase, double xscale, double vscale )
 {
     point B, V1, V2, A1, A2;
     int nsols;
     double BdR = NAN;
+    double VdL = NAN;
     double v = SPEED_OF_LIGHT;
 
     if (tok->calcA)
@@ -547,11 +575,16 @@ void print_all_tokens( FILE *f, struct tokens *tok, point *X, pulsar *psr,
               B.x[1] * X->ph.sin;
     }
 
+    if (tok->calcVdL)
+    {
+        VdL = psr_cost_los( X, psr, phase, DIR_OUTWARD );
+    }
+
     int n;
     for (n = 0; n < tok->n; n++)
     {
         print_token_value( f, tok, n, X, &B, &V1, &V2, &A1, &A2,
-                BdR, xscale, vscale );
+                BdR, VdL, xscale, vscale );
         fprintf( f, " " );
     }
     fprintf( f, "\n" );
