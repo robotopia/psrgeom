@@ -4,9 +4,13 @@
 ## Unreleased
 
 * Generalised the Bstep() function, for arbitrary vector fields.
+* Include retardation in the calculation of the emission point.
+
+----
+## v1.1.3 (2018-03-08)
+
 * Added a function to find the emission point on a last open field line corresponding to a given rotation phase.
 * Added a function, norm\_dot(), for calculating the normalised dot product of two vectors (i.e points).
-* Include retardation in the calculation of the emission point.
 * Added the ability to plot a custom range of z's in psr\_field
 
 ----
