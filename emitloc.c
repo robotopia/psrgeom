@@ -173,7 +173,9 @@ double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction )
 
     // Calculate the normalised dot product of the line of sight with the
     // velocity vector
-    double LdV = norm_dot( &LoS, V );
+    double LdV = LoS.x[0] * V->x[0] +
+                 LoS.x[1] * V->x[1] +
+                 LoS.x[2] * V->x[2];
 
     // At the moment, -1 <= LdV <= 1, so squaring it will give us something in
     // the correct range. But we need 0 to represent when the two vectors are
