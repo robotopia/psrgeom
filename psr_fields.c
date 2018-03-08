@@ -35,6 +35,7 @@ struct tokens {
     int calcV;
     int calcA;
     int calcVdL;
+    int calcBLF;
     int n;
 };
 
@@ -45,7 +46,8 @@ void parse_format( char *format, struct tokens *tok );
 void print_col_headers( FILE *f, char *format );
 void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
                         point *B, point *V1, point *V2, point *A1, point *A2,
-                        double BdR, double VdL, double xscale, double vscale );
+                        double BdR, double VdL, double BLF, double xscale,
+                        double vscale );
 void print_all_tokens( FILE *f, struct tokens *tok, point *X, pulsar *psr,
                        psr_angle *phase, double xscale, double vscale );
 
@@ -86,11 +88,12 @@ int main( int argc, char *argv[] )
 
     // Set up tokens
     struct tokens tok;
-    tok.calcB = 0;
-    tok.calcV = 0;
-    tok.calcA = 0;
+    tok.calcB   = 0;
+    tok.calcV   = 0;
+    tok.calcA   = 0;
     tok.calcVdL = 0;
-    tok.n     = 0;
+    tok.calcBLF = 0;
+    tok.n       = 0;
     parse_format( o.format, &tok );
 
     // Set up pulsar
@@ -450,6 +453,16 @@ void parse_format( char *format, struct tokens *tok )
                     else
                         char_num = 0;
                     break;
+                case 'L': // only allowed after 'B'
+                    if (tok->token[tok->n][0] == 'B')
+                    {
+                        tok->token[tok->n][char_num] = c;
+                        char_num++;
+                        format++;
+                    }
+                    else
+                        char_num = 0;
+                    break;
                 default:
                     char_num = 0;
                     break;
@@ -498,6 +511,17 @@ void parse_format( char *format, struct tokens *tok )
                         tok->calcVdL = 1;
                         format++;
                     }
+                    break;
+                case 'F': // only allowed after 'BL'
+                    if (tok->token[tok->n][0] == 'B' &&
+                        tok->token[tok->n][1] == 'L')
+                    {
+                        tok->token[tok->n][char_num] = c;
+                        tok->n++;
+                        tok->calcBLF = 1;
+                        format++;
+                    }
+                    break;
             }
             char_num = 0;
         }
@@ -514,7 +538,8 @@ void print_col_headers( FILE *f, char *format )
 
 void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
                         point *B, point *V1, point *V2, point *A1, point *A2,
-                        double BdR, double VdL, double xscale, double vscale )
+                        double BdR, double VdL, double BLF, double xscale,
+                        double vscale )
 {
     // Print X
     if (!strncmp( tok->token[n], "Xx", 2 ))
@@ -576,6 +601,10 @@ void print_token_value( FILE *f, struct tokens *tok, int n, point *X,
     else if (!strncmp( tok->token[n], "VdL", 3 ))
         fprintf( f, "%.15e", VdL );
 
+    // Print the normalised proximity to a last open field line
+    else if (!strncmp( tok->token[n], "BLF", 3 ))
+        fprintf( f, "%.15e", BLF );
+
 }
 
 
@@ -587,6 +616,7 @@ void print_all_tokens( FILE *f, struct tokens *tok, point *X, pulsar *psr,
     int nsols;
     double BdR = NAN;
     double VdL = NAN;
+    double BLF = NAN;
     double v = SPEED_OF_LIGHT;
 
     if (tok->calcA)
@@ -603,15 +633,16 @@ void print_all_tokens( FILE *f, struct tokens *tok, point *X, pulsar *psr,
     }
 
     if (tok->calcVdL)
-    {
         VdL = psr_cost_los( X, psr, phase, DIR_OUTWARD );
-    }
+
+    if (tok->calcBLF)
+        BLF = psr_cost_lofl( X, psr );
 
     int n;
     for (n = 0; n < tok->n; n++)
     {
         print_token_value( f, tok, n, X, &B, &V1, &V2, &A1, &A2,
-                BdR, VdL, xscale, vscale );
+                BdR, VdL, BLF, xscale, vscale );
         fprintf( f, " " );
     }
     fprintf( f, "\n" );

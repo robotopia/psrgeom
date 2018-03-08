@@ -178,8 +178,12 @@ flowing in the opposite direction as the magnetic field.
 The dot product of the (normalised) magnetic field with the unit vector that
 points cylindrically outward.
 .It Sq VdL
-The square of the dot product of the (DIR_OUTWARD) vector field with the line
-of sight.
+One minus the dot product of the (DIR_OUTWARD) vector field with the line of
+sight.
+.It Sq BLF
+The normalised
+.Sq proximity
+of the point to a last open field line.
 .El
 .Pp
 The format string is parsed strictly from left to right. Any character that
