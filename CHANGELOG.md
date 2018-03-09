@@ -6,6 +6,10 @@
 * Generalised the Bstep() function, for arbitrary vector fields.
 * Include retardation in the calculation of the emission point.
 
+## v1.1.4 (2018-03-09)
+
+* Added an output format option "BLF" to psr\_fields.
+
 ----
 ## v1.1.3 (2018-03-08)
 
