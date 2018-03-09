@@ -76,11 +76,16 @@ double psr_cost_lofl( point *X, pulsar *psr )
     {
         // In this case, far_pt is the point where the magnetic field line
         // penetrates the light cylinder
-        double Bdr = Bdotrxy( &far_pt, psr );
+        point B;
+        calc_fields( X, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
+        double Bdr = B.x[0] * X->ph.cos +
+                     B.x[1] * X->ph.sin;
+        double Bz  = B.x[2];
 
         // At the moment, -1 <= Bdr <= 1, so we can get a valid cost by
-        // squaring it.
-        cost = Bdr * Bdr;
+        // taking the absolute value. But we also want to penalise points
+        // on the light cylinder whose B direction is "up"
+        cost = (Bz <= 0 ? fabs(Bdr) : 2.0 - fabs(Bdr));
     }
     else /* (stop_type == STOP_FOUND) */
     {
