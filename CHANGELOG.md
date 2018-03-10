@@ -5,6 +5,7 @@
 
 * Generalised the Bstep() function, for arbitrary vector fields.
 * Include retardation in the calculation of the emission point.
+* Added functions for calculating the line of sight, and converting between position angles and beam opening angles.
 
 ## v1.1.4 (2018-03-09)
 
