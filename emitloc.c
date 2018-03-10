@@ -223,6 +223,68 @@ double psr_cost_total_nmead( int n, const double *xyz, void *varg )
     return cost_lofl + cost_los;
 }
 
+
+void find_approx_emission_point( pulsar *psr, psr_angle *phase,
+                                 point *emit_pt )
+/* This function finds the emission point around a "simplified" pulsar, which
+ * means a pulsar that
+ *   1) is not rotating,
+ *   2) has a perfectly dipolar magnetic field,
+ *   3) emits along field lines whose maximum extent is the light cylinder
+ *      radius (NB this is not generally the same as the last open field
+ *      lines).
+ * The main purpose of this function is to seed the input of the
+ * find_emission_point() function, which solves for the full Deutsch (1955)
+ * magnetic field, for a rotating pulsar.
+ *
+ * Inputs:
+ *   pulsar *psr      : a pointer to a pulsar struct
+ *   psr_angle *phase : the rotation phase of interest
+ * Outputs:
+ *   point *emit_pt   : the found emission point
+ */
+{
+    // Get the line of sight
+    point LoS;
+    line_of_sight( psr, phase, &LoS );
+
+    // Get the magnetic axis (as a unit vector aka point)
+    point mag;
+    psr_angle angle_zero = ANGLE_ZERO;
+    set_point_sph( &mag, 1.0, &(psr->al), &angle_zero, POINT_SET_ALL );
+
+    // Get Γ, the angle that the line of sight makes with the magnetic axis
+    psr_angle gamma;
+    set_psr_angle_cos( &gamma, LoS.x[0] * mag.x[0] +
+                               LoS.x[1] * mag.x[1] +
+                               LoS.x[2] * mag.x[2] );
+
+    // Convert the opening beam angle, Γ, to a position angle, θ
+    psr_angle theta;
+    beamangle_to_posangle( &gamma, &theta );
+
+    // Calculate the emission point's distance from the origin, r
+    double r = psr->rL * theta.sin * theta.sin;
+
+    // Calculate the emission point's "phase" (in the magnetic frame, σ) by
+    // finding the "phase" of the line of sight (because the magnetic axis,
+    // line of sight, and emission point are co-planar).
+
+    point LoS_mag;        /* The LoS in magnetic frame coordinates */
+    obs_to_mag_frame( &LoS, psr, NULL, &LoS_mag );
+
+    psr_angle *sigma = &(LoS_mag.ph);
+
+    // Now I have the spherical coordinates (r,θ,φ) in the magnetic frame,
+    // so set the emission point in the mag. frame and then convert back
+    // to the observer frame.
+    point emit_pt_mag;
+    set_point_sph( &emit_pt_mag, r, &theta, sigma, POINT_SET_ALL );
+
+    mag_to_obs_frame( &emit_pt_mag, psr, NULL, emit_pt );
+}
+
+
 void find_emission_point( pulsar *psr, psr_angle *phase, int direction, 
                           point *emit_pt )
 /* This function finds the point which satisfies the dual contraints of
@@ -291,3 +353,9 @@ void find_emission_point( pulsar *psr, psr_angle *phase, int direction,
                             solution.x[2],
                             POINT_SET_ALL );
 }
+
+
+/* BIBLOGRAPHY
+ *
+ * Deutsch, A. (1955), Annales d'Astrophysique, 18, 1-10
+ */

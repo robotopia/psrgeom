@@ -167,6 +167,8 @@ void print_psrg_header( FILE *f, int argc, char *argv[] );
 
 double psr_cost_lofl( point *X, pulsar *psr );
 double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction );
+void find_approx_emission_point( pulsar *psr, psr_angle *phase,
+                                 point *emit_pt );
 void find_emission_point( pulsar *psr, psr_angle *phase, int direction,
                           point *emit_pt );
 

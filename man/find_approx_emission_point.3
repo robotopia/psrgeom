@@ -1,0 +1,34 @@
+.\" Copyright 2018 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH FIND_APPROX_EMISSION_POINT 3 2018-03-10 "" "Pulsar Geometry"
+.SH NAME
+find_approx_emission_point \- Finds an approximate location around a pulsar that would give rise to emission seen at a particular rotation phase
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void find_approx_emission_point(pulsar *" psr ", psr_angle *" phase ", point *" emit_pt ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR find_approx_emission_point ()
+function locates the emission point around a "simplified" pulsar, 
+.IR psr ,
+at a rotation phase
+.IR phase .
+Here, "simplified" means a pulsar that (1) is not rotating, (2) has a
+perfectly dipolar magnetic field, and (3) emits along field lines whose
+maximum extent is the light cylinder radius (NB this is not generally the same
+as the last open field lines).
+.PP
+The main purpose of this function is to seed the input of the
+.BR find_emission_point ()
+function, which solves for the full Deutsch (1955)
+magnetic field, for a rotating pulsar.
+.PP
+The resulting point is stored in
+.IR emit_pt .
+.SH RETURN VALUE
+The
+.BR find_approx_emission_point ()
+function does not return anything.
