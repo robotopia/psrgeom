@@ -33,6 +33,8 @@ TARGETS = calc_fields.3.gz \
 		  psr_cost_lofl.3.gz \
 		  psr_cost_los.3.gz \
 		  find_emission_point.3.gz \
+		  beamangle_to_posangle.3.gz \
+		  posangle_to_beamangle.3.gz \
 		  psr_fields.7.gz
 
 all: $(TARGETS)

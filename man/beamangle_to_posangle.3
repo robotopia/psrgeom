@@ -1,0 +1,48 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH BEAMANGLE_TO_POSANGLE 3 2018-03-10 "" "Pulsar Geometry"
+.SH NAME
+beamangle_to_posangle \- converts beam opening angle to position angle in a dipole magnetic field
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void beamangle_to_posangle(psr_angle *" ba ", psr_angle *" pa ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR beamangle_to_posangle ()
+function converts the beam opening angle
+.I ba
+to a position angle
+.IR pa ,
+as described by Eq (4) of Gangadhara & Gupta (2001).
+.EX
+
+
+    Z
+    |
+    |
+    |            .  o     .
+    X      .                  .
+    |   .                       .
+    | .                          .
+    |.                           .
+    Y-------------------------------------> x
+ 
+
+.EE
+In the figure, "o" is a point on the dipole field line, denoted with dots
+("."), "X" is the point on the z-axis where the tangent line of "o"
+intersects it, Y is at the origin, and Z is a point higher up on the
+z-axis. Then we have the definitions
+.I ba
+= angle(oXZ) and
+.I pa
+= angle(oYZ).
+.SH RETURN VALUE
+The
+.BR beamangle_to_posangle ()
+function does not return any value.
+.SH SEE ALSO
+.BR posangle_to_beamangle (3)

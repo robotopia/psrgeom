@@ -107,3 +107,76 @@ void dipole_footpoint( pulsar *psr, double R, psr_angle *si, point *foot_pt )
     // Convert from magnetic coordinates to the observer's frame
     mag_to_obs_frame( foot_pt, psr, NULL, foot_pt );
 }
+
+
+void beamangle_to_posangle( psr_angle *ba, psr_angle *pa )
+/* This function converts a beam opening angle, Γ, to a position angle, θ,
+ * as described by Eq (4) of Gangadhara & Gupta (2001).
+ *
+ *   Z
+ *   |
+ *   |
+ *   |            .  o     .
+ *   X      .                  .
+ *   |   .                       .
+ *   | .                          .
+ *   |.                           .
+ *   Y-------------------------------------> x
+ *
+ * In the figure, "o" is a point on the dipole field line, denoted with dots
+ * ("."), "X" is the point on the z-axis where the tangent line of "o"
+ * intersects it, Y is at the origin, and Z is a point higher up on the
+ * z-axis. Then we have the definitions:
+ *
+ *   psr_angle *ba = Γ = ∠oXZ  (input)
+ *   psr_angle *pa = θ = ∠oYZ  (output)
+ *
+ * This function is the inverse of posangle_to_beamangle().
+ */
+{
+    double b = 1.5 * ba->cos / ba->sin;           /* = 3/(2 tan Γ)   */
+    double theta;                                 /* = θ             */
+    if (ba->deg < 180.0)                          /* if (Γ < π)      */
+        theta = atan( -b + sqrt( 2.0 + b*b ) );
+    else
+        theta = atan( -b - sqrt( 2.0 + b*b ) ) + PI;
+
+    set_psr_angle_rad( pa, theta );
+}
+
+void posangle_to_beamangle( psr_angle *pa, psr_angle *ba )
+/* This function converts a position angle, θ, to a beam opening angle, Γ.
+ *
+ *   Z
+ *   |
+ *   |
+ *   |            .  o     .
+ *   X      .                  .
+ *   |   .                       .
+ *   | .                          .
+ *   |.                           .
+ *   Y-------------------------------------> x
+ *
+ * In the figure, "o" is a point on the dipole field line, denoted with dots
+ * ("."), "X" is the point on the z-axis where the tangent line of "o"
+ * intersects it, Y is at the origin, and Z is a point higher up on the
+ * z-axis. Then we have the definitions:
+ *
+ *   psr_angle *pa = θ = ∠oYZ  (input)
+ *   psr_angle *ba = Γ = ∠oXZ  (output)
+ *
+ * This function is the inverse of beamangle_to_posangle().
+ */
+{
+    double gamma = atan2( 3.0*pa->cos*pa->sin,
+                          3.0*pa->cos*pa->cos - 1 );
+
+    set_psr_angle_rad( ba, gamma );
+}
+
+
+/* BIBLIOGRAPHY:
+ *
+ * Gangadhara & Gupta (2001), ApJ, 555, 31-39
+ *
+ */

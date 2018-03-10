@@ -151,6 +151,9 @@ void mag_to_obs_frame( point *xm, pulsar *psr, psr_angle *ph, point *xo );
 double calc_dipole_R( point *xm );
 void dipole_footpoint( pulsar *psr, double R, psr_angle *si, point *foot_pt );
 
+void beamangle_to_posangle( psr_angle *ba, psr_angle *pa );
+void posangle_to_beamangle( psr_angle *pa, psr_angle *ba );
+
 
 /**** Other functions ****/
 
