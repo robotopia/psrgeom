@@ -122,7 +122,7 @@ void destroy_pulsar( pulsar *psr );
 
 void set_pulsar_period( pulsar *psr, double P );
 double light_cylinder( double P );
-
+void line_of_sight( pulsar *psr, psr_angle *phase, point *LoS );
 
 
 

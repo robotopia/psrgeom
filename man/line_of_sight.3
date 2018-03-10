@@ -1,0 +1,33 @@
+.\" Copyright 2017 Sam McSweeney (sammy.mcsweeney@gmail.com)
+.TH LINE_OF_SIGHT 3 2018-03-10 "" "Pulsar Geometry"
+.SH NAME
+line_of_sight \- calculates the line of sight in the pulsar's rotating coordinate system
+.SH SYNOPSIS
+.nf
+.B #include <psrgeom.h>
+.PP
+.BI "void line_of_sight(pulsar *" psr ", psr_angle *" phase ", point *" LoS ");"
+.fi
+.PP
+.SH DESCRIPTION
+The
+.BR line_of_sight ()
+function finds the line-of-sight unit vector
+.I LoS
+for a given pulsar
+.I psr
+and rotation phase angle
+.IR phase . LoS
+is given in rotating frame coordinates, where the z-axis is the
+rotation axis, and where the magnetic axis is fixed to lie in the xz-plane.
+.PP
+The point
+.I LoS
+is set with the
+.B POINT_SET_ALL
+flag, and is guaranteed to have length 1, both in the sense of
+sqrt(x^2 + y^2 + z^2) = 1, and r = 1.
+.SH RETURN VALUE
+The
+.BR line_of_sight ()
+function does not return any value.

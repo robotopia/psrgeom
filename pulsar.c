@@ -78,3 +78,32 @@ void set_pulsar_period( pulsar *psr, double P )
     set_psr_angle_rad( &psr->Om, 2.0*PI/P );
 }
 
+
+void line_of_sight( pulsar *psr, psr_angle *phase, point *LoS )
+/* This function finds the line-of-sight unit vector (LoS) for a given pulsar
+ * geometry and rotation phase angle. The LoS is given in rotating frame
+ * coordinates, where the z-axis is the rotation axis, and where the magnetic
+ * axis is fixed to lie in the xz-plane.
+ *
+ * The point LoS is set with the POINT_SET_ALL flag, and is guaranteed to have
+ * length 1, both in the sense of sqrt(x^2 + y^2 + z^2) = 1, and r = 1.
+ *
+ * Inputs:
+ *   pulsar    *psr    : the pulsar geometry
+ *   psr_angle *phase  : the rotation phase
+ * Outputs:
+ *   point     *LoS    : the line of sight unit vector
+ */
+{
+    // A positive rotation of the pulsar equals an apparent reverse rotation
+    // of the line of sight in the rotating frame
+    psr_angle rev_phase;
+    set_psr_angle_deg( &rev_phase, 360.0 - phase->deg );
+
+    // Set the spherical coordinates for the line of sight
+    double     r  = 1.0; // A unit vector
+    psr_angle *th = &(psr->ze);
+    psr_angle *ph = &rev_phase;
+
+    set_point_sph( LoS, r, th, ph, POINT_SET_ALL );
+}

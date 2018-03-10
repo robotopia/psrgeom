@@ -161,21 +161,10 @@ double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction )
     }
 
     // Calculate the line of sight for the given rotation phase (remember that
-    // the coordinate system is in the rotating frame, so that setting the
-    // phase corresponds to rotating the line of sight about the rotation
-    // axis). NB: The line of sight (apparently) rotates about the z-axis in
-    // the opposite direction to the pulsar rotation.
+    // the coordinate system is in the rotating frame).
+
     point LoS;
-
-    psr_angle rev_phase;
-    set_psr_angle_deg( &rev_phase, 360.0 - phase->deg );
-
-    // Set the spherical coordinates for the line of sight
-    double     r  = 1.0; // A unit vector
-    psr_angle *th = &(psr->ze);
-    psr_angle *ph = &rev_phase;
-
-    set_point_sph( &LoS, r, th, ph, POINT_SET_ALL );
+    line_of_sight( psr, phase, &LoS );
 
     // Calculate the normalised dot product of the line of sight with the
     // velocity vector
