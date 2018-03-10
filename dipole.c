@@ -61,12 +61,12 @@ void mag_to_obs_frame( point *xm, pulsar *psr, psr_angle *ph, point *xo )
  */
 {
     // Rotate the inclination alpha
-    rotate_about_axis( xo, xm, &psr->al, 'y', POINT_SET_ALL );
+    rotate_about_axis( xm, xo, &psr->al, 'y', POINT_SET_ALL );
 
     // Rotate the phase
     if (ph)
     {
-        rotate_about_axis( xm, xm, ph, 'z', POINT_SET_ALL );
+        rotate_about_axis( xo, xo, ph, 'z', POINT_SET_ALL );
     }
 }
 
