@@ -219,6 +219,8 @@ double psr_cost_total_nmead( int n, const double *xyz, void *varg )
     double cost_lofl = psr_cost_lofl( &X, psr );
     double cost_los  = psr_cost_los( &X, psr, phase, direction );
 
+printf( "%f %f %f %.15e %.15e\n", xyz[0], xyz[1], xyz[2], cost_lofl, cost_los );
+
     // Combine them in the simplest way possible, and return the result
     return cost_lofl + cost_los;
 }
@@ -315,15 +317,12 @@ void find_emission_point( pulsar *psr, psr_angle *phase, int direction,
 
     double p0[n];  // The initial guess
     int i;         // for looping over 0..(n-1)
-    do
-    {
-        for (i = 0; i < n; i++)
-            p0[i] = RANDU;
-    } while ((p0[0]*p0[0] + p0[1]*p0[1]) >= 1.0); /* Make sure point is within
-                                                     the light cylinder */
-    // Scale up to physical units
+
+    point init_guess;
+    find_approx_emission_point( psr, phase, &init_guess );
+
     for (i = 0; i < n; i++)
-        p0[i] *= psr->rL;
+        p0[i] = init_guess.x[i];
 
     // Use default Nelder-Mead algorithm parameters
     nm_optimset optimset;

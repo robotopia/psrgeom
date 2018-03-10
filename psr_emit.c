@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
-#include <time.h>
 #include "psrgeom.h"
 
 struct opts
@@ -24,9 +23,6 @@ void print_col_headers( FILE *f );
 
 int main( int argc, char *argv[] )
 {
-    // Seed the random number generator
-    srand( time( NULL ) );
-
     // Set up struct for command line options and set default values
     struct opts o;
     o.al_deg    = NAN;
@@ -79,18 +75,14 @@ int main( int argc, char *argv[] )
     print_psrg_header( f, argc, argv );
     print_col_headers( f );
 
-    int i;
-    for (i = 0; i < 500; i++)
-    {
-        // Calculate answer
-        find_emission_point( &psr, ph, o.direction, &emit_pt );
+    // Calculate answer
+    find_emission_point( &psr, ph, o.direction, &emit_pt );
 
-        // Write out the result
-        fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
-                    emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
-                    psr_cost_lofl( &emit_pt, &psr ),
-                    psr_cost_los( &emit_pt, &psr, ph, o.direction ) );
-    }
+    // Write out the result
+    fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
+                emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
+                psr_cost_lofl( &emit_pt, &psr ),
+                psr_cost_los( &emit_pt, &psr, ph, o.direction ) );
 
     // Clean up
     destroy_psr_angle( ra  );
