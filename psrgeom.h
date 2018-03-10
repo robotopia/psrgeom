@@ -121,6 +121,7 @@ pulsar *create_pulsar( psr_angle *ra, psr_angle *dec, double P, double r,
 void destroy_pulsar( pulsar *psr );
 
 void set_pulsar_period( pulsar *psr, double P );
+double light_cylinder( double P );
 
 
 
@@ -153,7 +154,6 @@ void dipole_footpoint( pulsar *psr, double R, psr_angle *si, point *foot_pt );
 
 /**** Other functions ****/
 
-double light_cylinder( double P );
 void move_around_cyl( point *start_pt, psr_angle *xi, double zdist,
                       point *end_pt );
 

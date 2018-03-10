@@ -22,7 +22,6 @@ LIBFILE = lib$(LIBRARY).a
 HDRFILE = $(LIBRARY).h
 OBJS = psr_angle.o \
 	   point.o \
-	   lightcyl.o \
 	   pulsar.o \
 	   fields.o \
 	   cylinder.o \
@@ -44,6 +43,7 @@ install:
 	cp $(LIBFILE) /usr/local/lib
 	cp $(HDRFILE) /usr/local/include
 	cp $(TARGETS) /usr/local/bin
+	mkdir -p /usr/local/man/man3 /usr/local/man/man7
 	cp man/*.3.gz /usr/local/man/man3
 	cp man/*.7.gz /usr/local/man/man7
 
