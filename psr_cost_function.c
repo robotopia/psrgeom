@@ -132,6 +132,7 @@ int main( int argc, char *argv[] )
                 fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
                         x, y, z, c1, c2 );
             }
+            fprintf( f, "\n" );
         }
         fprintf( f, "\n" );
     }
