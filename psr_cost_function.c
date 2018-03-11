@@ -15,6 +15,9 @@ struct opts
     int     rL_norm;   // bool: normalise to light cylinder radius?
     int     direction; // either DIR_OUTWARD or DIR_INWARD
     char   *outfile;   // name of output file (NULL means stdout)
+    int     n[3];      // The number of samples in X,Y,Z
+    double  lim[3][2]; // The lower and upper limits of X
+    char    XYZ[3];    // The loop order
 };
 
 void usage();
@@ -33,6 +36,15 @@ int main( int argc, char *argv[] )
     o.rL_norm   = 0;
     o.direction = DIR_OUTWARD;
     o.outfile   = NULL;
+    int i, j;
+    for (i = 0; i < 3; i++)
+    {
+        o.n[i]   = -1;
+        o.XYZ[i] = '\0';
+    }
+    for (i = 0; i < 3; i++)
+    for (j = 0; j < 2; j++)
+        o.lim[i][j] = NAN;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -68,21 +80,61 @@ int main( int argc, char *argv[] )
     // Set up rotation phase
     psr_angle *ph = create_psr_angle_deg( o.ph_deg );
 
-    // Set up point for answer
-    point emit_pt;
+    // Set up point for sampling
+    point X;
+
+    // Set up the spacing between pixels
+    double dX[3];
+    for (i = 0; i < 3; i++)
+        dX[i] = (o.lim[i][1] - o.lim[i][0]) / (double)o.n[i];
 
     // Write the file and column headers
     print_psrg_header( f, argc, argv );
     print_col_headers( f );
 
-    // Calculate answer
-    find_emission_point( &psr, ph, o.direction, &emit_pt );
+    // Iterate through the three dimensions, covering all pixels
+    double a;        // A temporary placeholder for either x, y, or z
+    double x, y, z;  // The location values
+    double c1, c2;   // The cost functions
+    int xi[3];       // The pixel indices
 
-    // Write out the result
-    fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
-                emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
-                psr_cost_lofl( &emit_pt, &psr ),
-                psr_cost_los( &emit_pt, &psr, ph, o.direction ) );
+    x = y = z = NAN;
+
+    for (xi[0] = 0; xi[0] < o.n[0]; xi[0]++)
+    {
+        a = xi[0]*dX[0] + o.lim[0][0];
+        if      (o.XYZ[0] == 'X')  x = a; 
+        else if (o.XYZ[0] == 'Y')  y = a;
+        else if (o.XYZ[0] == 'Z')  z = a;
+
+        for (xi[1] = 0; xi[1] < o.n[1]; xi[1]++)
+        {
+            a = xi[1]*dX[1] + o.lim[1][0];
+            if      (o.XYZ[1] == 'X')  x = a; 
+            else if (o.XYZ[1] == 'Y')  y = a;
+            else if (o.XYZ[1] == 'Z')  z = a;
+
+            for (xi[2] = 0; xi[2] < o.n[2]; xi[2]++)
+            {
+                a = xi[2]*dX[2] + o.lim[2][0];
+                if      (o.XYZ[2] == 'X')  x = a; 
+                else if (o.XYZ[2] == 'Y')  y = a;
+                else if (o.XYZ[2] == 'Z')  z = a;
+
+                // Set up point
+                set_point_xyz( &X, x, y, z, POINT_SET_ALL );
+
+                // Evaluate cost functions
+                c1 = psr_cost_lofl( &X, &psr );
+                c2 = psr_cost_los( &X, &psr, ph, o.direction );
+
+                // Write out the result
+                fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
+                        x, y, z, c1, c2 );
+            }
+        }
+        fprintf( f, "\n" );
+    }
 
     // Clean up
     destroy_psr_angle( ra  );
@@ -96,12 +148,12 @@ int main( int argc, char *argv[] )
     if (o.outfile != NULL)
         fclose( f );
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 void usage()
 {
-    printf( "usage: psr_emit [OPTIONS]\n\n" );
+    printf( "usage: psr_cost_function [OPTIONS]\n\n" );
     printf( "REQUIRED OPTIONS:\n" );
     printf( "  -a  alpha    The angle between the rotation and magetic axes "
                            "in degrees (required)\n" );
@@ -111,6 +163,12 @@ void usage()
                            "(required)\n" );
     printf( "  -z  zeta     The angle between the rotation axis and the line "
                            "of sight in degrees (required)\n" );
+    printf( "  -X  x1,x2,n  Calculate the cost function in the range "
+                           "[x1,x2] with n samples\n" );
+    printf( "  -Y  y1,y2,n  Calculate the cost function in the range "
+                           "[y1,y2] with n samples\n" );
+    printf( "  -Z  z1,z2,n  Calculate the cost function in the range "
+                           "[z1,z2] with n samples\n" );
     printf( "\nOTHER OPTIONS:\n" );
     printf( "  -h           Display this help and exit\n" );
     printf( "  -i           Calculate the emission point for particles that "
@@ -128,9 +186,10 @@ void usage()
 
 void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
+    int l = 0; // For determining the XYZ loop order
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:hiLo:p:P:r:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:hiLo:p:P:r:t:X:Y:z:Z:")) != -1)
     {
         switch (c)
         {
@@ -159,6 +218,13 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
             case 't':
                 o->tmult = atof(optarg);
                 break;
+            case 'X':
+            case 'Y':
+            case 'Z':
+                sscanf( optarg, "%lf,%lf,%d",
+                        &(o->lim[l][0]), &(o->lim[l][1]), &(o->n[l]) );
+                o->XYZ[l++] = c;
+                break;
             case 'z':
                 o->ze_deg = atof(optarg);
                 break;
@@ -180,6 +246,26 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
         fprintf( stderr, "error: -a, -p, -P, and -z options required\n" );
         usage();
         exit(EXIT_FAILURE);
+    }
+
+    int i, j;
+    for (i = 0; i < 3; i++)
+        if (o->n[i] <= 0)
+        {
+            fprintf( stderr, "error: -n must be present and its arguments "
+                             "must be positive\n" );
+            exit(EXIT_FAILURE);
+        }
+
+    for (i = 0; i < 3; i++)
+    for (j = 0; j < 2; j++)
+    {
+        if (isnan( o->lim[i][j] ))
+        {
+            fprintf( stderr, "error: failed to read/parse required -X,-Y,-Z "
+                             "arguments\n" );
+            exit(EXIT_FAILURE);
+        }
     }
 }
 

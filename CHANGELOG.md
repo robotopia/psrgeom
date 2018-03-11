@@ -7,6 +7,11 @@
 * Include retardation in the calculation of the emission point.
 
 ----
+## v1.1.6 (2018-03-11)
+
+* Added program psr\_cost\_function for evaluating the cost functions at a grid of x,y,z coordinates.
+
+----
 ## v1.1.5 (2018-03-11)
 
 * Added functions for calculating the line of sight, and converting between position angles and beam opening angles.
