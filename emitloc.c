@@ -61,7 +61,7 @@ double psr_cost_lofl( point *X, pulsar *psr )
     double tmult     = 0.01;  // Hard code the step size
     FILE  *no_output = NULL;  // Don't write out the intermediate points
     int    rL_norm   = 0;     // (Irrelevant, since not writing anything out)
-    double rL_lim    = 1.0;   // i.e. Stop at the light cylinder
+    double rL_lim    = 1.1;   // i.e. Stop at the light cylinder
     point  far_pt;            // Where to store the final point
 
     // Find the most extreme point (or where it crosses the light cylinder)
@@ -77,26 +77,23 @@ double psr_cost_lofl( point *X, pulsar *psr )
         // In this case, far_pt is the point where the magnetic field line
         // penetrates the light cylinder
         point B;
-        calc_fields( X, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
-        double Bdr = B.x[0] * X->ph.cos +
-                     B.x[1] * X->ph.sin;
-        double Bz  = B.x[2];
+        calc_fields( &far_pt, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
+        double Bdr = B.x[0] * far_pt.ph.cos +
+                     B.x[1] * far_pt.ph.sin;
 
         // At the moment, -1 <= Bdr <= 1, so we can get a valid cost by
-        // taking the absolute value. But we also want to penalise points
-        // on the light cylinder whose B direction is "up"
-        cost = (Bz <= 0 ? fabs(Bdr) : 2.0 - fabs(Bdr));
+        // taking the absolute value.
+        cost = fabs(Bdr);
     }
     else /* (stop_type == STOP_FOUND) */
     {
         // In this case, far_pt is the point on the field line with the
         // largest perpendicular distance to the rotation (z) axis
-        double rhosq = far_pt.rhosq;
 
         // The fractional distance (squared) will always fall neatly into the
-        // range: 0 <= (rho/rL)^2 <= 1, so we just need to invert it so that "0"
-        // means the last open field line
-        cost = 1.0 - (rhosq / psr->rL2);
+        // range: 0 <= (rho/rL)^2 <= rL_lim^2, so we just need to invert it so
+        // that "0" means the last open field line
+        cost = fabs(1.0 - sqrt( far_pt.rhosq / psr->rL2 ));
     }
 
     // Return the calculated cost
@@ -220,9 +217,12 @@ double psr_cost_total_nmead( int n, const double *xyz, void *varg )
     double cost_los  = psr_cost_los( &X, psr, phase, direction );
 
 printf( "%f %f %f %.15e %.15e\n", xyz[0], xyz[1], xyz[2], cost_lofl, cost_los );
+//printf( "%f %f %f %.15e\n", xyz[0], xyz[1], xyz[2], cost_los );
 
     // Combine them in the simplest way possible, and return the result
-    return cost_lofl + cost_los;
+    //return cost_lofl + cost_los;
+    return cost_los;
+    //return cost_lofl;
 }
 
 
