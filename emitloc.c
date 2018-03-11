@@ -220,8 +220,8 @@ printf( "%f %f %f %.15e %.15e\n", xyz[0], xyz[1], xyz[2], cost_lofl, cost_los );
 //printf( "%f %f %f %.15e\n", xyz[0], xyz[1], xyz[2], cost_los );
 
     // Combine them in the simplest way possible, and return the result
-    //return cost_lofl + cost_los;
-    return cost_los;
+    return cost_lofl + cost_los;
+    //return cost_los;
     //return cost_lofl;
 }
 

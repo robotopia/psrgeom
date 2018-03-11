@@ -5,8 +5,13 @@
 
 * Generalised the Bstep() function, for arbitrary vector fields.
 * Include retardation in the calculation of the emission point.
+
+----
+## v1.1.5 (2018-03-11)
+
 * Added functions for calculating the line of sight, and converting between position angles and beam opening angles.
 * Added a function for finding the approximate emission point, using a simplified magnetic field geometry.
+* Half-fixed bugs relating to finding the emission point in the full Arendt geometry.
 
 ## v1.1.4 (2018-03-09)
 
