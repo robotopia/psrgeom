@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <nmead.h>
+#include <newuoa.h>
 #include <time.h>
 #include "psrgeom.h"
 
@@ -77,14 +78,15 @@ double psr_cost_lofl( point *X, pulsar *psr )
     {
         // In this case, far_pt is the point where the magnetic field line
         // penetrates the light cylinder
-        point B;
-        calc_fields( &far_pt, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
-        double Bdr = B.x[0] * far_pt.ph.cos +
-                     B.x[1] * far_pt.ph.sin;
+        //point B;
+        //calc_fields( &far_pt, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
+        //double Bdr = B.x[0] * far_pt.ph.cos +
+        //             B.x[1] * far_pt.ph.sin;
 
         // At the moment, -1 <= Bdr <= 1, so we can get a valid cost by
         // taking the absolute value.
-        cost = fabs(Bdr);
+        //cost = fabs(Bdr);
+        cost = 1.0; // Temporary, while debugging cost function
     }
     else /* (stop_type == STOP_FOUND) */
     {
@@ -179,11 +181,10 @@ double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction )
     return cost;
 }
 
-double psr_cost_total_nmead( int n, const double *xyz, void *varg )
-/* A cost function for use with the Nelder-Mead algorithm, as implemented in
- * the nmead library. This cost function combines the costs associated with
- * the last open field lines (psr_cost_lofl) and the line of sight
- * (psr_cost_los).
+double psr_cost_total( long int n, const double *xyz, void *varg )
+/* A cost function for use with an optimisation algorithm. This cost function
+ * combines the costs associated with the last open field lines
+ * (psr_cost_lofl) and the line of sight (psr_cost_los).
  *
  * Arguments:
  *   n    = number of parameters to be fitted = 3 (i.e., x,y,z)
@@ -199,7 +200,7 @@ double psr_cost_total_nmead( int n, const double *xyz, void *varg )
     // Force n to equal 3
     if (n != 3)
     {
-        fprintf( stderr, "error: psr_cost_total_nmead: n (=%d) must "
+        fprintf( stderr, "error: psr_cost_total: n (=%ld) must "
                          "equal 3\n", n );
         exit(EXIT_FAILURE);
     }
@@ -224,16 +225,17 @@ double psr_cost_total_nmead( int n, const double *xyz, void *varg )
                     xyz[0], xyz[1], xyz[2], cost_lofl, cost_los );
 
     // Combine the two costs, and return the result
-    return 0.02*cost_lofl + cost_los;
+    double coeff = 1.0;
+    return coeff*cost_lofl + cost_los;
 
     /* The coefficient above seems to be a magic number; without it (or when
-     * it has a different value), the function fails to converge at the
-     * correct point. For the geometries:
+     * it has a different value), the Nelder-Mead algorithm function fails to
+     * converge at the correct point. For the geometries:
      *
      *   α = 45°, ζ = 40°, φ = -45°, P = 1.0 sec,
      *   α = 30°, ζ = 40°, φ =   0°, P = 0.5 sec,
      *
-     * a value around 0.04 performs best. However, for
+     * a value around 0.04 or 0.05 performs best. However, for
      *
      *   α = 10°, ζ = 20°, φ = 110°, P = 0.01 sec,
      *
@@ -303,8 +305,8 @@ void find_approx_emission_point( pulsar *psr, psr_angle *phase,
 }
 
 
-void find_emission_point( pulsar *psr, psr_angle *phase, int direction, 
-                          point *emit_pt, FILE *f )
+void find_emission_point_nmead( pulsar *psr, psr_angle *phase, int direction, 
+                                point *emit_pt, FILE *f )
 /* This function finds the point which satisfies the dual contraints of
  *   1) sitting on a last open field line, and
  *   2) producing emission that is beamed along the line of sight.
@@ -361,7 +363,7 @@ void find_emission_point( pulsar *psr, psr_angle *phase, int direction,
     arg.f         = f;
 
     // Call the Nelder-Mead function and find the point
-    nelder_mead( p0, n, optimset, &solution, psr_cost_total_nmead, &arg );
+    nelder_mead( p0, n, optimset, &solution, psr_cost_total, &arg );
 
     // Pass the solution out of this function
     set_point_xyz( emit_pt, solution.x[0],
@@ -371,7 +373,134 @@ void find_emission_point( pulsar *psr, psr_angle *phase, int direction,
 }
 
 
+void find_emission_point_newuoa( pulsar *psr, psr_angle *phase, int direction, 
+                                 point *emit_pt, FILE *f )
+/* This function finds the point which satisfies the dual contraints of
+ *   1) sitting on a last open field line, and
+ *   2) producing emission that is beamed along the line of sight.
+ * It uses Powell's NEWUOA optimisation, as implemented in the newuoa library.
+ *
+ * The initial point to feed in should be as close to the correct point as
+ * possible, to minimise the time spent converging on the answer. Here,
+ * however, we just randomise the initial guess, which can be improved upon
+ * later if need be.
+ *
+ * Inputs:
+ *   pulsar *psr      : a pointer to a pulsar struct
+ *   psr_angle *phase : the rotation phase of interest
+ *   int direction    : either DIR_OUTWARD or DIR_INWARD (for particles
+ *                      flowing along or against the magnetic field,
+ *                      respectively)
+ * Outputs:
+ *   point *emit_pt   : the emission point that the Nelder-Mead algorithm
+ *                      converged upon
+ */
+{
+    // Assume that the random number generator has been already seeded
+
+    // Set up the arguments for the call to the NEWUOA function
+    int n   = 3;     // Three parameters to fit (x,y,z)
+    int npt = n+2;   // The number of interpolation conditions
+                     // Must be in range [n+2,(n+1)(n+2)/2]
+    newuoa_objfun *objfun = psr_cost_total; // The function to be evaluated
+
+    // Set up the initial guess
+    double x[n]; // <-- This is also where the answer will end up
+    int i;
+
+    point init_guess;
+    find_approx_emission_point( psr, phase, &init_guess );
+
+    for (i = 0; i < n; i++)
+        x[i] = init_guess.x[i];
+
+    // Create memory space for working calculations
+    int workspace_size = (npt+13)*(npt+n)+3*n*(n+3)/2; // Mandated by the docs
+    double w[workspace_size];
+
+    // NEWUOA expects two variables to be set: RHOBEG and RHOEND:
+    // The documentation says:
+    //
+    // "RHOBEG and RHOEND must be set to the initial and final values of a
+    // trust region radius, so both must be positive with RHOEND<=RHOBEG.
+    // Typically RHOBEG should be about one tenth of the greatest expected
+    // change to a // variable, and RHOEND should indicate the accuracy that
+    // is required in the final values of the variables."
+    //
+    // I'll set RHOBEG to 10% of the radial distance of the initial point,
+    // and RHOEND to 1 metre.
+    double rhobeg = 0.1 * init_guess.r;
+    double rhoend = 1e-12;
+
+    // I've got my own printf'ing happening, so turn NEWUOA's internal
+    // reporting off
+    int iprint = 0;
+
+    // Set the maximum number of calls to the cost function
+    int maxfun = 1000;
+
+    // Set up the data args that get passed to the cost function
+    struct nm_cost_args data;
+    data.psr       = psr;
+    data.phase     = phase;
+    data.direction = direction;
+    data.f         = f;
+
+    // Call the NEWUOA function and find the minimum point
+    int status = newuoa( n, npt, objfun, &data, x, rhobeg, rhoend,
+                         iprint, maxfun, w );
+
+    if (status != NEWUOA_SUCCESS)
+    {
+        fprintf( f, "warning: find_emission_point_newuoa: "
+                    "%s\n", newuoa_reason( status ) );
+    }
+
+    // Pass the solution out of this function
+    set_point_xyz( emit_pt, x[0], x[1], x[2], POINT_SET_ALL );
+}
+
+
 /* BIBLOGRAPHY
  *
  * Deutsch, A. (1955), Annales d'Astrophysique, 18, 1-10
  */
+
+
+void psr_cost_deriv( point *X, pulsar *psr, psr_angle *phase, int direction,
+                     double dx, point *grad )
+/* This function finds the grad (∇) of the cost function (psr_cost_total)
+ * numerically at the specified point X. The caller chooses how closely to
+ * sample the nearby points (dx).
+ */
+{
+    struct nm_cost_args arg;
+    arg.psr       = psr;
+    arg.phase     = phase;
+    arg.direction = direction;
+    arg.f         = NULL;
+
+    int n = 3;
+    double xyz[n];
+    double xyz_dx[n];
+    double xyz_dy[n];
+    double xyz_dz[n];
+
+    int i;
+    for (i = 0; i < n; i++)
+        xyz[i] = xyz_dx[i] = xyz_dy[i] = xyz_dz[i] = X->x[i];
+
+    xyz_dx[0] += dx;
+    xyz_dy[1] += dx;
+    xyz_dz[2] += dx;
+
+    double c0, cx, cy, cz;
+
+    // Get the function at the points X, X+dx, X+dy, X+dz
+    c0 = psr_cost_total( n, xyz   , &arg );
+    cx = psr_cost_total( n, xyz_dx, &arg );
+    cy = psr_cost_total( n, xyz_dy, &arg );
+    cz = psr_cost_total( n, xyz_dz, &arg );
+
+    set_point_xyz( grad, (cx-c0)/dx, (cy-c0)/dx, (cz-c0)/dx, POINT_SET_ALL );
+}

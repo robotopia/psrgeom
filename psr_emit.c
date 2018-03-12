@@ -76,7 +76,14 @@ int main( int argc, char *argv[] )
     print_col_headers( f );
 
     // Calculate answer
-    find_emission_point( &psr, ph, o.direction, &emit_pt, f );
+    find_emission_point_nmead( &psr, ph, o.direction, &emit_pt, f );
+
+    // Print out the gradient at that point
+    point grad;
+    double dx = 1.0;
+    psr_cost_deriv( &emit_pt, &psr, ph, o.direction, dx, &grad );
+    fprintf( f, "# Gradient: ∇c = (%.15e, %.15e, %.15e), |∇c| = %.15e\n",
+                grad.x[0], grad.x[1], grad.x[2], grad.r );
 
     // Clean up
     destroy_psr_angle( ra  );
