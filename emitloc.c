@@ -78,15 +78,15 @@ double psr_cost_lofl( point *X, pulsar *psr )
     {
         // In this case, far_pt is the point where the magnetic field line
         // penetrates the light cylinder
-        //point B;
-        //calc_fields( &far_pt, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
-        //double Bdr = B.x[0] * far_pt.ph.cos +
-        //             B.x[1] * far_pt.ph.sin;
+        point B;
+        calc_fields( &far_pt, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
+        double Bdr = B.x[0] * far_pt.ph.cos +
+                     B.x[1] * far_pt.ph.sin;
 
         // At the moment, -1 <= Bdr <= 1, so we can get a valid cost by
         // taking the absolute value.
-        //cost = fabs(Bdr);
-        cost = 1.0; // Temporary, while debugging cost function
+        cost = fabs(Bdr) + rL_lim - 1.0;
+        //cost = 1.0; // Temporary, while debugging cost function
     }
     else /* (stop_type == STOP_FOUND) */
     {
@@ -225,8 +225,8 @@ double psr_cost_total( long int n, const double *xyz, void *varg )
                     xyz[0], xyz[1], xyz[2], cost_lofl, cost_los );
 
     // Combine the two costs, and return the result
-    double coeff = 1.0;
-    return coeff*cost_lofl + cost_los;
+    //double coeff = 1.0;
+    return 1e10 * (cost_lofl*cost_lofl*cost_lofl + cost_los);
 
     /* The coefficient above seems to be a magic number; without it (or when
      * it has a different value), the Nelder-Mead algorithm function fails to
@@ -345,8 +345,8 @@ void find_emission_point_nmead( pulsar *psr, psr_angle *phase, int direction,
     // Use default Nelder-Mead algorithm parameters
     nm_optimset optimset;
 
-    optimset.tolx     = NM_TOL_X * 1e-10;
-    optimset.tolf     = NM_TOL_F;
+    optimset.tolx     = NM_TOL_X * 1e-16;
+    optimset.tolf     = NM_TOL_F * 1e-16;
     optimset.max_iter = NM_MAX_ITER;
     optimset.max_eval = NM_MAX_EVAL;
 
