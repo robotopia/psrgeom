@@ -220,11 +220,25 @@ double psr_cost_total_nmead( int n, const double *xyz, void *varg )
     double cost_los  = psr_cost_los( &X, psr, phase, direction );
 
     if (f != NULL)
-        fprintf( f, "%f %f %f %.15e %.15e\n",
+        fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
                     xyz[0], xyz[1], xyz[2], cost_lofl, cost_los );
 
-    // Combine them in the simplest way possible, and return the result
-    return cost_lofl + cost_los;
+    // Combine the two costs, and return the result
+    return 0.02*cost_lofl + cost_los;
+
+    /* The coefficient above seems to be a magic number; without it (or when
+     * it has a different value), the function fails to converge at the
+     * correct point. For the geometries:
+     *
+     *   α = 45°, ζ = 40°, φ = -45°, P = 1.0 sec,
+     *   α = 30°, ζ = 40°, φ =   0°, P = 0.5 sec,
+     *
+     * a value around 0.04 performs best. However, for
+     *
+     *   α = 10°, ζ = 20°, φ = 110°, P = 0.01 sec,
+     *
+     * a value of 0.02 works, while 0.04 doesn't.
+     */
 }
 
 
@@ -329,7 +343,7 @@ void find_emission_point( pulsar *psr, psr_angle *phase, int direction,
     // Use default Nelder-Mead algorithm parameters
     nm_optimset optimset;
 
-    optimset.tolx     = NM_TOL_X;
+    optimset.tolx     = NM_TOL_X * 1e-10;
     optimset.tolf     = NM_TOL_F;
     optimset.max_iter = NM_MAX_ITER;
     optimset.max_eval = NM_MAX_EVAL;
