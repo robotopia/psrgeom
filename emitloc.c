@@ -28,6 +28,7 @@ struct nm_cost_args
     pulsar    *psr;
     psr_angle *phase;
     int        direction;
+    FILE      *f;
 };
 
 double psr_cost_lofl( point *X, pulsar *psr )
@@ -192,6 +193,7 @@ double psr_cost_total_nmead( int n, const double *xyz, void *varg )
  *          (1) a pointer to a pulsar struct
  *          (2) a pointer to a psr_angle struct (the phase)
  *          (3) a direction (either DIR_OUTWARD or DIR_INWARD)
+ *          (4) a file handle to print out intermediate steps (can be NULL)
  */
 {
     // Force n to equal 3
@@ -211,18 +213,18 @@ double psr_cost_total_nmead( int n, const double *xyz, void *varg )
     pulsar              *psr       = arg->psr;
     psr_angle           *phase     = arg->phase;
     int                  direction = arg->direction;
+    FILE                *f         = arg->f;
 
     // Get the two associated costs
     double cost_lofl = psr_cost_lofl( &X, psr );
     double cost_los  = psr_cost_los( &X, psr, phase, direction );
 
-printf( "%f %f %f %.15e %.15e\n", xyz[0], xyz[1], xyz[2], cost_lofl, cost_los );
-//printf( "%f %f %f %.15e\n", xyz[0], xyz[1], xyz[2], cost_los );
+    if (f != NULL)
+        fprintf( f, "%f %f %f %.15e %.15e\n",
+                    xyz[0], xyz[1], xyz[2], cost_lofl, cost_los );
 
     // Combine them in the simplest way possible, and return the result
     return cost_lofl + cost_los;
-    //return cost_los;
-    //return cost_lofl;
 }
 
 
@@ -288,7 +290,7 @@ void find_approx_emission_point( pulsar *psr, psr_angle *phase,
 
 
 void find_emission_point( pulsar *psr, psr_angle *phase, int direction, 
-                          point *emit_pt )
+                          point *emit_pt, FILE *f )
 /* This function finds the point which satisfies the dual contraints of
  *   1) sitting on a last open field line, and
  *   2) producing emission that is beamed along the line of sight.
@@ -342,6 +344,7 @@ void find_emission_point( pulsar *psr, psr_angle *phase, int direction,
     arg.psr       = psr;
     arg.phase     = phase;
     arg.direction = direction;
+    arg.f         = f;
 
     // Call the Nelder-Mead function and find the point
     nelder_mead( p0, n, optimset, &solution, psr_cost_total_nmead, &arg );

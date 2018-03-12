@@ -76,13 +76,7 @@ int main( int argc, char *argv[] )
     print_col_headers( f );
 
     // Calculate answer
-    find_emission_point( &psr, ph, o.direction, &emit_pt );
-
-    // Write out the result
-    fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
-                emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
-                psr_cost_lofl( &emit_pt, &psr ),
-                psr_cost_los( &emit_pt, &psr, ph, o.direction ) );
+    find_emission_point( &psr, ph, o.direction, &emit_pt, f );
 
     // Clean up
     destroy_psr_angle( ra  );
