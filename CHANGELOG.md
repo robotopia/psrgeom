@@ -7,6 +7,12 @@
 * Include retardation in the calculation of the emission point.
 
 ----
+## v1.1.7 (2018-03-13)
+
+* Added support for Powell optimisation as an alternative to Nelder-Mead optimisation.
+* Added support for the 'elevator' method (recommended)
+
+----
 ## v1.1.6 (2018-03-11)
 
 * Added program psr\_cost\_function for evaluating the cost functions at a grid of x,y,z coordinates.
