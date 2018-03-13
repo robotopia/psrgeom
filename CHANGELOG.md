@@ -7,6 +7,11 @@
 * Include retardation in the calculation of the emission point.
 
 ----
+## v1.1.8 (2018-03-13)
+
+* Add program psr\_polangle for plotting PA curves (beta)
+
+----
 ## v1.1.7 (2018-03-13)
 
 * Added support for Powell optimisation as an alternative to Nelder-Mead optimisation.

@@ -16,7 +16,8 @@ CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG)
 TARGETS = psr_fields \
 		  psr_lines \
 		  psr_emit \
-		  psr_cost_function
+		  psr_cost_function \
+		  psr_polangle
 
 LIBRARY = psrgeom
 LIBFILE = lib$(LIBRARY).a

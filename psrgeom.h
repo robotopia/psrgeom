@@ -1,7 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
-#define PSRGEOM_VERSION "1.1.7"
+#define PSRGEOM_VERSION "1.1.8"
 
 #include <stdio.h>
 #include <math.h>
@@ -146,6 +146,8 @@ int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
                FILE *write_xyz, int rL_norm, double rL_lim, point *foot_pt );
 int farpoint( point *start_pt, pulsar *psr, double tmult,
               FILE *write_xyz, int rL_norm, double rL_lim, point *far_pt );
+void calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
+                     point *emit_pt, psr_angle *psi );
 
 
 /**** Dipole field functions ****/
