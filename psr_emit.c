@@ -76,7 +76,7 @@ int main( int argc, char *argv[] )
     print_col_headers( f );
 
     // Calculate answer
-    find_emission_point_nmead( &psr, ph, o.direction, &emit_pt, f );
+    find_emission_point_elevator( &psr, ph, o.direction, &emit_pt, f );
 
     // Print out the gradient at that point
     point grad;

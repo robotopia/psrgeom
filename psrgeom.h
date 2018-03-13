@@ -172,17 +172,19 @@ void print_psrg_header( FILE *f, int argc, char *argv[] );
 double psr_cost_lofl( point *X, pulsar *psr );
 double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction );
 int get_fieldline_type( point *X, pulsar *psr, double tmult );
+
 void find_approx_emission_point( pulsar *psr, psr_angle *phase,
                                  point *emit_pt );
 void find_emission_point_nmead( pulsar *psr, psr_angle *phase, int direction,
                                 point *emit_pt, FILE *f );
 void find_emission_point_newuoa( pulsar *psr, psr_angle *phase, int direction,
                                  point *emit_pt, FILE *f );
+int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
+        int direction, point *emit_pt, FILE *f );
+
 void psr_cost_deriv( point *X, pulsar *psr, psr_angle *phase, int direction,
                      double dx, point *grad );
 void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
                     int direction, point *end_pt, FILE *f );
-int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
-        int direction, point *emit_pt, FILE *f );
 
 #endif

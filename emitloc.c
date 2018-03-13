@@ -200,6 +200,7 @@ double psr_cost_los_at_r_optim( long int n, const double *thph, void *varg )
  *          (5) The radius, r
  */
 {
+fprintf( stderr, "# entering psr_cost_los_at_r_optim()\n" );
     // Force n to equal 2
     if (n != 2)
     {
@@ -223,6 +224,8 @@ double psr_cost_los_at_r_optim( long int n, const double *thph, void *varg )
     set_psr_angle_rad( &ph, thph[1] );
     set_point_sph( &X, r, &th, &ph, POINT_SET_ALL );
 
+fprintf( stderr, "# X = (%.15e, %.15e, %.15e)\n", X.x[0], X.x[1], X.x[2] );
+//exit(EXIT_FAILURE);
     // Get the "LoS" cost
     double cost_los = psr_cost_los( &X, psr, phase, direction );
 
@@ -580,7 +583,7 @@ void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
     int n   = 2;     // Two parameters to fit (θ,φ)
     int npt = n+2;   // The number of interpolation conditions
                      // Must be in range [n+2,(n+1)(n+2)/2]
-    newuoa_objfun *objfun = psr_cost_total; // The function to be evaluated
+    newuoa_objfun *objfun = psr_cost_los_at_r_optim;
 
     // Set up the initial guess
     double x[n]; // <-- This is also where the answer will end up
@@ -620,9 +623,12 @@ void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
     data.direction = direction;
     data.f         = f;
 
+fprintf( stderr, "#here1 - \n" );
+fprintf( stderr, "# n = %d,  npt = %d,  x[0] = %f,  x[1] = %f\n", n, npt, x[0], x[1] );
     // Call the NEWUOA function and find the minimum point
     int status = newuoa( n, npt, objfun, &data, x, rhobeg, rhoend,
                          iprint, maxfun, w );
+fprintf( stderr, "#here2\n" );
 
     if (status != NEWUOA_SUCCESS)
     {
@@ -703,7 +709,9 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
 
     // Find the point at this radius which satisfies the LoS criterion
     point rlo_pt, rhi_pt, temp_pt;
+fprintf( stderr, "#init_pt = (%.15e, %.15e, %.15e)\n", init_pt.x[0], init_pt.x[1], init_pt.x[2] );
     find_LoS_at_r( &init_pt, psr, phase, direction, &rlo_pt, NULL );
+fprintf( stderr, "#rlo_pt = (%.15e, %.15e, %.15e)\n", rlo_pt.x[0], rlo_pt.x[1], rlo_pt.x[2] );
 
     // This first point is, initially, both the high and low point,
     // since we don't know which side of it our solution is.
@@ -737,7 +745,9 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
                        &(temp_pt.ph), POINT_SET_ALL );
 
         // Find the LoS criterion point at this new, lower, radius
-        find_LoS_at_r( &half_down_pt, psr, phase, direction, &rlo_pt, NULL );
+fprintf( stderr, "# Entering find_LoS_at_r() (finding lower bound)\n" );
+        find_LoS_at_r( &half_down_pt, psr, phase, direction, &rlo_pt, stderr );
+fprintf( stderr, "# Exiting find_LoS_at_r() (finding lower bound)\n" );
 
         // And the field line type there
         rlo_type = get_fieldline_type( &rlo_pt, psr, tmult );
@@ -761,7 +771,9 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
                        &(temp_pt.ph), POINT_SET_ALL );
 
         // Find the LoS criterion point at this new, lower, radius
-        find_LoS_at_r( &half_up_pt, psr, phase, direction, &rhi_pt, NULL );
+fprintf( stderr, "# Entering find_LoS_at_r() (finding upper bound)\n" );
+        find_LoS_at_r( &half_up_pt, psr, phase, direction, &rhi_pt, stderr );
+fprintf( stderr, "# Exiting find_LoS_at_r() (finding upper bound)\n" );
 
         // And the field line type there
         rhi_type = get_fieldline_type( &rhi_pt, psr, tmult );
@@ -800,7 +812,9 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
                                 POINT_SET_ALL );
 
         // As before, find the LoS criterion point at this radius
-        find_LoS_at_r( &mid_pt, psr, phase, direction, &temp_pt, NULL );
+fprintf( stderr, "# Entering find_LoS_at_r() (bisection)\n" );
+        find_LoS_at_r( &mid_pt, psr, phase, direction, &temp_pt, stderr );
+fprintf( stderr, "# Exiting find_LoS_at_r() (bisection)\n" );
 
         // And get it's field line type
         temp_type = get_fieldline_type( &temp_pt, psr, tmult );
