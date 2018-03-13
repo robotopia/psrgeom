@@ -78,12 +78,20 @@ int main( int argc, char *argv[] )
     // Calculate answer
     find_emission_point_elevator( &psr, ph, o.direction, &emit_pt, f );
 
-    // Print out the gradient at that point
-    point grad;
-    double dx = 1.0;
-    psr_cost_deriv( &emit_pt, &psr, ph, o.direction, dx, &grad );
-    fprintf( f, "# Gradient: ∇c = (%.15e, %.15e, %.15e), |∇c| = %.15e\n",
-                grad.x[0], grad.x[1], grad.x[2], grad.r );
+    // Print out the features of the found point.
+    point V1, V2;
+    point LoS;
+
+    calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, NULL, &V1, &V2, NULL, NULL, NULL );
+    line_of_sight( &psr, ph, &LoS );
+
+    fprintf( f, "# V   = ( %.15e, %.15e, %.15e )\n", V1.x[0], V1.x[1], V1.x[2] );
+    fprintf( f, "# LoS = ( %.15e, %.15e, %.15e )\n", LoS.x[0], LoS.x[1], LoS.x[2] );
+
+    point far_pt;
+    farpoint( &emit_pt, &psr, 0.01, NULL, 0, 1.1, &far_pt );
+
+    fprintf( f, "# extreme point has ρ/r_L = %.15f\n", sqrt( far_pt.rhosq / psr.rL2 ) );
 
     // Clean up
     destroy_psr_angle( ra  );
