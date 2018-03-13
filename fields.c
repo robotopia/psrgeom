@@ -784,3 +784,63 @@ void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
                        2.0*slop2.x[i] + 2.0*slop3.x[i]) / 6.0;
     }
 }
+
+
+void calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
+                     psr_angle *psi )
+/* This function calculates the polarisation angle, Ψ, for a pulsar at a
+ * given phase, φ.
+ *
+ * Inputs:
+ *   pulsar *psr      : the pulsar geometry
+ *   psr_angle *phase : the rotation phase
+ *   int direction    : whether the particles are moving along or against the
+ *                      magnetic field. Can be DIR_OUTWARD (along) or
+ *                      DIR_INWARD (against).
+ * Outputs:
+ *   psr_angle *psi   : the polsarisation angle. Guaranteed to be in the range
+ *                      0° ≤ Ψ < 180°
+ */
+{
+    // First order of business: find the emission point corresponding to this
+    // geometry and rotation phase
+    point emit_pt;
+    find_emission_point_elevator( psr, phase, direction, &emit_pt, NULL );
+
+    // Second, find the acceleration vectors at that point
+    point A;
+    int nsols;
+    calc_fields( &emit_pt, psr, SPEED_OF_LIGHT, NULL,
+                 NULL, NULL, &A, NULL, &nsols );
+
+    if (nsols <= 0)
+    {
+        fprintf( stderr, "error: calc_pol_angle: did not find a solution\n" );
+        exit(EXIT_FAILURE);
+    }
+
+    // Third, convert the acceleration to a polarisation angle
+    point LoS; // The line of sight
+    point pz;  // A reference vector, 90° away from the LoS
+
+    line_of_sight( psr, phase, &LoS );
+    pol_zero( psr, phase, &pz );
+
+    // (Remember, both A and LoS are unit vectors)
+    psr_angle A_dot_LoS;
+    set_psr_angle_cos( &A_dot_LoS, A.x[0] * LoS.x[0] +
+                                   A.x[1] * LoS.x[1] +
+                                   A.x[2] * LoS.x[2] );
+
+    // Get the vector A projected onto the sky
+    point pa;
+    set_point_xyz( &pa, (A.x[0] - LoS.x[0]*A_dot_LoS.cos) / A_dot_LoS.sin,
+                        (A.x[1] - LoS.x[1]*A_dot_LoS.cos) / A_dot_LoS.sin,
+                        (A.x[2] - LoS.x[2]*A_dot_LoS.cos) / A_dot_LoS.sin,
+                        POINT_SET_ALL );
+
+    // And finally, get the angle between pa and the reference angle, pz
+    set_psr_angle_cos( psi, pz.x[0] * pa.x[0] +
+                            pz.x[1] * pa.x[1] +
+                            pz.x[2] * pa.x[2] );
+}
