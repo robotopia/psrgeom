@@ -7,6 +7,11 @@
 * Include retardation in the calculation of the emission point.
 
 ----
+## v1.1.9 (2018-03-13)
+
+Fixed important bug in psr\_polangle (still in beta)
+
+----
 ## v1.1.8 (2018-03-13)
 
 * Add program psr\_polangle for plotting PA curves (beta)
