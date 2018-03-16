@@ -601,9 +601,10 @@ void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
     // change to a // variable, and RHOEND should indicate the accuracy that
     // is required in the final values of the variables."
     //
-    // I'll set RHOBEG to 10% of the radial distance of the initial point,
-    // and RHOEND to 1 metre.
-    double rhobeg = 0.1 * init_pt->r;
+    // Since I'm hoping that the initial guess point is reasonably close to
+    // the final point on the sphere, and since my parameters are given in
+    // radians, I'll set my RHOBEG to 0.1 (rad) and RHOEND to 1e-16 (rad).
+    double rhobeg = 0.1;
     double rhoend = 1e-16;
 
     // I've got my own printf'ing happening, so turn NEWUOA's internal
