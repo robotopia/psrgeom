@@ -686,6 +686,15 @@ int farpoint( point *start_pt, pulsar *psr, double tmult,
         // Take a single RK4 step along the magnetic field
         Bstep( &old_x, psr, tstep, direction, &x );
 
+        // When tstep gets too small, the step will be below machine precision
+        // so old_x will equal x. If this happens assume we're at the extreme
+        if (old_x.x[0] == x.x[0] &&
+            old_x.x[1] == x.x[1] &&
+            old_x.x[2] == x.x[2])
+        {
+            break;
+        }
+
         // Recalculate the various distances to the new point
         set_point_xyz( &x, x.x[0], x.x[1], x.x[2],
                 POINT_SET_SPH | POINT_SET_RHOSQ );
@@ -696,8 +705,8 @@ int farpoint( point *start_pt, pulsar *psr, double tmult,
         // Write out the current xyz position, if requested,
         // but only if we're still moving in the original direction
         if (write_xyz && (direction == init_direction))
-            fprintf( write_xyz, "%.15e %.15e %.15e\n",
-                     xscale*x.x[0], xscale*x.x[1], xscale*x.x[2] );
+            fprintf( write_xyz, "%.15e %.15e %.15e %.15e\n",
+                     xscale*x.x[0], xscale*x.x[1], xscale*x.x[2], tstep );
 
         // Error checking: this algorithm should have stopped long before
         // tstep reaches underflow

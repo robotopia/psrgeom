@@ -174,7 +174,7 @@ void print_psrg_header( FILE *f, int argc, char *argv[] );
 
 double psr_cost_lofl( point *X, pulsar *psr );
 double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction );
-int get_fieldline_type( point *X, pulsar *psr, double tmult );
+int get_fieldline_type( point *X, pulsar *psr, double tmult, FILE *f );
 
 void find_approx_emission_point( pulsar *psr, psr_angle *phase,
                                  point *emit_pt );
