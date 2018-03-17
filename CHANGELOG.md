@@ -6,6 +6,12 @@
 * Generalised the Bstep() function, for arbitrary vector fields.
 
 ----
+## v1.1.12 (2018-03-18)
+
+* Restricted emission point range to <90% of light cylinder radius.
+* Debugged support for the -i option (opposite beam) in psr\_polangle and psr\_emit.
+
+----
 ## v1.1.11 (2018-03-17)
 
 * Include retardation in the calculation of the emission point.
