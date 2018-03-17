@@ -136,7 +136,9 @@ void beamangle_to_posangle( psr_angle *ba, psr_angle *pa )
 {
     double b = 1.5 * ba->cos / ba->sin;           /* = 3/(2 tan Γ)   */
     double theta;                                 /* = θ             */
-    if (ba->deg < 180.0)                          /* if (Γ < π)      */
+    if (ba->deg == 0)
+        theta = 0.0;
+    else if (ba->deg < 180.0)                     /* if (Γ < π)      */
         theta = atan( -b + sqrt( 2.0 + b*b ) );
     else
         theta = atan( -b - sqrt( 2.0 + b*b ) ) + PI;

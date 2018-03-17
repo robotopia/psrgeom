@@ -734,6 +734,25 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
     point init_pt;
     find_approx_emission_point( psr, phase, direction, &init_pt );
 
+    // Make sure the initial guess at least 2 pulsar radii above the pulsar's
+    // surface
+    if (init_pt.r == 0.0)
+    {
+        psr_angle za; // "zero angle"
+        set_psr_angle_rad( &za, 0.0 );
+        set_point_sph( &init_pt, 3.0*psr->r,
+                                 &psr->al,
+                                 &za,
+                                 POINT_SET_ALL );
+    }
+    else if (init_pt.r < 3.0*psr->r)
+    {
+        set_point_sph( &init_pt, 3.0*psr->r,
+                                 &init_pt.th,
+                                 &init_pt.ph,
+                                 POINT_SET_ALL );
+    }
+
     // Find the point at this radius which satisfies the LoS criterion
     point rlo_pt, rhi_pt, temp_pt;
     find_LoS_at_r( &init_pt, psr, phase, direction, &rlo_pt, NULL );
