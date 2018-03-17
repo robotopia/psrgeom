@@ -817,10 +817,11 @@ void calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
     find_emission_point_elevator( psr, phase, direction, emit_pt, NULL );
 
     // Second, find the acceleration vectors at that point
-    point A;
+    point A1, A2;
+    point *A = (direction == DIR_OUTWARD ? &A1 : &A2);
     int nsols;
     calc_fields( emit_pt, psr, SPEED_OF_LIGHT, NULL,
-                 NULL, NULL, &A, NULL, &nsols );
+                 NULL, NULL, &A1, &A2, &nsols );
 
     if (nsols <= 0)
     {
@@ -837,15 +838,15 @@ void calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
 
     // (Remember, both A and LoS are unit vectors)
     psr_angle A_dot_LoS;
-    set_psr_angle_cos( &A_dot_LoS, A.x[0] * LoS.x[0] +
-                                   A.x[1] * LoS.x[1] +
-                                   A.x[2] * LoS.x[2] );
+    set_psr_angle_cos( &A_dot_LoS, A->x[0] * LoS.x[0] +
+                                   A->x[1] * LoS.x[1] +
+                                   A->x[2] * LoS.x[2] );
 
     // Get the vector A projected onto the sky
     point pa;
-    set_point_xyz( &pa, (A.x[0] - LoS.x[0]*A_dot_LoS.cos) / A_dot_LoS.sin,
-                        (A.x[1] - LoS.x[1]*A_dot_LoS.cos) / A_dot_LoS.sin,
-                        (A.x[2] - LoS.x[2]*A_dot_LoS.cos) / A_dot_LoS.sin,
+    set_point_xyz( &pa, (A->x[0] - LoS.x[0]*A_dot_LoS.cos) / A_dot_LoS.sin,
+                        (A->x[1] - LoS.x[1]*A_dot_LoS.cos) / A_dot_LoS.sin,
+                        (A->x[2] - LoS.x[2]*A_dot_LoS.cos) / A_dot_LoS.sin,
                         POINT_SET_ALL );
 
     // And finally, get the angle between pa and the reference angle, pz
