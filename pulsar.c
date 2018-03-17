@@ -168,9 +168,9 @@ void calc_retardation( point *X, pulsar *psr, point *LoS, point *retarded_LoS )
 {
     // Calculate the prejection of the position vector of X onto the LoS
     // (we assume LoS has length 1)
-    double proj = X->r * (X->x[0] * LoS->x[0] +
-                          X->x[1] * LoS->x[1] +
-                          X->x[2] * LoS->x[2]);
+    double proj = (X->x[0] * LoS->x[0] +
+                   X->x[1] * LoS->x[1] +
+                   X->x[2] * LoS->x[2]);
 
     // Convert the projected length into a photon travel time
     double t = proj / SPEED_OF_LIGHT;

@@ -4,6 +4,10 @@
 ## Unreleased
 
 * Generalised the Bstep() function, for arbitrary vector fields.
+
+----
+## v1.1.11 (2018-03-17)
+
 * Include retardation in the calculation of the emission point.
 
 ----

@@ -121,6 +121,7 @@ double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction,
  *                      calculation
  *   psr_angle *phase : The rotation phase of the pulsar
  *   int direction    : Must be either DIR_OUTWARD or DIR_INWARD
+ *   int retardation  : Whether to adjust for retardation effects or not
  * Return value:
  *   cost        : The cost of the point X. It is guaranteed to be a number
  *                 between 0 and 1, where 0 means that X is on a last open
