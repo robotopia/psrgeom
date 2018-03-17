@@ -75,7 +75,7 @@ int main( int argc, char *argv[] )
     int i;
     for (i = 0; i < N; i++)
     {
-        ph_deg = i*360.0/(double)N;
+        ph_deg = i*360.0/(double)N - 180.0;
         set_psr_angle_deg( &ph, ph_deg );
         calc_pol_angle( &psr, &ph, o.direction, &emit_pt, &psi );
         fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
