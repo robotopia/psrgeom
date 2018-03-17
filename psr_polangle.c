@@ -99,7 +99,9 @@ int main( int argc, char *argv[] )
     // Loop over the phases and calculate the new pos angle, using the
     // previous emission point as a seed for each new emission point
     double ph_deg;
+
     double ph_start = (o.direction == DIR_OUTWARD ? 0.0 : -180.0);
+
     int N = 360; // The number of points to sample
     int i;
     for (i = 0; i < N+1; i++)
@@ -110,7 +112,7 @@ int main( int argc, char *argv[] )
         {
             fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
                         emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
-                        ph.deg, psi.deg );
+                        (ph.deg > 180.0 ? ph.deg - 360.0 : ph.deg), psi.deg );
             copy_point( &emit_pt, &prev_pt );
         }
         else
