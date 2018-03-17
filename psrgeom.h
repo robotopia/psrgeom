@@ -114,6 +114,7 @@ void copy_point( point *src, point *dest );
 
 double norm_dot( point *p1, point *p2 );
 
+void spherical_midpoint( point *p1, point *p2, point *mid_pt, int flags );
 
 
 /**** Pulsar functions ****/

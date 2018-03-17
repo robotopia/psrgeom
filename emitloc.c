@@ -210,11 +210,11 @@ double psr_cost_los_at_r_optim( long int n, const double *thph, void *varg )
 
     // "Deconstruct" the data argument "arg"
     struct cost_args *arg       = (struct cost_args *)varg;
-    pulsar              *psr       = arg->psr;
-    psr_angle           *phase     = arg->phase;
-    int                  direction = arg->direction;
-    FILE                *f         = arg->f;
-    double               r         = arg->r;
+    pulsar           *psr       = arg->psr;
+    psr_angle        *phase     = arg->phase;
+    int               direction = arg->direction;
+    FILE             *f         = arg->f;
+    double            r         = arg->r;
 
     // Convert the parameters to a point
     point X;
@@ -796,10 +796,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         }
 
         // Set the temp point to half-way between the upper and lower points
-        set_point_xyz( &mid_pt, (rlo_pt.x[0] + rhi_pt.x[0])/2.0,
-                                (rlo_pt.x[1] + rhi_pt.x[1])/2.0,
-                                (rlo_pt.x[2] + rhi_pt.x[2])/2.0,
-                                POINT_SET_ALL );
+        spherical_midpoint( &rlo_pt, &rhi_pt, &mid_pt, POINT_SET_ALL );
 
         // As before, find the LoS criterion point at this radius
         find_LoS_at_r( &mid_pt, psr, phase, direction, &temp_pt, NULL );

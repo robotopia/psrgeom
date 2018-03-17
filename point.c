@@ -118,3 +118,28 @@ double norm_dot( point *p1, point *p2 )
              p1->x[1] * p2->x[1] +
              p1->x[2] * p2->x[2]) / (p1->r * p2->r));
 }
+
+
+void spherical_midpoint( point *p1, point *p2, point *mid_pt, int flags )
+/* This function calculates the "spherical midpoint", which is here defined as
+ * the point whose radius is midway between the two given points, and whose
+ * latitude and longitude are such that if the two given points had the same
+ * radius, the midpoint would be on the great circle connecting the two
+ * points, and would be equidistant from them.
+ *
+ * This implementation assumes that both the Cartesian coordinates of points
+ * p1 and p2 and their radius, r, have been set.
+ */
+{
+    // Once p1 and p2 have been scaled to the same radius, their vector sum
+    // will have the correct latitude and longitute
+    point sum_pt;
+    set_point_xyz( &sum_pt, p1->x[0]/p1->r + p2->x[0]/p2->r,
+                            p1->x[1]/p1->r + p2->x[1]/p2->r,
+                            p1->x[2]/p1->r + p2->x[2]/p2->r,
+                            POINT_SET_TH | POINT_SET_PH );
+    set_point_sph( mid_pt, (p1->r + p2->r) / 2.0,
+                           &sum_pt.th,
+                           &sum_pt.ph,
+                           flags );
+}
