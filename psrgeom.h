@@ -38,6 +38,11 @@
 #define  STOP_FOUND   0
 #define  STOP_EXCEED  1
 
+// The possible return values of find_emission_point_elevator()
+#define  EMIT_PT_TOO_LOW  -1
+#define  EMIT_PT_FOUND     0
+#define  EMIT_PT_TOO_HIGH  1
+
 // Field line types
 #define  OPEN_LINE    0
 #define  CLOSED_LINE  1
@@ -148,8 +153,8 @@ int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
                FILE *write_xyz, int rL_norm, double rL_lim, point *foot_pt );
 int farpoint( point *start_pt, pulsar *psr, double tmult,
               FILE *write_xyz, int rL_norm, double rL_lim, point *far_pt );
-void calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
-                     point *init_pt, point *emit_pt, psr_angle *psi );
+int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
+                    point *init_pt, point *emit_pt, psr_angle *psi );
 
 
 /**** Dipole field functions ****/

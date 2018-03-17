@@ -72,26 +72,26 @@ int main( int argc, char *argv[] )
     point emit_pt, init_pt;
 
     // Initially, set the init_pt to an approximate initial guess
-    set_psr_angle_deg( ph, 0.0 );
     find_approx_emission_point( &psr, ph, o.direction, &init_pt );
 
     // Make sure the initial "previous" point is at least 2 pulsar radii above
     // the pulsar's surface
-    if (init_pt.r == 0.0)
+    double min_height = 3.0*psr.r;
+    if (init_pt.r < min_height)
     {
         psr_angle za; // "zero angle"
         set_psr_angle_rad( &za, 0.0 );
-        set_point_sph( &init_pt, 3.0*psr.r,
+        set_point_sph( &init_pt, min_height,
                                  &psr.al,
                                  &za,
                                  POINT_SET_ALL );
-    }
-    else if (init_pt.r < 3.0*psr.r)
-    {
-        set_point_sph( &init_pt, 3.0*psr.r,
-                                 &init_pt.th,
-                                 &init_pt.ph,
-                                 POINT_SET_ALL );
+        if (o.direction == DIR_INWARD)
+        {
+            set_point_xyz( &init_pt, -init_pt.x[0],
+                                     -init_pt.x[1],
+                                     -init_pt.x[2],
+                                     POINT_SET_ALL );
+        }
     }
 
     // Write the file and column headers
@@ -99,7 +99,20 @@ int main( int argc, char *argv[] )
     print_col_headers( f );
 
     // Calculate answer
-    find_emission_point_elevator( &psr, ph, o.direction, &init_pt, &emit_pt, f );
+    int status;
+    status = find_emission_point_elevator( &psr, ph, o.direction,
+                                           &init_pt, &emit_pt, f );
+
+    if (status == EMIT_PT_TOO_HIGH)
+    {
+        fprintf( stderr, "# Stopped at light cylinder\n" );
+        exit(EXIT_SUCCESS);
+    }
+    else if (status == EMIT_PT_TOO_LOW)
+    {
+        fprintf( stderr, "# Stopped at pulsar surface\n" );
+        exit(EXIT_SUCCESS);
+    }
 
     // Print out the features of the found point.
     point V1, V2;

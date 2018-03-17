@@ -77,15 +77,16 @@ int main( int argc, char *argv[] )
 
     // Make sure the initial "previous" point is at least 2 pulsar radii above
     // the pulsar's surface
-    if (prev_pt.r == 0.0)
+    double min_height = 3.0*psr.r;
+    if (prev_pt.r < min_height)
     {
         psr_angle za; // "zero angle"
         set_psr_angle_rad( &za, 0.0 );
-        set_point_sph( &prev_pt, 3.0*psr.r,
+        set_point_sph( &prev_pt, min_height,
                                  &psr.al,
                                  &za,
                                  POINT_SET_ALL );
-        /*
+
         if (o.direction == DIR_INWARD)
         {
             set_point_xyz( &prev_pt, -prev_pt.x[0],
@@ -93,31 +94,29 @@ int main( int argc, char *argv[] )
                                      -prev_pt.x[2],
                                      POINT_SET_ALL );
         }
-        */
     }
-    else if (prev_pt.r < 3.0*psr.r)
-    {
-        set_point_sph( &prev_pt, 3.0*psr.r,
-                                 &prev_pt.th,
-                                 &prev_pt.ph,
-                                 POINT_SET_ALL );
-    }
-
 
     // Loop over the phases and calculate the new pos angle, using the
     // previous emission point as a seed for each new emission point
     double ph_deg;
+    double ph_start = (o.direction == DIR_OUTWARD ? 0.0 : -180.0);
     int N = 360; // The number of points to sample
     int i;
     for (i = 0; i < N+1; i++)
     {
-        ph_deg = i*360.0/(double)N;
+        ph_deg = i*360.0/(double)N + ph_start;
         set_psr_angle_deg( &ph, ph_deg );
-        calc_pol_angle( &psr, &ph, o.direction, &prev_pt, &emit_pt, &psi );
-        fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
-                    emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
-                    ph.deg, psi.deg );
-        copy_point( &emit_pt, &prev_pt );
+        if (calc_pol_angle( &psr, &ph, o.direction, &prev_pt, &emit_pt, &psi ))
+        {
+            fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
+                        emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
+                        ph.deg, psi.deg );
+            copy_point( &emit_pt, &prev_pt );
+        }
+        else
+        {
+            fprintf( f, "\n" );
+        }
     }
 
     // Clean up

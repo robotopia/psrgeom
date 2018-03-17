@@ -795,8 +795,8 @@ void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
 }
 
 
-void calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
-                     point *init_pt, point *emit_pt, psr_angle *psi )
+int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
+                    point *init_pt, point *emit_pt, psr_angle *psi )
 /* This function calculates the polarisation angle, Ψ, for a pulsar at a
  * given phase, φ.
  *
@@ -814,7 +814,12 @@ void calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
 {
     // First order of business: find the emission point corresponding to this
     // geometry and rotation phase
-    find_emission_point_elevator( psr, phase, direction, init_pt, emit_pt, NULL );
+    int status;
+    status = find_emission_point_elevator( psr, phase, direction,
+                                           init_pt, emit_pt, NULL );
+
+    if (status == EMIT_PT_TOO_HIGH || status == EMIT_PT_TOO_LOW)
+        return 0; // = failed to find point
 
     // Second, find the acceleration vectors at that point
     point A1, A2;
@@ -826,7 +831,7 @@ void calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
     if (nsols <= 0)
     {
         fprintf( stderr, "error: calc_pol_angle: did not find a solution\n" );
-        exit(EXIT_FAILURE);
+        return 0; // = fail
     }
 
     // Third, convert the acceleration to a polarisation angle
@@ -853,4 +858,6 @@ void calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
     set_psr_angle_cos( psi, pz.x[0] * pa.x[0] +
                             pz.x[1] * pa.x[1] +
                             pz.x[2] * pa.x[2] );
+
+    return 1; // = success
 }

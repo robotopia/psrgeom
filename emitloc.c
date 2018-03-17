@@ -748,7 +748,6 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
 
     // Iterate both inwards and outwards until an opposite-type field line
     // is found
-int down = 0, up = 0, bisection = 0;
     while (1)
     {
         /* Go down the elevator, a half radius at a time */
@@ -767,12 +766,11 @@ int down = 0, up = 0, bisection = 0;
 
         // Check to see if we've "reached" the pulsar surface
         if (rlo_pt.r <= psr->r || rlo_pt.r >= temp_pt.r)
-            return -1; // Return with error code "too low"
+            return EMIT_PT_TOO_LOW; // Return with error code "too low"
 
         // And the field line type there
         rlo_type = get_fieldline_type( &rlo_pt, psr, tmult, NULL );
 
-down++;
         // If they differ, then we have a match!
         if (rlo_type != temp_type)
         {
@@ -796,13 +794,13 @@ down++;
         find_LoS_at_r( &half_up_pt, psr, phase, direction, &rhi_pt, NULL );
 
         // Check to see if we've "reached" the light cylinder
-        if (rhi_pt.r >= psr->rL || rhi_pt.r <= temp_pt.r)
-            return 1; // Return with error code "too high"
+        // Actually, ignore anything within 10% of the light cylinder
+        if (rhi_pt.r >= 0.9*psr->rL || rhi_pt.r <= temp_pt.r)
+            return EMIT_PT_TOO_HIGH; // Return with error code "too high"
 
         // And the field line type there
         rhi_type = get_fieldline_type( &rhi_pt, psr, tmult, NULL );
 
-up++;
         // If they differ, then we have a match!
         if (rhi_type != temp_type)
         {
@@ -825,11 +823,10 @@ up++;
         mid_r = (rlo_pt.r + rhi_pt.r) / 2.0;
         if ((rlo_pt.r >= mid_r) || (mid_r >= rhi_pt.r))
         {
-            // Declare the lower point the winner and exit!
-            copy_point( &rlo_pt, emit_pt );
+            // Declare the higher point the winner and exit!
+            copy_point( &rhi_pt, emit_pt );
             break;
         }
-bisection++;
 
         // Set the temp point to half-way between the upper and lower points
         spherical_midpoint( &rlo_pt, &rhi_pt, &mid_pt, POINT_SET_ALL );
@@ -859,7 +856,6 @@ bisection++;
                         cost_lofl, cost_los );
         }
     }
-fprintf( stderr, "#phase = %.1f,  down = %d,  up = %d,  bisection = %d\n", phase->deg, down, up, bisection );
 
-    return 0; // = successful
+    return EMIT_PT_FOUND; // = successful
 }
