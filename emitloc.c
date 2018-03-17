@@ -748,13 +748,10 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
 
     // Iterate both inwards and outwards until an opposite-type field line
     // is found
+int down = 0, up = 0, bisection = 0;
     while (1)
     {
         /* Go down the elevator, a half radius at a time */
-
-        // Declare the search a failure if we dip below the pulsar radius.
-        if (rlo_pt.r/2 < psr->r)
-            return -1;
 
         // Save off the previous lowest point to "temp_pt"
         copy_point( &rlo_pt, &temp_pt );
@@ -768,9 +765,14 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         // Find the LoS criterion point at this new, lower, radius
         find_LoS_at_r( &half_down_pt, psr, phase, direction, &rlo_pt, NULL );
 
+        // Check to see if we've "reached" the pulsar surface
+        if (rlo_pt.r <= psr->r || rlo_pt.r >= temp_pt.r)
+            return -1; // Return with error code "too low"
+
         // And the field line type there
         rlo_type = get_fieldline_type( &rlo_pt, psr, tmult, NULL );
 
+down++;
         // If they differ, then we have a match!
         if (rlo_type != temp_type)
         {
@@ -793,9 +795,14 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         // Find the LoS criterion point at this new, higher, radius
         find_LoS_at_r( &half_up_pt, psr, phase, direction, &rhi_pt, NULL );
 
+        // Check to see if we've "reached" the light cylinder
+        if (rhi_pt.r >= psr->rL || rhi_pt.r <= temp_pt.r)
+            return 1; // Return with error code "too high"
+
         // And the field line type there
         rhi_type = get_fieldline_type( &rhi_pt, psr, tmult, NULL );
 
+up++;
         // If they differ, then we have a match!
         if (rhi_type != temp_type)
         {
@@ -822,6 +829,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
             copy_point( &rlo_pt, emit_pt );
             break;
         }
+bisection++;
 
         // Set the temp point to half-way between the upper and lower points
         spherical_midpoint( &rlo_pt, &rhi_pt, &mid_pt, POINT_SET_ALL );
@@ -851,6 +859,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
                         cost_lofl, cost_los );
         }
     }
+fprintf( stderr, "#phase = %.1f,  down = %d,  up = %d,  bisection = %d\n", phase->deg, down, up, bisection );
 
     return 0; // = successful
 }

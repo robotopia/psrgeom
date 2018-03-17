@@ -85,6 +85,15 @@ int main( int argc, char *argv[] )
                                  &psr.al,
                                  &za,
                                  POINT_SET_ALL );
+        /*
+        if (o.direction == DIR_INWARD)
+        {
+            set_point_xyz( &prev_pt, -prev_pt.x[0],
+                                     -prev_pt.x[1],
+                                     -prev_pt.x[2],
+                                     POINT_SET_ALL );
+        }
+        */
     }
     else if (prev_pt.r < 3.0*psr.r)
     {
@@ -100,7 +109,7 @@ int main( int argc, char *argv[] )
     double ph_deg;
     int N = 360; // The number of points to sample
     int i;
-    for (i = 0; i < N; i++)
+    for (i = 0; i < N+1; i++)
     {
         ph_deg = i*360.0/(double)N;
         set_psr_angle_deg( &ph, ph_deg );
