@@ -752,8 +752,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
     {
         /* Go down the elevator, a half radius at a time */
 
-        // Declare the search a failure, if we dip below the pulsar radius,
-        // or (equivalently) come within a pulsar radius of the light cylinder
+        // Declare the search a failure if we dip below the pulsar radius.
         if (rlo_pt.r/2 < psr->r)
             return -1;
 
@@ -761,8 +760,9 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         copy_point( &rlo_pt, &temp_pt );
         temp_type = rlo_type;
 
-        // Get the point at half the radius from the previous lowest point
-        set_point_sph( &half_down_pt, temp_pt.r/2.0, &(temp_pt.th),
+        // Get the point halfway between the previous lowest point and the
+        // pulsar surface
+        set_point_sph( &half_down_pt, (temp_pt.r + psr->r)/2.0, &(temp_pt.th),
                        &(temp_pt.ph), POINT_SET_ALL );
 
         // Find the LoS criterion point at this new, lower, radius
@@ -785,11 +785,12 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         copy_point( &rhi_pt, &temp_pt );
         temp_type = rhi_type;
 
-        // Get the point at half the radius from the previous lowest point
+        // Get the point at the radius halfway between the previous highest
+        // point and the light cylinder
         set_point_sph( &half_up_pt, (temp_pt.r + psr->rL)/2.0, &(temp_pt.th),
                        &(temp_pt.ph), POINT_SET_ALL );
 
-        // Find the LoS criterion point at this new, lower, radius
+        // Find the LoS criterion point at this new, higher, radius
         find_LoS_at_r( &half_up_pt, psr, phase, direction, &rhi_pt, NULL );
 
         // And the field line type there

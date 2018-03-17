@@ -1,5 +1,6 @@
 *.o
 *.gz
+*.swp
 lib*.a
 psr_fields
 psr_lines
