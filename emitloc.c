@@ -307,7 +307,7 @@ double psr_cost_total( long int n, const double *xyz, void *varg )
 }
 
 
-void find_approx_emission_point( pulsar *psr, psr_angle *phase,
+void find_approx_emission_point( pulsar *psr, psr_angle *phase, int direction,
                                  point *emit_pt )
 /* This function finds the emission point around a "simplified" pulsar, which
  * means a pulsar that
@@ -323,10 +323,22 @@ void find_approx_emission_point( pulsar *psr, psr_angle *phase,
  * Inputs:
  *   pulsar *psr      : a pointer to a pulsar struct
  *   psr_angle *phase : the rotation phase of interest
+ *   int direction    : whether the emitting particles are flowing along
+ *                      (DIR_OUTWARD) or against (DIR_INWARD) the magnetic
+ *                      field
  * Outputs:
  *   point *emit_pt   : the found emission point
  */
 {
+    // Make sure that direction is either DIR_OUTWARD or DIR_INWARD
+    if (direction != DIR_OUTWARD && direction != DIR_INWARD)
+    {
+        fprintf( stderr, "error: find_approx_emission_point: "
+                         "direction must be either DIR_OUTWARD or "
+                         "DIR_INWARD\n" );
+        exit(EXIT_FAILURE);
+    }
+
     // Get the line of sight
     point LoS;
     line_of_sight( psr, phase, &LoS );
@@ -355,7 +367,6 @@ void find_approx_emission_point( pulsar *psr, psr_angle *phase,
 
     point LoS_mag;        /* The LoS in magnetic frame coordinates */
     obs_to_mag_frame( &LoS, psr, NULL, &LoS_mag );
-
     psr_angle *sigma = &(LoS_mag.ph);
 
     // Now I have the spherical coordinates (r,θ,φ) in the magnetic frame,
@@ -365,6 +376,17 @@ void find_approx_emission_point( pulsar *psr, psr_angle *phase,
     set_point_sph( &emit_pt_mag, r, &theta, sigma, POINT_SET_ALL );
 
     mag_to_obs_frame( &emit_pt_mag, psr, NULL, emit_pt );
+
+    // In the case of DIR_INWARD, the emission point will be exactly opposite
+    // the one just calculated (i.e. reflected in the origin)
+    if (direction == DIR_INWARD)
+    {
+        set_point_xyz( emit_pt, -emit_pt->x[0],
+                                -emit_pt->x[1],
+                                -emit_pt->x[2],
+                                POINT_SET_ALL );
+    }
+
 }
 
 
@@ -400,7 +422,7 @@ void find_emission_point_nmead( pulsar *psr, psr_angle *phase, int direction,
     int i;         // for looping over 0..(n-1)
 
     point init_guess;
-    find_approx_emission_point( psr, phase, &init_guess );
+    find_approx_emission_point( psr, phase, direction, &init_guess );
 
     for (i = 0; i < n; i++)
         p0[i] = init_guess.x[i];
@@ -470,7 +492,7 @@ void find_emission_point_newuoa( pulsar *psr, psr_angle *phase, int direction,
     int i;
 
     point init_guess;
-    find_approx_emission_point( psr, phase, &init_guess );
+    find_approx_emission_point( psr, phase, direction, &init_guess );
 
     for (i = 0; i < n; i++)
         x[i] = init_guess.x[i];
@@ -710,7 +732,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
 
     // Get the initial point
     point init_pt;
-    find_approx_emission_point( psr, phase, &init_pt );
+    find_approx_emission_point( psr, phase, direction, &init_pt );
 
     // Find the point at this radius which satisfies the LoS criterion
     point rlo_pt, rhi_pt, temp_pt;
