@@ -7,9 +7,14 @@
 * Include retardation in the calculation of the emission point.
 
 ----
-## v1.1.9 (2018-03-13)
+## v1.1.10 (2018-03-17)
 
-Fixed important bug in psr\_polangle (still in beta)
+* Fixed a convergence bug in the convergence of the emission point.
+
+----
+## v1.1.9 (2018-03-16)
+
+* Fixed important bug in psr\_polangle (still in beta)
 
 ----
 ## v1.1.8 (2018-03-13)
