@@ -696,7 +696,7 @@ int get_fieldline_type( point *X, pulsar *psr, double tmult, FILE *f )
 
 
 int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
-        int direction, point *emit_pt, FILE *f )
+        int direction, point *init_pt, point *emit_pt, FILE *f )
 /* This function attempts to find the emission point by using the "elevator"
  * method. I call it the "elevator" method, because it searches for solutions
  * up and down the set of points that satisfy the "line of sight" criterion,
@@ -704,8 +704,8 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
  * Maybe "space elevator" would have been more apt, but that would've made the
  * function name tediously long.
  *
- * The "elevator" method starts at the point returned by the
- * find_approx_emission_point() function. It then uses NEWUOA to search for
+ * The "elevator" method starts at the supplied initial point (e.g. from the
+ * find_approx_emission_point() function). It then uses NEWUOA to search for
  * a point at the same radius r that satisfies the "line of sight" criterion,
  * namely, that the velocity field is parallel to the line of sight. Then,
  * having found that point, it evaluates it for the "last open field line"
@@ -730,32 +730,9 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
     // Make a few temporary points
     point half_down_pt, half_up_pt;
 
-    // Get the initial point
-    point init_pt;
-    find_approx_emission_point( psr, phase, direction, &init_pt );
-
-    // Make sure the initial guess at least 2 pulsar radii above the pulsar's
-    // surface
-    if (init_pt.r == 0.0)
-    {
-        psr_angle za; // "zero angle"
-        set_psr_angle_rad( &za, 0.0 );
-        set_point_sph( &init_pt, 3.0*psr->r,
-                                 &psr->al,
-                                 &za,
-                                 POINT_SET_ALL );
-    }
-    else if (init_pt.r < 3.0*psr->r)
-    {
-        set_point_sph( &init_pt, 3.0*psr->r,
-                                 &init_pt.th,
-                                 &init_pt.ph,
-                                 POINT_SET_ALL );
-    }
-
     // Find the point at this radius which satisfies the LoS criterion
     point rlo_pt, rhi_pt, temp_pt;
-    find_LoS_at_r( &init_pt, psr, phase, direction, &rlo_pt, NULL );
+    find_LoS_at_r( init_pt, psr, phase, direction, &rlo_pt, NULL );
 
     // This first point is, initially, both the high and low point,
     // since we don't know which side of it our solution is.

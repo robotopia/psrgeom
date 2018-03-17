@@ -68,19 +68,47 @@ int main( int argc, char *argv[] )
     print_col_headers( f );
 
     // Calculate the polarisation angle for each phase
-    point emit_pt;
+    point emit_pt, prev_pt;
     psr_angle ph, psi;
+
+    // Initially, set the prev_pt to an approximate initial guess
+    set_psr_angle_deg( &ph, 0.0 );
+    find_approx_emission_point( &psr, &ph, o.direction, &prev_pt );
+
+    // Make sure the initial "previous" point is at least 2 pulsar radii above
+    // the pulsar's surface
+    if (prev_pt.r == 0.0)
+    {
+        psr_angle za; // "zero angle"
+        set_psr_angle_rad( &za, 0.0 );
+        set_point_sph( &prev_pt, 3.0*psr.r,
+                                 &psr.al,
+                                 &za,
+                                 POINT_SET_ALL );
+    }
+    else if (prev_pt.r < 3.0*psr.r)
+    {
+        set_point_sph( &prev_pt, 3.0*psr.r,
+                                 &prev_pt.th,
+                                 &prev_pt.ph,
+                                 POINT_SET_ALL );
+    }
+
+
+    // Loop over the phases and calculate the new pos angle, using the
+    // previous emission point as a seed for each new emission point
     double ph_deg;
     int N = 360; // The number of points to sample
     int i;
     for (i = 0; i < N; i++)
     {
-        ph_deg = i*360.0/(double)N - 180.0;
+        ph_deg = i*360.0/(double)N;
         set_psr_angle_deg( &ph, ph_deg );
-        calc_pol_angle( &psr, &ph, o.direction, &emit_pt, &psi );
+        calc_pol_angle( &psr, &ph, o.direction, &prev_pt, &emit_pt, &psi );
         fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
                     emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
                     ph.deg, psi.deg );
+        copy_point( &emit_pt, &prev_pt );
     }
 
     // Clean up

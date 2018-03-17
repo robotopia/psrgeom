@@ -68,15 +68,38 @@ int main( int argc, char *argv[] )
     // Set up rotation phase
     psr_angle *ph = create_psr_angle_deg( o.ph_deg );
 
-    // Set up point for answer
-    point emit_pt;
+    // Set up point for answer, and for initial seed guess
+    point emit_pt, init_pt;
+
+    // Initially, set the init_pt to an approximate initial guess
+    set_psr_angle_deg( ph, 0.0 );
+    find_approx_emission_point( &psr, ph, o.direction, &init_pt );
+
+    // Make sure the initial "previous" point is at least 2 pulsar radii above
+    // the pulsar's surface
+    if (init_pt.r == 0.0)
+    {
+        psr_angle za; // "zero angle"
+        set_psr_angle_rad( &za, 0.0 );
+        set_point_sph( &init_pt, 3.0*psr.r,
+                                 &psr.al,
+                                 &za,
+                                 POINT_SET_ALL );
+    }
+    else if (init_pt.r < 3.0*psr.r)
+    {
+        set_point_sph( &init_pt, 3.0*psr.r,
+                                 &init_pt.th,
+                                 &init_pt.ph,
+                                 POINT_SET_ALL );
+    }
 
     // Write the file and column headers
     print_psrg_header( f, argc, argv );
     print_col_headers( f );
 
     // Calculate answer
-    find_emission_point_elevator( &psr, ph, o.direction, &emit_pt, f );
+    find_emission_point_elevator( &psr, ph, o.direction, &init_pt, &emit_pt, f );
 
     // Print out the features of the found point.
     point V1, V2;

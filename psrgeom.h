@@ -149,7 +149,7 @@ int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
 int farpoint( point *start_pt, pulsar *psr, double tmult,
               FILE *write_xyz, int rL_norm, double rL_lim, point *far_pt );
 void calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
-                     point *emit_pt, psr_angle *psi );
+                     point *init_pt, point *emit_pt, psr_angle *psi );
 
 
 /**** Dipole field functions ****/
@@ -186,7 +186,7 @@ void find_emission_point_nmead( pulsar *psr, psr_angle *phase, int direction,
 void find_emission_point_newuoa( pulsar *psr, psr_angle *phase, int direction,
                                  point *emit_pt, FILE *f );
 int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
-        int direction, point *emit_pt, FILE *f );
+        int direction, point *init_pt, point *emit_pt, FILE *f );
 
 void psr_cost_deriv( point *X, pulsar *psr, psr_angle *phase, int direction,
                      double dx, point *grad );
