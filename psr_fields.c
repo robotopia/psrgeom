@@ -632,8 +632,10 @@ void print_all_tokens( FILE *f, struct tokens *tok, point *X, pulsar *psr,
               B.x[1] * X->ph.sin;
     }
 
+    // For now, always turn retardation on
+    int retardation = 1; // Turn on retardation effects
     if (tok->calcVdL)
-        VdL = psr_cost_los( X, psr, phase, DIR_OUTWARD );
+        VdL = psr_cost_los( X, psr, phase, DIR_OUTWARD, retardation );
 
     if (tok->calcBLF)
         BLF = psr_cost_lofl( X, psr );

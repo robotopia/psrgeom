@@ -11,12 +11,12 @@ rotate_about_axis \- rotate a point about either the x-, y-, or z- axis
 .PP
 .SH DESCRIPTION
 The
-.BR rotate_about_axis()
+.BR rotate_about_axis ()
 function rotates the point \fIin\fP about \fIaxis\fP by an angle \fIrot\fP,
 and records the new point in \fIout\fP. The \fIflags\fP parameter specifies
 which members of the \fIout\fP are set (see, e.g., 
-.BR set_point_xyz()
- for a list of valid flags). This function assumes that the x, y, and z fields
+.BR set_point_xyz ()
+for a list of valid flags). This function assumes that the x, y, and z fields
 of \fIin\fP have been set. \fIaxis\fP can take the values 'x', 'X', 'y', 'Y',
 'z', 'Z', and will terminate with an error if any other value is used.
 .SH RETURN VALUE

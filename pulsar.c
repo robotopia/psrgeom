@@ -140,3 +140,47 @@ void pol_zero( pulsar *psr, psr_angle *phase, point *pz )
 }
 
 
+void calc_retardation( point *X, pulsar *psr, point *LoS, point *retarded_LoS )
+/* This function calculates the retardation due to the difference in flight
+ * time of photons starting from different locations in the magnetosphere.
+ * In particular, it returns a pseudo-line-of-sight, i.e. the line of sight
+ * that has been rotated around the pulsar's rotation axis by an amount
+ * corresponding to the pulsar's rotation rate and the time difference between
+ * a photon starting at X and a photon starting atsome reference point (here,
+ * we choose the origin).
+ *
+ * Thus, an emission point closer to the observer than the reference point
+ * would be seen at an earlier time. Since the LoS (apparently) rotates in the
+ * opposite sense to the pulsar rotation (i.e. in the rotating frame), we can
+ * simulate an earlier time of arrival with an artificial rotation of the line
+ * of sight in the *same* sense as the pulsar.
+ *
+ * This function assumes that X's Cartesian coordinates are set, that its
+ * radius, r, is set, and that LoS is of length unity.
+ *
+ * Inputs:
+ *   point  *X   : the point at which the retardation is to be calculated
+ *   pulsar *psr : the pulsar struct
+ *   point  *LoS : the (non-retarded) line of sight
+ * Outputs:
+ *   point *retarded_LoS : the retarded line of sight
+ */
+{
+    // Calculate the prejection of the position vector of X onto the LoS
+    // (we assume LoS has length 1)
+    double proj = X->r * (X->x[0] * LoS->x[0] +
+                          X->x[1] * LoS->x[1] +
+                          X->x[2] * LoS->x[2]);
+
+    // Convert the projected length into a photon travel time
+    double t = proj / SPEED_OF_LIGHT;
+
+    // Convert the photon travel time into a pulsar rotation phase
+    psr_angle dph;
+    set_psr_angle_rad( &dph, t*psr->Om.rad );
+
+    // Rotate the line of sight by that amount (around the z-axis = pulsar's
+    // rotation axis)
+    rotate_about_axis( LoS, retarded_LoS, &dph, 'z', POINT_SET_ALL );
+}
+

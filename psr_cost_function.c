@@ -125,8 +125,9 @@ int main( int argc, char *argv[] )
                 set_point_xyz( &X, x, y, z, POINT_SET_ALL );
 
                 // Evaluate cost functions
+                int retardation = 1; // Turn on retardation effects
                 c1 = psr_cost_lofl( &X, &psr );
-                c2 = psr_cost_los( &X, &psr, ph, o.direction );
+                c2 = psr_cost_los( &X, &psr, ph, o.direction, retardation );
 
                 // Write out the result
                 fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",

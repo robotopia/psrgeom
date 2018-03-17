@@ -105,7 +105,8 @@ double psr_cost_lofl( point *X, pulsar *psr )
 }
 
 
-double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction )
+double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction,
+                     int retardation )
 /* This calculates the "cost" associated with how close emission from point X
  * is from the line of sight, given a rotation phase. Each point has
  * associated with it two possible velocity vectors (which determine the
@@ -167,6 +168,11 @@ double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction )
     point LoS;
     line_of_sight( psr, phase, &LoS );
 
+    // If retardation effects are requested, offset the line of sight by the
+    // appropriate amount
+    if (retardation)
+        calc_retardation( X, psr, &LoS, &LoS );
+
     // Calculate the normalised dot product of the line of sight with the
     // velocity vector
     double LdV = LoS.x[0] * V->x[0] +
@@ -224,7 +230,8 @@ double psr_cost_los_at_r_optim( long int n, const double *thph, void *varg )
     set_point_sph( &X, r, &th, &ph, POINT_SET_ALL );
 
     // Get the "LoS" cost
-    double cost_los = psr_cost_los( &X, psr, phase, direction );
+    int retardation = 1; // Turn on retardation effects
+    double cost_los = psr_cost_los( &X, psr, phase, direction, retardation );
 
     if (f != NULL)
         fprintf( f, "%.15e %.15e %.15e %.15e\n",
@@ -271,8 +278,9 @@ double psr_cost_total( long int n, const double *xyz, void *varg )
     FILE                *f         = arg->f;
 
     // Get the two associated costs
+    int retardation = 1; // Turn on retardation effects
     double cost_lofl = psr_cost_lofl( &X, psr );
-    double cost_los  = psr_cost_los( &X, psr, phase, direction );
+    double cost_los  = psr_cost_los( &X, psr, phase, direction, retardation );
 
     if (f != NULL)
         fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
@@ -814,8 +822,10 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         // Print out the temp point, if requested
         if (f != NULL)
         {
+            int retardation = 1; // Turn on retardation effects
             double cost_lofl = psr_cost_lofl( &temp_pt, psr );
-            double cost_los  = psr_cost_los( &temp_pt, psr, phase, direction );
+            double cost_los  = psr_cost_los( &temp_pt, psr, phase, direction,
+                                             retardation );
             fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
                         temp_pt.x[0], temp_pt.x[1], temp_pt.x[2],
                         cost_lofl, cost_los );

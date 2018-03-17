@@ -72,12 +72,12 @@ typedef struct point_t {
 typedef struct pulsar_t {
     psr_angle    ra;    // Right Ascension
     psr_angle    dec;   // Declination
-    double   P;     // Rotation period
+    double       P;     // Rotation period
     psr_angle    Om;    // Rotation frequency = 2π/P
-    //double   Pdot;  // First time derivative of rotation period
-    double   r;     // Stellar radius
-    double   rL;    // Light cylinder radius
-    double   rL2;   // = rL^2 (because it comes up quite often)
+    //double       Pdot;  // First time derivative of rotation period
+    double       r;     // Stellar radius
+    double       rL;    // Light cylinder radius
+    double       rL2;   // = rL^2 (because it comes up quite often)
     psr_angle    al;    // Angle between the rotation and magnetic axes
     psr_angle    ze;    // Angle between the rotation axis and the line of sight
 } pulsar;
@@ -130,6 +130,7 @@ double light_cylinder( double P );
 void line_of_sight( pulsar *psr, psr_angle *phase, point *LoS );
 void pol_zero( pulsar *psr, psr_angle *phase, point *pz );
 
+void calc_retardation( point *X, pulsar *psr, point *LoS, point *retarded_LoS );
 
 
 /**** Magnetic field functions ****/
@@ -174,7 +175,8 @@ void print_psrg_header( FILE *f, int argc, char *argv[] );
 /**** Finding the emission point ****/
 
 double psr_cost_lofl( point *X, pulsar *psr );
-double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction );
+double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction,
+                     int retardation );
 int get_fieldline_type( point *X, pulsar *psr, double tmult, FILE *f );
 
 void find_approx_emission_point( pulsar *psr, psr_angle *phase,
