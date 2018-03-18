@@ -112,13 +112,7 @@ int fitwidth( pulsar *psr, int direction, double width_rad,
 
     // Print out our progress so far, if requested
     if (f != NULL)
-    {
-        // First, print a column header line
-        fprintf( f, "# φ1+φ2/2  h(φ1)  h(φ2)\n" );
-
-        // Then print the result
         fprintf( f, "%.15e %.15e %.15e\n", mid_ph, ph1_pt.r, ph2_pt.r );
-    }
 
     // Loop over different phases (always in one direction) until we've gone
     // too far.
@@ -168,7 +162,7 @@ int fitwidth( pulsar *psr, int direction, double width_rad,
     while (1)
     {
         // Evaluate the phase in the middle
-        mid_ph += (lo_mid_ph + hi_mid_ph) / 2.0;
+        mid_ph = (lo_mid_ph + hi_mid_ph) / 2.0;
 
         // Check if machine precision has been reached
         if (lo_mid_ph >= mid_ph || mid_ph >= hi_mid_ph)

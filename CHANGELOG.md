@@ -6,6 +6,11 @@
 * Generalised the Bstep() function, for arbitrary vector fields.
 
 ----
+## v1.2.0 (2018-03-18)
+
+* Implemented a "fitwidth" function (and program) for matching emission heights to pulse widths.
+
+----
 ## v1.1.12 (2018-03-18)
 
 * Restricted emission point range to <90% of light cylinder radius.

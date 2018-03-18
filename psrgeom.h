@@ -1,7 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
-#define PSRGEOM_VERSION "1.1.12"
+#define PSRGEOM_VERSION "1.2.0"
 
 #include <stdio.h>
 #include <math.h>
@@ -197,5 +197,10 @@ void psr_cost_deriv( point *X, pulsar *psr, psr_angle *phase, int direction,
                      double dx, point *grad );
 void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
                     int direction, point *end_pt, FILE *f );
+
+/**** Finding the pulse width ****/
+
+int fitwidth( pulsar *psr, int direction, double width_rad,
+              psr_angle *ph1, psr_angle *ph2, FILE *f );
 
 #endif

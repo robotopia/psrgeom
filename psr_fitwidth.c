@@ -10,9 +10,8 @@ struct opts
     double  al_deg;    // alpha angle in deg
     double  ze_deg;    // zeta angle in deg
     double  P_sec;     // period, in sec
-    double  tmult;     // RK4 step size, as a fraction of lt cyl radius
-    int     rL_norm;   // bool: normalise to light cylinder radius?
     int     direction; // either DIR_OUTWARD or DIR_INWARD
+    double  width_deg; // the phase "width"
     char   *outfile;   // name of output file (NULL means stdout)
 };
 
@@ -27,9 +26,8 @@ int main( int argc, char *argv[] )
     o.al_deg    = NAN;
     o.P_sec     = NAN;
     o.ze_deg    = NAN;
-    o.tmult     = 0.01;
-    o.rL_norm   = 0;
     o.direction = DIR_OUTWARD;
+    o.width_deg = NAN;
     o.outfile   = NULL;
 
     parse_cmd_line( argc, argv, &o );
@@ -68,58 +66,13 @@ int main( int argc, char *argv[] )
     print_col_headers( f );
 
     // Calculate the polarisation angle for each phase
-    point emit_pt, prev_pt;
-    psr_angle ph, psi;
+    psr_angle ph1, ph2;
+    double width_rad = o.width_deg * DEG2RAD;
 
-    // Initially, set the prev_pt to an approximate initial guess
-    set_psr_angle_deg( &ph, 0.0 );
-    find_approx_emission_point( &psr, &ph, o.direction, &prev_pt );
+    int status = fitwidth( &psr, o.direction, width_rad, &ph1, &ph2, f );
 
-    // Make sure the initial "previous" point is at least 2 pulsar radii above
-    // the pulsar's surface
-    double min_height = 3.0*psr.r;
-    if (prev_pt.r < min_height)
-    {
-        psr_angle za; // "zero angle"
-        set_psr_angle_rad( &za, 0.0 );
-        set_point_sph( &prev_pt, min_height,
-                                 &psr.al,
-                                 &za,
-                                 POINT_SET_ALL );
-
-        if (o.direction == DIR_INWARD)
-        {
-            set_point_xyz( &prev_pt, -prev_pt.x[0],
-                                     -prev_pt.x[1],
-                                     -prev_pt.x[2],
-                                     POINT_SET_ALL );
-        }
-    }
-
-    // Loop over the phases and calculate the new pos angle, using the
-    // previous emission point as a seed for each new emission point
-    double ph_deg;
-
-    double ph_start = (o.direction == DIR_OUTWARD ? 0.0 : -180.0);
-
-    int N = 360; // The number of points to sample
-    int i;
-    for (i = 0; i < N+1; i++)
-    {
-        ph_deg = i*360.0/(double)N + ph_start;
-        set_psr_angle_deg( &ph, ph_deg );
-        if (calc_pol_angle( &psr, &ph, o.direction, &prev_pt, &emit_pt, &psi ))
-        {
-            fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
-                        emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
-                        (ph.deg > 180.0 ? ph.deg - 360.0 : ph.deg), psi.deg );
-            copy_point( &emit_pt, &prev_pt );
-        }
-        else
-        {
-            fprintf( f, "\n" );
-        }
-    }
+    if (status != EMIT_PT_FOUND)
+        fprintf( f, "# Failed to find point\n" );
 
     // Clean up
     destroy_psr_angle( ra  );
@@ -137,12 +90,13 @@ int main( int argc, char *argv[] )
 
 void usage()
 {
-    printf( "usage: psr_polangle [OPTIONS]\n\n" );
+    printf( "usage: psr_fitwidth [OPTIONS]\n\n" );
     printf( "REQUIRED OPTIONS:\n" );
     printf( "  -a  alpha    The angle between the rotation and magetic axes "
                            "in degrees (required)\n" );
     printf( "  -P  period   The rotation period of the pulsar, in seconds "
                            "(required)\n" );
+    printf( "  -w  width    The pulse width, in degrees (required)\n" );
     printf( "  -z  zeta     The angle between the rotation axis and the line "
                            "of sight in degrees (required)\n" );
     printf( "\nOTHER OPTIONS:\n" );
@@ -152,11 +106,8 @@ void usage()
                            "field\n"
             "               (default is to assume particles are flowing in "
                            "the same direction as the magnetic field)\n" );
-    printf( "  -L           Normalise distances to light cylinder radius\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
-    printf( "  -t  tmult    The initial size of the RK4 steps, as a fraction "
-                           "of the light cylinder radius (default: 0.01)\n" );
 }
 
 
@@ -164,7 +115,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:hiLo:P:r:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:hio:P:w:z:")) != -1)
     {
         switch (c)
         {
@@ -178,17 +129,14 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
             case 'i':
                 o->direction = DIR_INWARD;
                 break;
-            case 'L':
-                o->rL_norm = 1;
-                break;
             case 'o':
                 o->outfile = strdup(optarg);
                 break;
             case 'P':
                 o->P_sec = atof(optarg);
                 break;
-            case 't':
-                o->tmult = atof(optarg);
+            case 'w':
+                o->width_deg = atof(optarg);
                 break;
             case 'z':
                 o->ze_deg = atof(optarg);
@@ -205,9 +153,10 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
     }
 
     // Check that all the arguments are valid
-    if (isnan(o->al_deg) || isnan(o->P_sec) || isnan(o->ze_deg))
+    if (isnan(o->al_deg) || isnan(o->P_sec) ||
+        isnan(o->ze_deg) || isnan(o->width_deg))
     {
-        fprintf( stderr, "error: -a, -P, and -z options required\n" );
+        fprintf( stderr, "error: -a, -P, -w, and -z options required\n" );
         usage();
         exit(EXIT_FAILURE);
     }
@@ -217,7 +166,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 void print_col_headers( FILE *f )
 {
     // Print out a line to file handle f
-    fprintf( f, "# x y z rotation_phase(φ)  pol_angle(Ψ)\n" );
+    fprintf( f, "# φ1+φ2/2  h(φ1)  h(φ2)\n" );
 }
 
 
