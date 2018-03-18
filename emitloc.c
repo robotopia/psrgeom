@@ -7,7 +7,7 @@
  *
  * Description:
  *   This source file implements the functions required to find the emission
- *   locations for a given rotation phase. It uses a Nelder-Mead algorithm to
+ *   locations for a given rotation phase. It uses the NEWUOA algorithm to
  *   converge on the desired point. The cost function incorporates both how
  *   close a point's field line is to the last open field line, and how
  *   close the emission direction is to the line of sight.
@@ -23,8 +23,8 @@
 #include "psrgeom.h"
 
 // The following struct is for conveniently passing information to the
-// Nelder-Mead optimisation function
-struct cost_args
+// optimisation functions
+struct em_cost_args
 {
     pulsar    *psr;
     psr_angle *phase;
@@ -216,7 +216,7 @@ double psr_cost_los_at_r_optim( long int n, const double *thph, void *varg )
     }
 
     // "Deconstruct" the data argument "arg"
-    struct cost_args *arg       = (struct cost_args *)varg;
+    struct em_cost_args *arg       = (struct em_cost_args *)varg;
     pulsar           *psr       = arg->psr;
     psr_angle        *phase     = arg->phase;
     int               direction = arg->direction;
@@ -272,7 +272,7 @@ double psr_cost_total( long int n, const double *xyz, void *varg )
     set_point_xyz( &X, xyz[0], xyz[1], xyz[2], POINT_SET_ALL );
 
     // "Deconstruct" the data argument "arg"
-    struct cost_args *arg       = (struct cost_args *)varg;
+    struct em_cost_args *arg       = (struct em_cost_args *)varg;
     pulsar              *psr       = arg->psr;
     psr_angle           *phase     = arg->phase;
     int                  direction = arg->direction;
@@ -441,7 +441,7 @@ void find_emission_point_nmead( pulsar *psr, psr_angle *phase, int direction,
     solution.x = solvals;
 
     // Set up the data args that get passed to the cost function
-    struct cost_args arg;
+    struct em_cost_args arg;
     arg.psr       = psr;
     arg.phase     = phase;
     arg.direction = direction;
@@ -523,7 +523,7 @@ void find_emission_point_newuoa( pulsar *psr, psr_angle *phase, int direction,
     int maxfun = 1000;
 
     // Set up the data args that get passed to the cost function
-    struct cost_args data;
+    struct em_cost_args data;
     data.psr       = psr;
     data.phase     = phase;
     data.direction = direction;
@@ -557,7 +557,7 @@ void psr_cost_deriv( point *X, pulsar *psr, psr_angle *phase, int direction,
  * sample the nearby points (dx).
  */
 {
-    struct cost_args arg;
+    struct em_cost_args arg;
     arg.psr       = psr;
     arg.phase     = phase;
     arg.direction = direction;
@@ -646,7 +646,7 @@ void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
     int maxfun = 1000;
 
     // Set up the data args that get passed to the cost function
-    struct cost_args data;
+    struct em_cost_args data;
     data.psr       = psr;
     data.phase     = phase;
     data.direction = direction;
