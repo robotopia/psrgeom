@@ -69,10 +69,10 @@ int main( int argc, char *argv[] )
     psr_angle ph1, ph2;
     double width_rad = o.width_deg * DEG2RAD;
 
-    int status = fitwidth( &psr, o.direction, width_rad, &ph1, &ph2, f );
+    double h = fitwidth( &psr, o.direction, width_rad, &ph1, &ph2, f );
 
-    if (status != EMIT_PT_FOUND)
-        fprintf( f, "# Failed to find point\n" );
+    if (isnan(h))
+        fprintf( f, "# Failed to find solution\n" );
 
     // Clean up
     destroy_psr_angle( ra  );
@@ -166,7 +166,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 void print_col_headers( FILE *f )
 {
     // Print out a line to file handle f
-    fprintf( f, "# φ1+φ2/2  h(φ1)  h(φ2)\n" );
+    fprintf( f, "# (φ1+φ2)/2_(°)  h(φ1)_(m)  h(φ2)_(m)\n" );
 }
 
 

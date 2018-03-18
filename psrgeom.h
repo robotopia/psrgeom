@@ -200,7 +200,7 @@ void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
 
 /**** Finding the pulse width ****/
 
-int fitwidth( pulsar *psr, int direction, double width_rad,
+double fitwidth( pulsar *psr, int direction, double width_rad,
               psr_angle *ph1, psr_angle *ph2, FILE *f );
 
 #endif

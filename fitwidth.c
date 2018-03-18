@@ -17,7 +17,7 @@
 #include <newuoa.h>
 #include "psrgeom.h"
 
-int fitwidth( pulsar *psr, int direction, double width_rad,
+double fitwidth( pulsar *psr, int direction, double width_rad,
               psr_angle *ph1, psr_angle *ph2, FILE *f )
 /* This function finds the pair of rotation phases that are width_rad radians
  * apart, and that have the same emission height. It does this by first
@@ -52,8 +52,8 @@ int fitwidth( pulsar *psr, int direction, double width_rad,
  *   psr_angle *ph1   : the lower rotation phase
  *   psr_angle *ph2   : the upper rotation phase
  * Returns:
- *   The return value is one of the following:
- *     EMIT_PT_TOO_LOW, EMIT_PT_FOUND, EMIT_PT_TOO_HIGH
+ *   The return value is the emission height. If no solution is found, NAN
+ *   is returned.
  */
 {
     // Error check direction
@@ -80,7 +80,7 @@ int fitwidth( pulsar *psr, int direction, double width_rad,
                  psr, &init_ph, direction, &approx_init_pt, &init_pt, NULL );
 
     // Assert that a suitable point was found
-    if (status != EMIT_PT_FOUND)   return status;
+    if (status != EMIT_PT_FOUND)   return NAN;
 
     // Keep track of the midpoint between the two phases
     double mid_ph = init_ph.rad;
@@ -97,12 +97,12 @@ int fitwidth( pulsar *psr, int direction, double width_rad,
     // ph1:
     status = find_emission_point_elevator(
                  psr, ph1, direction, &init_pt, &ph1_pt, NULL );
-    if (status != EMIT_PT_FOUND)   return status;
+    if (status != EMIT_PT_FOUND)   return NAN;
 
     // ph2:
     status = find_emission_point_elevator(
                  psr, ph2, direction, &init_pt, &ph2_pt, NULL );
-    if (status != EMIT_PT_FOUND)   return status;
+    if (status != EMIT_PT_FOUND)   return NAN;
 
     // Check the extremely unlikely possibility that we got it first go
     if (ph1_pt.r == ph2_pt.r)      return EMIT_PT_FOUND;
@@ -112,7 +112,12 @@ int fitwidth( pulsar *psr, int direction, double width_rad,
 
     // Print out our progress so far, if requested
     if (f != NULL)
-        fprintf( f, "%.15e %.15e %.15e\n", mid_ph, ph1_pt.r, ph2_pt.r );
+    {
+        double mid_ph_deg = mid_ph * RAD2DEG;
+        fprintf( f, "%.15e %.15e %.15e\n",
+                    (mid_ph_deg > 180.0 ? mid_ph_deg - 360.0 : mid_ph_deg),
+                    ph1_pt.r, ph2_pt.r );
+    }
 
     // Loop over different phases (always in one direction) until we've gone
     // too far.
@@ -130,19 +135,24 @@ int fitwidth( pulsar *psr, int direction, double width_rad,
         // ph1:
         status = find_emission_point_elevator(
                      psr, ph1, direction, &ph1_pt, &ph1_pt, NULL );
-        if (status != EMIT_PT_FOUND)   return status;
+        if (status != EMIT_PT_FOUND)   return NAN;
 
         // ph2:
         status = find_emission_point_elevator(
                      psr, ph2, direction, &ph2_pt, &ph2_pt, NULL );
-        if (status != EMIT_PT_FOUND)   return status;
+        if (status != EMIT_PT_FOUND)   return NAN;
 
         // Re-evaluate the shift direction
         shift_dir = (ph1_pt.r < ph2_pt.r ? -1 : 1);
 
         // Print out progress so far
         if (f != NULL)
-            fprintf( f, "%.15e %.15e %.15e\n", mid_ph, ph1_pt.r, ph2_pt.r );
+        {
+            double mid_ph_deg = mid_ph * RAD2DEG;
+            fprintf( f, "%.15e %.15e %.15e\n",
+                        (mid_ph_deg > 180.0 ? mid_ph_deg - 360.0 : mid_ph_deg),
+                        ph1_pt.r, ph2_pt.r );
+        }
     }
 
     // Knowing that the solution lies between the last two sets of phases that
@@ -175,16 +185,21 @@ int fitwidth( pulsar *psr, int direction, double width_rad,
         // ph1:
         status = find_emission_point_elevator(
                      psr, ph1, direction, &ph1_pt, &ph1_pt, NULL );
-        if (status != EMIT_PT_FOUND)   return status;
+        if (status != EMIT_PT_FOUND)   return NAN;
 
         // ph2:
         status = find_emission_point_elevator(
                      psr, ph2, direction, &ph2_pt, &ph2_pt, NULL );
-        if (status != EMIT_PT_FOUND)   return status;
+        if (status != EMIT_PT_FOUND)   return NAN;
 
         // Print out progress so far
         if (f != NULL)
-            fprintf( f, "%.15e %.15e %.15e\n", mid_ph, ph1_pt.r, ph2_pt.r );
+        {
+            double mid_ph_deg = mid_ph * RAD2DEG;
+            fprintf( f, "%.15e %.15e %.15e\n",
+                        (mid_ph_deg > 180.0 ? mid_ph_deg - 360.0 : mid_ph_deg),
+                        ph1_pt.r, ph2_pt.r );
+        }
 
         // Bisect!
         if      (ph1_pt.r == ph2_pt.r)     break;
@@ -192,5 +207,5 @@ int fitwidth( pulsar *psr, int direction, double width_rad,
         else /* (ph1_pt.r >  ph2_pt.r) */  lo_mid_ph = mid_ph;
     }
 
-    return EMIT_PT_FOUND;
+    return (ph1_pt.r + ph2_pt.r)/2.0;
 }
