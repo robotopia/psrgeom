@@ -84,8 +84,6 @@ int main( int argc, char *argv[] )
     print_psrg_header( f, argc, argv );
     print_col_headers( f );
 
-    fprintf(stderr, "#tstep = %lf,  ttotal = %lf\n", o.tstep, o.ttotal);
-
     // Set up points
     point X;
     double xscale = (o.rL_norm ? 1.0/psr.rL : 1.0);
@@ -96,11 +94,9 @@ int main( int argc, char *argv[] )
     // Start at t = 0 and step along the velocity field
     double t;
 
-point B, V;
     for (t = o.tstep; t < o.ttotal; t += o.tstep)
     {
         Vstep( &X, &psr, o.tstep*SPEED_OF_LIGHT, o.direction, &X );
-        calc_fields( &X, &psr, SPEED_OF_LIGHT, &B, &V, NULL, NULL, NULL, NULL );
         fprintf( f, "%.15e %.15e %.15e %.15e\n",
                     t, xscale*X.x[0], xscale*X.x[1], xscale*X.x[2] );
     }

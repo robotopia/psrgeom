@@ -6,6 +6,12 @@
 * Generalised the Bstep() function, for arbitrary vector fields.
 
 ----
+## v1.2.1 (2018-03-19)
+
+* Added a Vstep() function, for stepping along velocity field lines.
+* Implemented psr\_trajectory, for plotting particle trajectories.
+
+----
 ## v1.2.0 (2018-03-18)
 
 * Implemented a "fitwidth" function (and program) for matching emission heights to pulse widths.

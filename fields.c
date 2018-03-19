@@ -848,22 +848,22 @@ void Vstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
     int i; // Generic loop counter
 
     // First stage
-    calc_fields( x1, psr, 0.0, NULL, &slop1P, &slop1N, NULL, NULL, NULL );
+    calc_fields( x1, psr, SPEED_OF_LIGHT, NULL, &slop1P, &slop1N, NULL, NULL, NULL );
     for (i = 0; i < NDEP; i++)
         xp1.x[i] = x1->x[i] + 0.5*sgn*slop1->x[i]*tstep;
 
     // Second stage
-    calc_fields( &xp1, psr, 0.0, NULL, &slop2P, &slop2N, NULL, NULL, NULL );
+    calc_fields( &xp1, psr, SPEED_OF_LIGHT, NULL, &slop2P, &slop2N, NULL, NULL, NULL );
     for (i = 0; i < NDEP; i++)
         xp2.x[i] = x1->x[i] + 0.5*sgn*slop2->x[i]*tstep;
 
     // Third stage
-    calc_fields( &xp2, psr, 0.0, NULL, &slop3P, &slop3N, NULL, NULL, NULL );
+    calc_fields( &xp2, psr, SPEED_OF_LIGHT, NULL, &slop3P, &slop3N, NULL, NULL, NULL );
     for (i = 0; i < NDEP; i++)
         xp1.x[i] = x1->x[i] + sgn*slop3->x[i]*tstep;
 
     // Last stage
-    calc_fields( &xp1, psr, 0.0, NULL, &slopeP, &slopeN, NULL, NULL, NULL );
+    calc_fields( &xp1, psr, SPEED_OF_LIGHT, NULL, &slopeP, &slopeN, NULL, NULL, NULL );
     for (i = 0; i < NDEP; i++)
     {
         x2->x[i] = x1->x[i] +
