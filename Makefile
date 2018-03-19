@@ -21,6 +21,8 @@ TARGETS = psr_fields \
 		  psr_fitwidth \
 		  psr_trajectory
 
+TESTS = calc_fields_test
+
 LIBRARY = psrgeom
 LIBFILE = lib$(LIBRARY).a
 HDRFILE = $(LIBRARY).h
@@ -34,12 +36,12 @@ OBJS = psr_angle.o \
 	   psrio.o \
 	   fitwidth.o
 
-all: $(TARGETS) $(LIBFILE) man-pages
+all: $(TARGETS) $(TESTS) $(LIBFILE) man-pages
 
 $(LIBFILE): $(OBJS)
 	ar rcs $@ $^
 
-$(TARGETS): $(OBJS)
+$(TARGETS) $(TESTS): $(OBJS)
 
 man-pages:
 	$(MAKE) -C man
