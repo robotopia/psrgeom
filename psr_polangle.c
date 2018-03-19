@@ -113,6 +113,12 @@ int main( int argc, char *argv[] )
             fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
                         emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
                         (ph.deg > 180.0 ? ph.deg - 360.0 : ph.deg), psi.deg );
+            if (i == 180 && o.direction == DIR_OUTWARD)
+            {
+                fprintf( f, "\n%.15e %.15e %.15e %.15e %.15e\n",
+                        emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
+                        ph.deg - 360.0, psi.deg );
+            }
             copy_point( &emit_pt, &prev_pt );
         }
         else

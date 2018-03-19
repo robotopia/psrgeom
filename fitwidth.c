@@ -18,7 +18,8 @@
 #include "psrgeom.h"
 
 double fitwidth( pulsar *psr, int direction, double width_rad,
-              psr_angle *ph1, psr_angle *ph2, FILE *f )
+              psr_angle *ph1, psr_angle *ph2, 
+              point *ph1_pt, point *ph2_pt, FILE *f )
 /* This function finds the pair of rotation phases that are width_rad radians
  * apart, and that have the same emission height. It does this by first
  * finding the emission height for the fiducial point (or anti-fiducial point
@@ -91,24 +92,22 @@ double fitwidth( pulsar *psr, int direction, double width_rad,
 
     // Evaluate the height at these two points to determine the first shift
     // direction
-    point ph1_pt;
-    point ph2_pt;
 
     // ph1:
     status = find_emission_point_elevator(
-                 psr, ph1, direction, &init_pt, &ph1_pt, NULL );
+                 psr, ph1, direction, &init_pt, ph1_pt, NULL );
     if (status != EMIT_PT_FOUND)   return NAN;
 
     // ph2:
     status = find_emission_point_elevator(
-                 psr, ph2, direction, &init_pt, &ph2_pt, NULL );
+                 psr, ph2, direction, &init_pt, ph2_pt, NULL );
     if (status != EMIT_PT_FOUND)   return NAN;
 
     // Check the extremely unlikely possibility that we got it first go
-    if (ph1_pt.r == ph2_pt.r)      return EMIT_PT_FOUND;
+    if (ph1_pt->r == ph2_pt->r)      return EMIT_PT_FOUND;
 
     // Otherwise, get the shift direction
-    int init_shift_dir = (ph1_pt.r < ph2_pt.r ? -1 : 1);
+    int init_shift_dir = (ph1_pt->r < ph2_pt->r ? -1 : 1);
 
     // Print out our progress so far, if requested
     if (f != NULL)
@@ -116,7 +115,7 @@ double fitwidth( pulsar *psr, int direction, double width_rad,
         double mid_ph_deg = mid_ph * RAD2DEG;
         fprintf( f, "%.15e %.15e %.15e\n",
                     (mid_ph_deg > 180.0 ? mid_ph_deg - 360.0 : mid_ph_deg),
-                    ph1_pt.r, ph2_pt.r );
+                    ph1_pt->r, ph2_pt->r );
     }
 
     // Loop over different phases (always in one direction) until we've gone
@@ -134,16 +133,16 @@ double fitwidth( pulsar *psr, int direction, double width_rad,
 
         // ph1:
         status = find_emission_point_elevator(
-                     psr, ph1, direction, &ph1_pt, &ph1_pt, NULL );
+                     psr, ph1, direction, ph1_pt, ph1_pt, NULL );
         if (status != EMIT_PT_FOUND)   return NAN;
 
         // ph2:
         status = find_emission_point_elevator(
-                     psr, ph2, direction, &ph2_pt, &ph2_pt, NULL );
+                     psr, ph2, direction, ph2_pt, ph2_pt, NULL );
         if (status != EMIT_PT_FOUND)   return NAN;
 
         // Re-evaluate the shift direction
-        shift_dir = (ph1_pt.r < ph2_pt.r ? -1 : 1);
+        shift_dir = (ph1_pt->r < ph2_pt->r ? -1 : 1);
 
         // Print out progress so far
         if (f != NULL)
@@ -151,7 +150,7 @@ double fitwidth( pulsar *psr, int direction, double width_rad,
             double mid_ph_deg = mid_ph * RAD2DEG;
             fprintf( f, "%.15e %.15e %.15e\n",
                         (mid_ph_deg > 180.0 ? mid_ph_deg - 360.0 : mid_ph_deg),
-                        ph1_pt.r, ph2_pt.r );
+                        ph1_pt->r, ph2_pt->r );
         }
     }
 
@@ -184,12 +183,12 @@ double fitwidth( pulsar *psr, int direction, double width_rad,
 
         // ph1:
         status = find_emission_point_elevator(
-                     psr, ph1, direction, &ph1_pt, &ph1_pt, NULL );
+                     psr, ph1, direction, ph1_pt, ph1_pt, NULL );
         if (status != EMIT_PT_FOUND)   return NAN;
 
         // ph2:
         status = find_emission_point_elevator(
-                     psr, ph2, direction, &ph2_pt, &ph2_pt, NULL );
+                     psr, ph2, direction, ph2_pt, ph2_pt, NULL );
         if (status != EMIT_PT_FOUND)   return NAN;
 
         // Print out progress so far
@@ -198,14 +197,14 @@ double fitwidth( pulsar *psr, int direction, double width_rad,
             double mid_ph_deg = mid_ph * RAD2DEG;
             fprintf( f, "%.15e %.15e %.15e\n",
                         (mid_ph_deg > 180.0 ? mid_ph_deg - 360.0 : mid_ph_deg),
-                        ph1_pt.r, ph2_pt.r );
+                        ph1_pt->r, ph2_pt->r );
         }
 
         // Bisect!
-        if      (ph1_pt.r == ph2_pt.r)     break;
-        else if (ph1_pt.r <  ph2_pt.r)     hi_mid_ph = mid_ph;
-        else /* (ph1_pt.r >  ph2_pt.r) */  lo_mid_ph = mid_ph;
+        if      (ph1_pt->r == ph2_pt->r)     break;
+        else if (ph1_pt->r <  ph2_pt->r)     hi_mid_ph = mid_ph;
+        else /* (ph1_pt->r >  ph2_pt->r) */  lo_mid_ph = mid_ph;
     }
 
-    return (ph1_pt.r + ph2_pt.r)/2.0;
+    return (ph1_pt->r + ph2_pt->r)/2.0;
 }

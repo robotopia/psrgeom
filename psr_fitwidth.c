@@ -67,11 +67,27 @@ int main( int argc, char *argv[] )
 
     // Calculate the polarisation angle for each phase
     psr_angle ph1, ph2;
+    point ph1_pt, ph2_pt;
     double width_rad = o.width_deg * DEG2RAD;
 
-    double h = fitwidth( &psr, o.direction, width_rad, &ph1, &ph2, f );
+    double h = fitwidth( &psr, o.direction, width_rad, &ph1, &ph2,
+                         &ph1_pt, &ph2_pt, NULL );
 
-    if (isnan(h))
+    // Print out info about the two bounding emission points
+    if (!isnan(h))
+    {
+        psr_angle psi1, psi2;
+        point dummy;
+        calc_pol_angle( &psr, &ph1, o.direction, &ph1_pt, &dummy, &psi1 );
+        calc_pol_angle( &psr, &ph2, o.direction, &ph2_pt, &dummy, &psi2 );
+        fprintf( f, "%.15e %.15e %.15e %.15e %.15e\n",
+                    (ph1.deg > 180.0 ? ph1.deg - 360.0 : ph1.deg),
+                    (ph2.deg > 180.0 ? ph2.deg - 360.0 : ph2.deg),
+                    h,
+                    psi1.deg,
+                    psi2.deg );
+    }
+    else
         fprintf( f, "# Failed to find solution\n" );
 
     // Clean up
@@ -166,7 +182,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 void print_col_headers( FILE *f )
 {
     // Print out a line to file handle f
-    fprintf( f, "# (φ1+φ2)/2_(°)  h(φ1)_(m)  h(φ2)_(m)\n" );
+    fprintf( f, "# φ1_(°)  φ2_(°)  h_(m)  Ψ1_(°)  Ψ2_(°)\n" );
 }
 
 
