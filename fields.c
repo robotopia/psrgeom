@@ -160,7 +160,6 @@ void calc_fields( point *X, pulsar *psr, double v,
     double Om2   = Om*Om;
     double pdBn2 = pdBn * pdBn;          // (ph dot Bn)^2
     double rho2  = x*x + y*y;
-    double rho   = sqrt( rho2 );
     double det   = Om2*pdBn2 - (rho2*Om2 - v*v);
     //      ^-- This is the bit under the sqrt sign
 

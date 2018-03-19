@@ -30,8 +30,9 @@ int main()
     int nsols;
     double rho; // = sqrt(x^2+y^2)
     point Vaz_norm;
+    point V_sub_Vaz;
     double v = SPEED_OF_LIGHT;
-    double vaz;
+    double SdB;
     double spin_speed;
 
     // do the whole test NTESTS times
@@ -64,19 +65,23 @@ int main()
         if (nsols != 2)
             continue;
 
-        // First test: V projected onto azimuthal direction gives azimuthal speed
+        // Test whether V - Vaz is parallel to B
         rho = sqrt(X.rhosq);
         spin_speed = rho*2.0*PI/P;
         set_point_xyz( &Vaz_norm, -X.x[1]/rho, X.x[0]/rho, 0.0, POINT_SET_ALL );
-        vaz = v * (V1.x[0] * Vaz_norm.x[0] +
-                   V1.x[1] * Vaz_norm.x[1] +
-                   V1.x[2] * Vaz_norm.x[2]);
+        set_point_xyz( &V_sub_Vaz, v*V1.x[0] - spin_speed*Vaz_norm.x[0],
+                                   v*V1.x[1] - spin_speed*Vaz_norm.x[1],
+                                   v*V1.x[2] - spin_speed*Vaz_norm.x[2],
+                                   POINT_SET_ALL );
 
-        if (fabs(vaz/spin_speed - 1.0) < 1e-10)
+        SdB = (V_sub_Vaz.x[0]/V_sub_Vaz.r) * B.x[0] +
+              (V_sub_Vaz.x[1]/V_sub_Vaz.r) * B.x[1] +
+              (V_sub_Vaz.x[2]/V_sub_Vaz.r) * B.x[2];
+
+        if (fabs(SdB - 1.0) < 1e-10)
             npassed++;
         else
-            printf( "#fail: vaz = %.15e m/s,  rho = %.15e m,  "
-                    "spin_speed = %.15e m/s\n", vaz, rho, spin_speed );
+            printf( "#fail: (cV - Ωφ) . B = %.15e\n", SdB );
     }
 
     printf( "calc_fields() tests:\n" );
