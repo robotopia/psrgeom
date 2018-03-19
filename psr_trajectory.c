@@ -88,17 +88,19 @@ int main( int argc, char *argv[] )
     point X;
     double xscale = (o.rL_norm ? 1.0/psr.rL : 1.0);
     set_point_xyz( &X, o.X[0], o.X[1], o.X[2], POINT_SET_ALL );
-    fprintf( f, "%.15e %.15e %.15e %.15e\n",
-                0.0, xscale*o.X[0], xscale*o.X[1], xscale*o.X[2] );
+    fprintf( f, "# Initial point: %.15e %.15e %.15e\n",
+                xscale*o.X[0], xscale*o.X[1], xscale*o.X[2] );
 
     // Start at t = 0 and step along the velocity field
     double t;
 
+    point V;
     for (t = o.tstep; t < o.ttotal; t += o.tstep)
     {
         Vstep( &X, &psr, o.tstep*SPEED_OF_LIGHT, o.direction, &X );
-        fprintf( f, "%.15e %.15e %.15e %.15e\n",
-                    t, xscale*X.x[0], xscale*X.x[1], xscale*X.x[2] );
+        calc_fields( &X, &psr, SPEED_OF_LIGHT, NULL, &V, NULL, NULL, NULL, NULL );
+        fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
+                    t, xscale*X.x[0], xscale*X.x[1], xscale*X.x[2], V.x[0], V.x[1], V.x[2] );
     }
 
     // Clean up
@@ -219,7 +221,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 void print_col_headers( FILE *f )
 {
     // Print out a line to file handle f
-    fprintf( f, "# t_(sec) x y z\n" );
+    fprintf( f, "# t_(sec) x y z Vx Vy Vz\n" );
 }
 
 
