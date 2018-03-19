@@ -832,7 +832,7 @@ void Vstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
     }
     else if (direction == DIR_INWARD)
     {
-        sgn = -1.0;
+        sgn = 1.0;
         slop1 = &slop1N;
         slop2 = &slop2N;
         slop3 = &slop3N;
