@@ -159,8 +159,8 @@ void calc_fields( point *X, pulsar *psr, double v,
     double pdBn  = -y*Bn[0] + x*Bn[1];   // ph dot Bn
     double Om2   = Om*Om;
     double pdBn2 = pdBn * pdBn;          // (ph dot Bn)^2
-    double rho   = sqrt( x*x + y*y );
-    double rho2  = rho*rho;
+    double rho2  = x*x + y*y;
+    double rho   = sqrt( rho2 );
     double det   = Om2*pdBn2 - (rho2*Om2 - v*v);
     //      ^-- This is the bit under the sqrt sign
 
@@ -171,7 +171,7 @@ void calc_fields( point *X, pulsar *psr, double v,
         nsol = 0;
         return;
     }
-    else if (det == 1)
+    else if (det == 1.0)
     {
         nsol = 1;
         calcA = 0; /* If there's only one V solution, then the A solution
