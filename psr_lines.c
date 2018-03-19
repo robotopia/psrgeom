@@ -61,33 +61,69 @@ int main( int argc, char *argv[] )
     psr_angle *al = create_psr_angle_deg( o.al_deg );
     psr_angle *ze = create_psr_angle_deg( o.ze_deg );
 
-    double P = o.P_sec;
-    double r = 1e4; /* This doesn't actually make a difference to any of the
-                       outputs of this program */
+    double P = o.P_sec;  // Pulsar spin period
+    double r = 1e4;      // Pulsar radius
 
     set_pulsar( &psr, ra, dec, P, r, al, ze );
 
     // Set up points
-    point X;  // The starting point
-    point X2; // The end point of either footpoint() or farpoint()
+    point emit_pt;
+    point foot_pt; // The end point of either footpoint() or farpoint()
 
+    // Print header and column header to file
     print_psrg_header( f, argc, argv );
-
-    // Set the point at this gridpoint
-    set_point_xyz( &X, RANDU*psr.rL,
-                       RANDU*psr.rL,
-                       RANDU*psr.rL,
-                       POINT_SET_ALL );
-
-    // Write the column headers
     print_col_headers( f );
 
-    // Calculate the points along the magnetic field line
-    footpoint( &X, &psr, o.tmult, DIR_INWARD, f, o.rL_norm, o.rho_lim, &X2 );
-    fprintf( f, "\n\n" );
-    footpoint( &X, &psr, o.tmult, DIR_OUTWARD, f, o.rL_norm, o.rho_lim, &X2 );
-    fprintf( f, "\n\n" );
-    farpoint( &X, &psr, o.tmult, f, o.rL_norm, o.rho_lim, &X2 );
+    // Start at φ = 0° at work around
+    psr_angle ph;
+    set_psr_angle_deg( &ph, 0.0 );
+
+    // Initially, set the init_pt to an approximate initial guess
+    find_approx_emission_point( &psr, &ph, DIR_OUTWARD, &emit_pt );
+
+    // Make sure the initial "previous" point is at least 2 pulsar radii above
+    // the pulsar's surface
+    double min_height = 3.0*psr.r;
+    if (emit_pt.r < min_height)
+    {
+        psr_angle za; // "zero angle"
+        set_psr_angle_rad( &za, 0.0 );
+        set_point_sph( &emit_pt, min_height,
+                                 &psr.al,
+                                 &za,
+                                 POINT_SET_ALL );
+    }
+
+    int N = 360;
+    int i;
+    for (i = 0; i < N; i++)
+    {
+        // Set the rotation phase
+        set_psr_angle_deg( &ph, i*360.0/N );
+
+        // Get the emission pt (guaranteed to be on a last open field line)
+        int status;
+        status = find_emission_point_elevator( &psr, &ph, DIR_OUTWARD,
+                                               &emit_pt, &emit_pt, NULL );
+        if (status == EMIT_PT_TOO_HIGH)
+        {
+            fprintf( stderr, "# Stopped at light cylinder\n" );
+            exit(EXIT_SUCCESS);
+        }
+        else if (status == EMIT_PT_TOO_LOW)
+        {
+            fprintf( stderr, "# Stopped at pulsar surface\n" );
+            exit(EXIT_SUCCESS);
+        }
+
+        // Trace the line back and forwards to the footpoints
+        footpoint( &emit_pt, &psr, o.tmult, DIR_INWARD, f, o.rL_norm,
+                   o.rho_lim, &foot_pt );
+        fprintf( f, "\n" );
+        footpoint( &emit_pt, &psr, o.tmult, DIR_OUTWARD, f, o.rL_norm,
+                   o.rho_lim, &foot_pt );
+        fprintf( f, "\n\n" );
+    }
 
     // Clean up
     destroy_psr_angle( ra  );
