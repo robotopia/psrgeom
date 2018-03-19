@@ -18,7 +18,8 @@ TARGETS = psr_fields \
 		  psr_emit \
 		  psr_cost_function \
 		  psr_polangle \
-		  psr_fitwidth
+		  psr_fitwidth \
+		  psr_trajectory
 
 LIBRARY = psrgeom
 LIBFILE = lib$(LIBRARY).a

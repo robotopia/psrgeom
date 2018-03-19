@@ -795,6 +795,84 @@ void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
 }
 
 
+void Vstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
+/* This follows a velocity field from a given starting point according to one
+ * step of the RK4 algorithm.
+ *
+ * Inputs:
+ *   x1       : the starting point
+ *   psr      : the pulsar (includes geometric information)
+ *   tstep    : the size of the RK4 step to take
+ *   direction: whether to follow the line DIR_INWARD or DIR_OUTWARD
+ *
+ * Outputs:
+ *   x2       : the ending point
+ */
+{
+    point slop1P, slop2P, slop3P, slopeP;
+    point slop1N, slop2N, slop3N, slopeN;
+    point *slop1, *slop2, *slop3, *slope;
+    point xp1, xp2;
+
+    if (direction == DIR_STOP)
+    {
+        fprintf( stderr, "warning: Vstep: direction set to DIR_STOP\n" );
+        copy_point( x1, x2 );
+        return;
+    }
+
+    double sgn;
+    if (direction == DIR_OUTWARD)
+    {
+        sgn = 1.0;
+        slop1 = &slop1P;
+        slop2 = &slop2P;
+        slop3 = &slop3P;
+        slope = &slopeP;
+    }
+    else if (direction == DIR_INWARD)
+    {
+        sgn = -1.0;
+        slop1 = &slop1N;
+        slop2 = &slop2N;
+        slop3 = &slop3N;
+        slope = &slopeN;
+    }
+    else
+    {
+        fprintf( stderr, "error: Vstep: unrecognised direction (%d)\n",
+                         direction );
+        exit(EXIT_FAILURE);
+    }
+
+    int i; // Generic loop counter
+
+    // First stage
+    calc_fields( x1, psr, 0.0, NULL, &slop1P, &slop1N, NULL, NULL, NULL );
+    for (i = 0; i < NDEP; i++)
+        xp1.x[i] = x1->x[i] + 0.5*sgn*slop1->x[i]*tstep;
+
+    // Second stage
+    calc_fields( &xp1, psr, 0.0, NULL, &slop2P, &slop2N, NULL, NULL, NULL );
+    for (i = 0; i < NDEP; i++)
+        xp2.x[i] = x1->x[i] + 0.5*sgn*slop2->x[i]*tstep;
+
+    // Third stage
+    calc_fields( &xp2, psr, 0.0, NULL, &slop3P, &slop3N, NULL, NULL, NULL );
+    for (i = 0; i < NDEP; i++)
+        xp1.x[i] = x1->x[i] + sgn*slop3->x[i]*tstep;
+
+    // Last stage
+    calc_fields( &xp1, psr, 0.0, NULL, &slopeP, &slopeN, NULL, NULL, NULL );
+    for (i = 0; i < NDEP; i++)
+    {
+        x2->x[i] = x1->x[i] +
+            tstep*sgn*(    slope->x[i] +     slop1->x[i] +
+                       2.0*slop2->x[i] + 2.0*slop3->x[i]) / 6.0;
+    }
+}
+
+
 int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
                     point *init_pt, point *emit_pt, psr_angle *psi )
 /* This function calculates the polarisation angle, Ψ, for a pulsar at a
