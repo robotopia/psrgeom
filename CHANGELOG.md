@@ -1,9 +1,9 @@
 # PSR Geometry
 
 ----
-## Unreleased
+## v1.2.2 (2018-03-20)
 
-* Generalised the Bstep() function, for arbitrary vector fields.
+* Corrected erroneous Vstep() function, and renamed it traj\_step().
 
 ----
 ## v1.2.1 (2018-03-19)

@@ -97,7 +97,7 @@ int main( int argc, char *argv[] )
     point V;
     for (t = o.tstep; t < o.ttotal; t += o.tstep)
     {
-        Vstep( &X, &psr, o.tstep*SPEED_OF_LIGHT, o.direction, &X );
+        traj_step( &X, t, &psr, o.tstep, o.direction, &X );
         calc_fields( &X, &psr, SPEED_OF_LIGHT, NULL, &V, NULL, NULL, NULL, NULL );
         fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
                     t, xscale*X.x[0], xscale*X.x[1], xscale*X.x[2], V.x[0], V.x[1], V.x[2] );

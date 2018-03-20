@@ -794,81 +794,56 @@ void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
 }
 
 
-void Vstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
-/* This follows a velocity field from a given starting point according to one
- * step of the RK4 algorithm.
+void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
+            point *x2 )
+/* This follows a particle's trajectory from a given starting point to time t.
+ * This necessarily cannot be a naive following of the V field, because the V
+ * field takes a point to a neighbouring point and the neighbouring point
+ * must be interpreted in the rotating frame.
+ *
+ * What we're really doing, then, is taking steps along the magnetic field,
+ * but only after de-rotating the given point back to where it was after time
+ * t. Unlike Bstep(), where we interpret tstep as a distance, here we
+ * interpret tstep as a time.
  *
  * Inputs:
  *   x1       : the starting point
+ *   t        : the time since rotation started
  *   psr      : the pulsar (includes geometric information)
- *   tstep    : the size of the RK4 step to take
+ *   tstep    : the time step for RK4, assuming travelling at light speed
  *   direction: whether to follow the line DIR_INWARD or DIR_OUTWARD
  *
  * Outputs:
  *   x2       : the ending point
  */
 {
-    point slop1P, slop2P, slop3P, slopeP;
-    point slop1N, slop2N, slop3N, slopeN;
-    point *slop1, *slop2, *slop3, *slope;
-    point xp1, xp2;
+    // De-rotate the given point x1 back time t
+    psr_angle back_rot;
+    set_psr_angle_rad( &back_rot, -t*psr->Om.rad );
+    rotate_about_axis( x1, x1, &back_rot, 'z', POINT_SET_ALL );
 
-    if (direction == DIR_STOP)
-    {
-        fprintf( stderr, "warning: Vstep: direction set to DIR_STOP\n" );
-        copy_point( x1, x2 );
-        return;
-    }
+    // Evaluate the B and V fields there
+    double v = SPEED_OF_LIGHT;
+    point B, V1, V2;
+    point *V = (direction == DIR_OUTWARD ? &V1 : &V2);
+    calc_fields( x1, psr, v, &B, &V1, &V2, NULL, NULL, NULL );
 
-    double sgn;
-    if (direction == DIR_OUTWARD)
-    {
-        sgn = 1.0;
-        slop1 = &slop1P;
-        slop2 = &slop2P;
-        slop3 = &slop3P;
-        slope = &slopeP;
-    }
-    else if (direction == DIR_INWARD)
-    {
-        sgn = 1.0;
-        slop1 = &slop1N;
-        slop2 = &slop2N;
-        slop3 = &slop3N;
-        slope = &slopeN;
-    }
-    else
-    {
-        fprintf( stderr, "error: Vstep: unrecognised direction (%d)\n",
-                         direction );
-        exit(EXIT_FAILURE);
-    }
+    // Convert the supplied time step into a size step along B,
+    // which is V dotted with B
+    double V_B = v * (V->x[0] * B.x[0] +
+                      V->x[1] * B.x[1] +
+                      V->x[2] * B.x[2]); /* This has units of velocity */
+    double dstep = tstep * V_B;
 
-    int i; // Generic loop counter
+    // dstep is a distance, so now we can just call Bstep() to step along the
+    // magnetic field by the appropriate amount.
 
-    // First stage
-    calc_fields( x1, psr, SPEED_OF_LIGHT, NULL, &slop1P, &slop1N, NULL, NULL, NULL );
-    for (i = 0; i < NDEP; i++)
-        xp1.x[i] = x1->x[i] + 0.5*sgn*slop1->x[i]*tstep;
+    Bstep( x1, psr, dstep, direction, x2 );
 
-    // Second stage
-    calc_fields( &xp1, psr, SPEED_OF_LIGHT, NULL, &slop2P, &slop2N, NULL, NULL, NULL );
-    for (i = 0; i < NDEP; i++)
-        xp2.x[i] = x1->x[i] + 0.5*sgn*slop2->x[i]*tstep;
-
-    // Third stage
-    calc_fields( &xp2, psr, SPEED_OF_LIGHT, NULL, &slop3P, &slop3N, NULL, NULL, NULL );
-    for (i = 0; i < NDEP; i++)
-        xp1.x[i] = x1->x[i] + sgn*slop3->x[i]*tstep;
-
-    // Last stage
-    calc_fields( &xp1, psr, SPEED_OF_LIGHT, NULL, &slopeP, &slopeN, NULL, NULL, NULL );
-    for (i = 0; i < NDEP; i++)
-    {
-        x2->x[i] = x1->x[i] +
-            tstep*sgn*(    slope->x[i] +     slop1->x[i] +
-                       2.0*slop2->x[i] + 2.0*slop3->x[i]) / 6.0;
-    }
+    // Finally, re-rotate the point back to the correct rotation
+    psr_angle rerotate;
+    set_psr_angle_rad( &rerotate, (t+tstep)*psr->Om.rad );
+    rotate_about_axis( x2, x2, &rerotate, 'z', POINT_SET_ALL );
 }
 
 

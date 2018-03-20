@@ -1,7 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
-#define PSRGEOM_VERSION "1.2.1"
+#define PSRGEOM_VERSION "1.2.2"
 
 #include <stdio.h>
 #include <math.h>
@@ -147,7 +147,8 @@ void calc_fields( point *X, pulsar *psr, double v,
                   int *nsols );
 
 void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
-void Vstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
+void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
+                point *x2 );
 double Bdotrxy( point *x, pulsar *psr );
 int cmp_extreme( point *x, pulsar *psr, double precision );
 int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
