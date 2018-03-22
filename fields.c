@@ -90,9 +90,13 @@ void calc_fields( point *X, pulsar *psr, double v,
     double r     = sqrt( rr );
     double r3    = r*rr;
     double r4    = r*r3;
-    double r5    = r*r4;
+    double r5    = r*r4;    double r5i   = 1.0/r5;
     double r6    = r*r5;
     double r7    = r*r6;
+
+    double rL    = psr->rL;
+    double rL2   = psr->rL2;
+    double rL3   = rL*rL2;
 
     double Om    = psr->Om.rad;
 
@@ -100,14 +104,16 @@ void calc_fields( point *X, pulsar *psr, double v,
     // Set up so that pole is where we think it is
     psr_angle phase;
     set_psr_angle_rad( &phase, (r - psr->r)/psr->rL );
+    double phS = phase.sin;
+    double phC = phase.cos;
 
     double a[] =
     {
-        1.0 / r5,
-        psr->al.sin * phase.cos / r3 / psr->rL2,
-        psr->al.sin * ( phase.cos/r5 + phase.sin/r4/psr->rL),
-        -psr->al.sin * phase.sin / r3 / psr->rL2,
-        psr->al.sin * (-phase.sin/r5 + phase.cos/r4/psr->rL)
+        r5i,
+        psr->al.sin * phC/(r3*rL2),
+        psr->al.sin * ( phC*r5i + phS/(r4*rL)),
+       -psr->al.sin * phS/(r3*rL2),
+        psr->al.sin * (-phS*r5i + phC/(r4*rL))
     };
 
     // The following are the x,y,z terms that get multiplied to the a[] terms
@@ -226,13 +232,15 @@ void calc_fields( point *X, pulsar *psr, double v,
      ********************************************/
 
     // Temporary values for calculating the derivates of a[] above.
+    double r7rL2i = 1.0 / (r7 * rL2);
+    double r5rL3i = 1.0 / (r5 * rL3);
     double a_temp[] =
     {
         -5.0 / r7,
-        -3.0 * psr->al.sin * phase.cos / r5 / psr->rL2,
-        -psr->al.sin / r6 * ( 5.0*phase.cos/r + 4.0*phase.sin/psr->rL ),
-        3.0 * psr->al.sin * phase.sin / r5 / psr->rL2,
-        -psr->al.sin / r6 * ( 4.0*phase.cos/psr->rL - 5.0*phase.sin/r )
+        -r5rL3i * psr->al.sin * (r*phS + 3.0*rL*phC),
+        -r7rL2i * psr->al.sin * (5.0*r*rL*phS + (5.0*rL2 - rr)*phC),
+        -r5rL3i * psr->al.sin * (r*phC - 3.0*rL*phS),
+        -r7rL2i * psr->al.sin * (5.0*r*rL*phC - (5.0*rL2 - rr)*phS)
     };
 
     // The full derivatives of (a[]) with respect to (x,y,z)
@@ -795,7 +803,7 @@ void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
 
 
 void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
-            point *x2 )
+            point *x2, int rL_norm, FILE *f )
 /* This follows a particle's trajectory from a given starting point to time t.
  * This necessarily cannot be a naive following of the V field, because the V
  * field takes a point to a neighbouring point and the neighbouring point
@@ -812,6 +820,8 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
  *   psr      : the pulsar (includes geometric information)
  *   tstep    : the time step for RK4, assuming travelling at light speed
  *   direction: whether to follow the line DIR_INWARD or DIR_OUTWARD
+ *   rL_norm  : whether to normalise output coords to light cyl units
+ *   f        : where to write out the intermediate steps
  *
  * Outputs:
  *   x2       : the ending point
@@ -824,9 +834,10 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
 
     // Evaluate the B and V fields there
     double v = SPEED_OF_LIGHT;
-    point B, V1, V2;
+    point B, V1, V2, A1, A2;
     point *V = (direction == DIR_OUTWARD ? &V1 : &V2);
-    calc_fields( x1, psr, v, &B, &V1, &V2, NULL, NULL, NULL );
+    point *A = (direction == DIR_OUTWARD ? &A1 : &A2);
+    calc_fields( x1, psr, v, &B, &V1, &V2, &A1, &A2, NULL );
 
     // Convert the supplied time step into a size step along B,
     // which is V dotted with B
@@ -844,6 +855,22 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
     psr_angle rerotate;
     set_psr_angle_rad( &rerotate, (t+tstep)*psr->Om.rad );
     rotate_about_axis( x2, x2, &rerotate, 'z', POINT_SET_ALL );
+
+    // If requested, write out the trajectory vectors (X, V, A)
+    if (f != NULL)
+    {
+        // Remember that we have to re-rotate V and A as well!
+        rotate_about_axis( V, V, &rerotate, 'z', POINT_SET_XYZ );
+        rotate_about_axis( A, A, &rerotate, 'z', POINT_SET_XYZ );
+
+        // Do we normalise point coordinates to light cylinder units?
+        double s = (rL_norm ? 1.0/psr->rL : 1.0);
+
+        fprintf( f, "%.15e  ", t );
+        fprintf( f, "%.15e %.15e %.15e  ", s*x2->x[0], s*x2->x[1], s*x2->x[2]);
+        fprintf( f, "%.15e %.15e %.15e  ", V->x[0],  V->x[1],  V->x[2]);
+        fprintf( f, "%.15e %.15e %.15e\n", A->x[0],  A->x[1],  A->x[2]);
+    }
 }
 
 

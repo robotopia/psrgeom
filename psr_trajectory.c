@@ -94,14 +94,8 @@ int main( int argc, char *argv[] )
     // Start at t = 0 and step along the velocity field
     double t;
 
-    point V;
     for (t = o.tstep; t < o.ttotal; t += o.tstep)
-    {
-        traj_step( &X, t, &psr, o.tstep, o.direction, &X );
-        calc_fields( &X, &psr, SPEED_OF_LIGHT, NULL, &V, NULL, NULL, NULL, NULL );
-        fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
-                    t, xscale*X.x[0], xscale*X.x[1], xscale*X.x[2], V.x[0], V.x[1], V.x[2] );
-    }
+        traj_step( &X, t, &psr, o.tstep, o.direction, &X, o.rL_norm, f );
 
     // Clean up
     destroy_psr_angle( ra  );
@@ -221,7 +215,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 void print_col_headers( FILE *f )
 {
     // Print out a line to file handle f
-    fprintf( f, "# t_(sec) x y z Vx Vy Vz\n" );
+    fprintf( f, "# t_(sec) x y z Vx Vy Vz Ax Ay Az\n" );
 }
 
 
