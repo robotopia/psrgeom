@@ -118,6 +118,16 @@ void set_psr_angle_cos( psr_angle *ang, double Cos )
     ang->cos   = Cos;
 }
 
+void reverse_psr_angle( psr_angle *in, psr_angle *out )
+/* Return the "additive opposite" the given angle, e.g.,
+ * 50° --> -50° (= 310°)
+ */
+{
+    out->rad = 2.0*PI - in->rad;
+    out->deg = 360.0  - in->deg;
+    out->sin = -in->sin;
+    out->cos =  in->cos;
+}
 
 void rotate_about_axis( point *in, point *out, psr_angle *rot, char axis,
                         int flags )

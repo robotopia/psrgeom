@@ -103,6 +103,7 @@ void set_psr_angle_deg( psr_angle *ang, double deg );
 void set_psr_angle_sin( psr_angle *ang, double Sin );
 void set_psr_angle_cos( psr_angle *ang, double Cos );
 
+void reverse_psr_angle( psr_angle *in, psr_angle *out );
 void rotate_about_axis( point *in, point *out, psr_angle *rot, char axis,
                         int flags );
 

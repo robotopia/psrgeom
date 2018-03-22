@@ -887,6 +887,7 @@ int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
  *   int direction    : whether the particles are moving along or against the
  *                      magnetic field. Can be DIR_OUTWARD (along) or
  *                      DIR_INWARD (against).
+ *   point *init_pt   : an initial guess of where the emission point it
  * Outputs:
  *   point *emit_pt   : the point of emission
  *   psr_angle *psi   : the polsarisation angle. Guaranteed to be in the range
@@ -916,29 +917,15 @@ int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
     }
 
     // Third, convert the acceleration to a polarisation angle
-    point LoS; // The line of sight
-    point pz;  // A reference vector, 90° away from the LoS
+    point u; // (u)nrotated
+    psr_angle uz; // For (u)nrotating the (z)eta angle
+    reverse_psr_angle( &psr->ze, &uz );
 
-    line_of_sight( psr, phase, &LoS );
-    pol_zero( psr, phase, &pz );
+    rotate_about_axis(  A, &u, phase, 'z', POINT_SET_ALL );
+    rotate_about_axis( &u, &u,   &uz, 'y', POINT_SET_ALL ); 
 
-    // (Remember, both A and LoS are unit vectors)
-    psr_angle A_dot_LoS;
-    set_psr_angle_cos( &A_dot_LoS, A->x[0] * LoS.x[0] +
-                                   A->x[1] * LoS.x[1] +
-                                   A->x[2] * LoS.x[2] );
-
-    // Get the vector A projected onto the sky
-    point pa;
-    set_point_xyz( &pa, (A->x[0] - LoS.x[0]*A_dot_LoS.cos) / A_dot_LoS.sin,
-                        (A->x[1] - LoS.x[1]*A_dot_LoS.cos) / A_dot_LoS.sin,
-                        (A->x[2] - LoS.x[2]*A_dot_LoS.cos) / A_dot_LoS.sin,
-                        POINT_SET_ALL );
-
-    // And finally, get the angle between pa and the reference angle, pz
-    set_psr_angle_cos( psi, pz.x[0] * pa.x[0] +
-                            pz.x[1] * pa.x[1] +
-                            pz.x[2] * pa.x[2] );
+    // Now we have a vector whose x and y coords give us the angle we need
+    set_psr_angle_rad( psi, atan2( u.x[0], u.x[1] ) );
 
     return 1; // = success
 }
