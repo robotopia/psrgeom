@@ -1,6 +1,12 @@
 # PSR Geometry
 
 ----
+## v1.2.3 (2018-03-22)
+
+* Fixed bug in the calculation of the A field.
+* Added capability of calc\_field\_test to make sure A was perpendicular to V.
+
+----
 ## v1.2.2 (2018-03-20)
 
 * Corrected erroneous Vstep() function, and renamed it traj\_step().
