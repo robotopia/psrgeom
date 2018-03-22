@@ -329,17 +329,6 @@ void calc_fields( point *X, pulsar *psr, double v,
         -Om*dpdBn[3] + chi*(pdBn*dpdBn[3])          // d(VB)/dt
     };
 
-/*
-char xyzt[] = "xyzt";
-//for (i = 0; i < 3; i++)
-for (j = 0; j < 4; j++)
-{
-    fprintf( stderr, "∂V_B/∂%c = %22.14e;   ", xyzt[j], dVBpos[j] );
-    fprintf( stderr, "diff(VBpos,%c)", xyzt[j] );
-    fprintf( stderr, "(x=%.15e,y=%.15e,z=%.15e,t=0.0)/%.15e\n", x, y, z, dVBpos[j] );
-}
-*/
-
     double dVBneg[4] =
     {
         -Om*dpdBn[0] - chi*(pdBn*dpdBn[0] - 2.0*x), // d(VB)/dx
