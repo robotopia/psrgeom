@@ -247,7 +247,9 @@ void calc_fields( point *X, pulsar *psr, double v,
     double da[5][3]; // da[4][2] means d(a[4])/dz
     for (i = 0; i < 5; i++)
     for (j = 0; j < 3; j++)
+    {
         da[i][j] = a_temp[i]*X->x[j];
+    }
 
     // The derivatives of c[][] above, with respect to (x,y,z):
     // e.g. dc[4][2][1] means d(c[4][2])/dy
@@ -289,7 +291,7 @@ void calc_fields( point *X, pulsar *psr, double v,
     {
         dB[i][j] = 0.0;
         for (k = 0; k < 5; k++)
-            dB[i][j] = (da[k][j] * c[k][i]) + (a[k] * dc[k][i][j]);
+            dB[i][j] += (da[k][j] * c[k][i]) + (a[k] * dc[k][i][j]);
     }
 
     // There's one more partial derivative we need: dB/dt
@@ -321,11 +323,22 @@ void calc_fields( point *X, pulsar *psr, double v,
 
     double dVBpos[4] =
     {
-        -Om*dpdBn[0] + chi*(pdBn*dpdBn[0] - 2.0*x), // d(VB)/dx
-        -Om*dpdBn[1] + chi*(pdBn*dpdBn[1] - 2.0*y), // d(VB)/dy
+        -Om*dpdBn[0] + chi*(pdBn*dpdBn[0] - x), // d(VB)/dx
+        -Om*dpdBn[1] + chi*(pdBn*dpdBn[1] - y), // d(VB)/dy
         -Om*dpdBn[2] + chi*(pdBn*dpdBn[2]),         // d(VB)/dz
         -Om*dpdBn[3] + chi*(pdBn*dpdBn[3])          // d(VB)/dt
     };
+
+/*
+char xyzt[] = "xyzt";
+//for (i = 0; i < 3; i++)
+for (j = 0; j < 4; j++)
+{
+    fprintf( stderr, "∂V_B/∂%c = %22.14e;   ", xyzt[j], dVBpos[j] );
+    fprintf( stderr, "diff(VBpos,%c)", xyzt[j] );
+    fprintf( stderr, "(x=%.15e,y=%.15e,z=%.15e,t=0.0)/%.15e\n", x, y, z, dVBpos[j] );
+}
+*/
 
     double dVBneg[4] =
     {

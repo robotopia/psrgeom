@@ -7,8 +7,8 @@ y = var('y')
 z = var('z')
 t = var('t')
 
-c = 299792458
-P = 0.5
+c  = 299792458
+P  = 0.5
 al = n(30.0*pi/180.0)
 rp = 1e4
 rL = n(c*P/(2*pi))
@@ -16,7 +16,6 @@ Om = n(2*pi/P)
 
 r = sqrt(x^2 + y^2 + z^2)
 De = (r-rp)/rL
-
 
 A1 =  1/r^5
 A2 =  sin(al)*cos(De)/r^3/rL^2

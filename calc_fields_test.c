@@ -26,7 +26,7 @@ int main()
     double ze_deg;
     double rL;
     point X;
-    point B, V1, V2;
+    point B, V1, V2, A1, A2;
     int nsols;
     double rho; // = sqrt(x^2+y^2)
     point Vaz_norm;
@@ -34,6 +34,7 @@ int main()
     double v = SPEED_OF_LIGHT;
     double SdB;
     double spin_speed;
+    double V_dot_A;
 
     // do the whole test NTESTS times
     int n;
@@ -42,10 +43,18 @@ int main()
     {
 
         // choose a random pulsar geometry
+        /*
         P      = RANDUNS(1.0) + 0.001; // 0.001 <= P < 1.001
         r      = 1e4;
         al_deg = RANDUNS(180.0);
         ze_deg = RANDUNS(180.0);
+        */
+
+        // choose a set pulsar geometry
+        P      = 0.5;
+        r      = 1e4;
+        al_deg = 30.0;
+        ze_deg = 40.0; /* <-- Not used in field calculation */
 
         set_psr_angle_deg( &al, al_deg );
         set_psr_angle_deg( &ze, ze_deg );
@@ -60,7 +69,7 @@ int main()
         }
 
         // Get the B and V fields at point X
-        calc_fields( &X, &psr, v, &B, &V1, &V2, NULL, NULL, &nsols );
+        calc_fields( &X, &psr, v, &B, &V1, &V2, &A1, &A2, &nsols );
 
         if (nsols != 2)
             continue;
@@ -78,10 +87,16 @@ int main()
               (V_sub_Vaz.x[1]/V_sub_Vaz.r) * B.x[1] +
               (V_sub_Vaz.x[2]/V_sub_Vaz.r) * B.x[2];
 
-        if (fabs(SdB - 1.0) < 1e-10)
+        // Test whether V (which has constant magnitude) is perpendicular to A
+        V_dot_A = V1.x[0] * A1.x[0] +
+                  V1.x[1] * A1.x[1] +
+                  V1.x[2] * A1.x[2];
+
+        if ((fabs(SdB - 1.0) < 1e-10) && (fabs(V_dot_A) < 1e-10))
             npassed++;
         else
-            printf( "#fail: (cV - Ωφ) . B = %.15e\n", SdB );
+            printf( "#fail: (cV - Ωφ) . B = %.15e,  V.A = %.15e\n", SdB, V_dot_A );
+
     }
 
     printf( "calc_fields() tests:\n" );
