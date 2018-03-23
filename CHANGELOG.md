@@ -1,5 +1,14 @@
 # PSR Geometry
 
+## Unreleased
+
+* Fit alpha and zeta for given main pulse and interpulse PPAs.
+
+----
+## v1.2.4 (2018-03-23)
+
+* Fixed bug in the calculation of the polarisation position angle.
+
 ----
 ## v1.2.3 (2018-03-22)
 
