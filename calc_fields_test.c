@@ -43,18 +43,18 @@ int main()
     {
 
         // choose a random pulsar geometry
-        /*
         P      = RANDUNS(1.0) + 0.001; // 0.001 <= P < 1.001
         r      = 1e4;
         al_deg = RANDUNS(180.0);
         ze_deg = RANDUNS(180.0);
-        */
 
         // choose a set pulsar geometry
+        /*
         P      = 0.5;
         r      = 1e4;
         al_deg = 30.0;
-        ze_deg = 40.0; /* <-- Not used in field calculation */
+        ze_deg = 40.0; // <-- Not used in field calculation
+        */
 
         set_psr_angle_deg( &al, al_deg );
         set_psr_angle_deg( &ze, ze_deg );
