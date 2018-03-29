@@ -19,7 +19,8 @@ TARGETS = psr_fields \
 		  psr_cost_function \
 		  psr_polangle \
 		  psr_fitwidth \
-		  psr_trajectory
+		  psr_trajectory \
+		  psr_visiblepoints
 
 TESTS = calc_fields_test
 
