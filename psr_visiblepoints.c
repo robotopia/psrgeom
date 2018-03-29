@@ -103,7 +103,13 @@ int main( int argc, char *argv[] )
 
         // This will now be used as the initial point for finding the visible
         // point at radius = stellar radius
-        while (init_pt.r < psr.rL)
+fprintf( f, "%.15e %.15e %.15e %.15e\n",
+            dip_emit_pt.x[0] * xscale,
+            dip_emit_pt.x[1] * xscale,
+            dip_emit_pt.x[2] * xscale,
+            ph.deg );
+        while (0)
+        //while (init_pt.r < psr.rL)
         {
             // Find the "true" visible point at this radius
             find_LoS_at_r( &init_pt, &psr, &ph,
@@ -117,14 +123,14 @@ int main( int argc, char *argv[] )
                         ph.deg );
 
             // Move up to the next radius
-            set_point_sph( &dip_emit_pt, emit_pt.r + o.dr,
+            set_point_sph( &init_pt, emit_pt.r + o.dr*psr.rL,
                                          &emit_pt.th,
                                          &emit_pt.ph,
                                          POINT_SET_ALL );
         }
 
-        // Put in a blank line to separate different phases
-        fprintf( f, "\n" );
+        // Put in a couple of blank lines to separate different phases
+        //fprintf( f, "\n\n" );
     }
 
     // Clean up
