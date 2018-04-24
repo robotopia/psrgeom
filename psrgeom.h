@@ -207,4 +207,11 @@ double fitwidth( pulsar *psr, int direction, double width_rad,
               psr_angle *ph1, psr_angle *ph2,
               point *ph1_pt, point *ph2_pt, FILE *f );
 
+/**** Functions from Numerical Recipes for C ****/
+
+void nrerror(char *error_text);
+float chebev(float a, float b, float c[], int m, float x);
+void beschb(double x, double *gam1, double *gam2, double *gampl, double *gammi);
+void bessik(float x, float xnu, float *ri, float *rk, float *rip, float *rkp);
+
 #endif

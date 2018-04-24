@@ -35,7 +35,8 @@ OBJS = psr_angle.o \
 	   dipole.o \
 	   emitloc.o \
 	   psrio.o \
-	   fitwidth.o
+	   fitwidth.o \
+	   numrec.o
 
 all: $(TARGETS) $(TESTS) $(LIBFILE) man-pages
 
