@@ -11,7 +11,7 @@ OPTIM   = -O2
 ## Uncomment the following to turn on debugging options
 #DEBUG   = -g -std=gnu99
 
-CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG)
+CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG) -march=native
 
 TARGETS = psr_fields \
 		  psr_lines \
