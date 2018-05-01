@@ -104,10 +104,102 @@ int main( int argc, char *argv[] )
     print_psrg_header( f, argc, argv );
     print_col_headers( f );
 
-/**** BOOKMARK ****/
+    // For calculating the (retarded) line of sight
+    point LoS, retarded_LoS;
+    psr_angle dph; // The retardation angle
 
+    // Loop over the polar cap
+    psr_angle s; // The "polar cap distance" to the magnetic pole
+    psr_angle p; // The azimuth angle around the polar cap
+    double s_deg = 0.0, p_deg;
+    int open_found; // Set to 1 if an open line is found for a given s
+    int linetype;   // either CLOSED_LINE or OPEN_LINE
+    point foot_pt, foot_pt_mag;
+    point init_pt, emit_pt;
+    psr_angle phase; // The observed (retarded) emission phase
+    int find_emitpt_result;
 
-/**** End calculation ****/
+    while (1) // This is for looping over s values (where s is the "polar cap
+              // distance" from the magnetic pole. The stopping criteria is
+              // when a full circuit is done around the polar cap without
+              // finding any open field lines
+    {
+        // Turn the s_deg into a psr_angle type
+        set_psr_angle_deg( &s, s_deg );
+
+        // Reset open_found to NOT found
+        open_found = 0;
+
+        // Loop around the polar cap in azimuth
+        for (p_deg = 0.0; p_deg += o.foot_dp_deg; p_deg < 360.0)
+        {
+            // Turn the p_deg into a psr_angle type
+            set_psr_angle_deg( &p, p_deg );
+
+            // Convert (s,p) into a point in the magnetic frame
+            set_point_sph( &foot_pt_mag, psr.r, &s, &p, POINT_SET_ALL );
+
+            // Convert the foot_pt into observer coordinates
+            mag_to_obs_frame( &foot_pt_mag, &psr, NULL, &foot_pt );
+
+            // Now check that we're on an open field line
+            linetype = get_fieldline_type( &foot_pt, &psr, o.tmult, NULL );
+            if (linetype == CLOSED_LINE)
+            {
+                break;
+            }
+            open_found = 1;
+
+            // Now find the emission points along this line!
+            // Start 1 metre above the surface
+            Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt );
+            while (1)
+            {
+                // Climb up the field line to find the next emit_pt
+                find_emitpt_result = find_next_line_emission_point( &psr,
+                        &init_pt, DIR_OUTWARD, o.tmult, &emit_pt, NULL );
+
+                // If no point was found, exit the loop
+                if (find_emitpt_result != EMIT_PT_FOUND)
+                {
+                    break;
+                }
+
+                // Calculate the (retarded) phase at which the emission would
+                // be seen. First, set the LoS to the velocity vector
+                calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, NULL, &LoS,
+                             NULL, NULL, NULL, NULL );
+                calc_retardation( &emit_pt, &psr, &LoS, &dph, &retarded_LoS );
+
+                // Now, the observed phase is the negative of the azimuthal
+                // angle of the retarded line of sight
+                set_psr_angle_deg( &phase, -(retarded_LoS.ph.deg) );
+
+                // Calculate the observed polarisation angle at emit_pt
+                // ... BOOKMARK!
+
+                // Print out results!
+                fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
+                            s_deg, p_deg, x, y, z, phase, pol );
+
+                // Go another 1 meter along before trying to find the next
+                // emit_pt
+                Bstep( &init_pt, &psr, 1.0, DIR_OUTWARD, &init_pt );
+            }
+
+            // If s = 0°, then no need to do any more values of p
+            if (s_deg == 0.0)
+                break;
+        }
+
+        // Check to see if any open lines were found. If not, exit the loop
+        if (open_found == 0)
+            break;
+
+        // Increment the s angle
+        s_deg += o.foot_ds_deg;
+    }
+
 
     // Clean up
     destroy_psr_angle( ra  );

@@ -136,7 +136,8 @@ double light_cylinder( double P );
 void line_of_sight( pulsar *psr, psr_angle *phase, point *LoS );
 void pol_zero( pulsar *psr, psr_angle *phase, point *pz );
 
-void calc_retardation( point *X, pulsar *psr, point *LoS, point *retarded_LoS );
+void calc_retardation( point *X, pulsar *psr, point *LoS,
+        psr_angle *dph, point *retarded_LoS );
 
 
 /**** Magnetic field functions ****/
@@ -197,8 +198,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         int direction, point *init_pt, point *emit_pt, FILE *f );
 
 int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
-        double tmult, int retardation, point *emit_pt, psr_angle *phase,
-        FILE *f );
+        double tmult, point *emit_pt, FILE *f );
 
 void psr_cost_deriv( point *X, pulsar *psr, psr_angle *phase, int direction,
                      double dx, point *grad );

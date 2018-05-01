@@ -140,13 +140,14 @@ void pol_zero( pulsar *psr, psr_angle *phase, point *pz )
 }
 
 
-void calc_retardation( point *X, pulsar *psr, point *LoS, point *retarded_LoS )
+void calc_retardation( point *X, pulsar *psr, point *LoS,
+        psr_angle *dph, point *retarded_LoS )
 /* This function calculates the retardation due to the difference in flight
  * time of photons starting from different locations in the magnetosphere.
  * In particular, it returns a pseudo-line-of-sight, i.e. the line of sight
  * that has been rotated around the pulsar's rotation axis by an amount
  * corresponding to the pulsar's rotation rate and the time difference between
- * a photon starting at X and a photon starting atsome reference point (here,
+ * a photon starting at X and a photon starting at some reference point (here,
  * we choose the origin).
  *
  * Thus, an emission point closer to the observer than the reference point
@@ -163,7 +164,8 @@ void calc_retardation( point *X, pulsar *psr, point *LoS, point *retarded_LoS )
  *   pulsar *psr : the pulsar struct
  *   point  *LoS : the (non-retarded) line of sight
  * Outputs:
- *   point *retarded_LoS : the retarded line of sight
+ *   point *retarded_angle : the retardation angle
+ *   point *retarded_LoS   : the retarded line of sight (can be NULL)
  */
 {
     // Calculate the prejection of the position vector of X onto the LoS
@@ -176,11 +178,11 @@ void calc_retardation( point *X, pulsar *psr, point *LoS, point *retarded_LoS )
     double t = proj / SPEED_OF_LIGHT;
 
     // Convert the photon travel time into a pulsar rotation phase
-    psr_angle dph;
-    set_psr_angle_rad( &dph, t*psr->Om.rad );
+    set_psr_angle_rad( dph, t*psr->Om.rad );
 
     // Rotate the line of sight by that amount (around the z-axis = pulsar's
-    // rotation axis)
-    rotate_about_axis( LoS, retarded_LoS, &dph, 'z', POINT_SET_ALL );
+    // rotation axis), if requested
+    if (retarded_LoS != NULL)
+        rotate_about_axis( LoS, retarded_LoS, dph, 'z', POINT_SET_ALL );
 }
 

@@ -171,8 +171,9 @@ double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction,
 
     // If retardation effects are requested, offset the line of sight by the
     // appropriate amount
+    psr_angle dph;
     if (retardation)
-        calc_retardation( X, psr, &LoS, &LoS );
+        calc_retardation( X, psr, &LoS, &dph, &LoS );
 
     // Calculate the normalised dot product of the line of sight with the
     // velocity vector
@@ -862,8 +863,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
 
 
 int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
-        double tmult, int retardation, point *emit_pt, psr_angle *phase,
-        FILE *f )
+        double tmult, point *emit_pt, FILE *f )
 /* Finds the next emission point that occurs on the field line that passes
  * through init_pt. The algorithm climbs along the field line, starting at
  * init_pt, and moving with step sizes specified by tmult, in the specified
@@ -879,13 +879,13 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
  *   int     direction : which direction to move along the field line
  *                       DIR_OUTWARD = in same direction as B
  *                       DIR_INWARD  = in opposite direction
- *   double  tmult     : step size as a fraction of the light cylinder radius
+ *   double  tmult     : step size as a fraction of init point radial vector
+ *                       length
  *   int   retardation : (boolean) whether or not to include retardation in
  *                       the calculation of phase
  *
  * Outputs:
  *   point  *emit_pt   : the next found emission point
- *   psr_angle *phase  : the phase at which the emission is seen
  *
  * Returns:
  *   The possible return values are:
@@ -904,9 +904,10 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
     // (2nd) init_pt is of the appropriate sign, and not flipped due to
     // floating point precision limits. Safest would be to take a minute
     // step before calling this function again.
-    point B, V;
+    point V;
     int nsols;
-    double VzZ_prev = NAN, VzZ_next;
+    double VzZ_prev = NAN;
+    double VzZ_next = NAN;
 
     // Now step along the field line and re-evaluate (V̂∙ẑ - ζ) at each step,
     // checking if it has changed sign.
@@ -946,6 +947,13 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
         {
             copy_point( &next_pt, &prev_pt );
             VzZ_prev = VzZ_next;
+        }
+
+        // If requested, print out prev_pt
+        if (f != NULL)
+        {
+            fprintf( f, "%.15e %.15e %.15e\n",
+                    prev_pt.x[0], prev_pt.x[1], prev_pt.x[2] );
         }
 
         // Take a step along B
@@ -1044,6 +1052,13 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
             copy_point( &mid_pt, &prev_pt );
             VzZ_prev = VzZ_mid;
         }
+
+        // If requested, print out prev_pt
+        if (f != NULL)
+        {
+            fprintf( f, "%.15e %.15e %.15e\n",
+                    prev_pt.x[0], prev_pt.x[1], prev_pt.x[2] );
+        }
     }
 
     // By this point, we know that either prev_pt or next_pt is as close as
@@ -1051,10 +1066,13 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
     // of the two is the better solution
     if (fabs(VzZ_prev) <= fabs(VzZ_next))
     {
-        copy_point( &VzZ_prev, emit_pt );
+        copy_point( &prev_pt, emit_pt );
     }
     else
     {
-        copy_point( &VzZ_next, emit_pt );
+        copy_point( &next_pt, emit_pt );
     }
+
+    // Return successful!
+    return EMIT_PT_FOUND;
 }
