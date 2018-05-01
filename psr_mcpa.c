@@ -106,7 +106,9 @@ int main( int argc, char *argv[] )
 
     // For calculating the (retarded) line of sight
     point LoS, retarded_LoS;
+    point A; // The acceleration vector at the emission point
     psr_angle dph; // The retardation angle
+    psr_angle psi; // The polarisation angle
 
     // Loop over the polar cap
     psr_angle s; // The "polar cap distance" to the magnetic pole
@@ -116,7 +118,8 @@ int main( int argc, char *argv[] )
     int linetype;   // either CLOSED_LINE or OPEN_LINE
     point foot_pt, foot_pt_mag;
     point init_pt, emit_pt;
-    psr_angle phase; // The observed (retarded) emission phase
+    psr_angle phase;     // The emission phase
+    psr_angle ret_phase; // The retarded (observed) phase
     int find_emitpt_result;
 
     while (1) // This is for looping over s values (where s is the "polar cap
@@ -131,7 +134,7 @@ int main( int argc, char *argv[] )
         open_found = 0;
 
         // Loop around the polar cap in azimuth
-        for (p_deg = 0.0; p_deg += o.foot_dp_deg; p_deg < 360.0)
+        for (p_deg = 0.0; p_deg < 360.0; p_deg += o.foot_dp_deg)
         {
             // Turn the p_deg into a psr_angle type
             set_psr_angle_deg( &p, p_deg );
@@ -166,21 +169,27 @@ int main( int argc, char *argv[] )
                 }
 
                 // Calculate the (retarded) phase at which the emission would
-                // be seen. First, set the LoS to the velocity vector
+                // be seen. First, set the LoS to the velocity vector. While
+                // we're at it, get the acceleration vector too.
                 calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, NULL, &LoS,
-                             NULL, NULL, NULL, NULL );
+                             NULL, &A, NULL, NULL );
                 calc_retardation( &emit_pt, &psr, &LoS, &dph, &retarded_LoS );
 
                 // Now, the observed phase is the negative of the azimuthal
                 // angle of the retarded line of sight
-                set_psr_angle_deg( &phase, -(retarded_LoS.ph.deg) );
+                set_psr_angle_deg( &phase, -(LoS.ph.deg) );
+                set_psr_angle_deg( &ret_phase, -(retarded_LoS.ph.deg) );
 
                 // Calculate the observed polarisation angle at emit_pt
-                // ... BOOKMARK!
+                accel_to_pol_angle( &psr, &A, &phase, &psi );
 
                 // Print out results!
                 fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
-                            s_deg, p_deg, x, y, z, phase, pol );
+                            s_deg, p_deg,
+                            emit_pt.x[0] * xscale,
+                            emit_pt.x[1] * xscale,
+                            emit_pt.x[2] * xscale,
+                            ret_phase.deg, psi.deg );
 
                 // Go another 1 meter along before trying to find the next
                 // emit_pt

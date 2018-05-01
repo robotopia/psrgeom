@@ -917,15 +917,33 @@ int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
     }
 
     // Third, convert the acceleration to a polarisation angle
+    accel_to_pol_angle( psr, A, phase, psi );
+
+    return 1; // = success
+}
+
+
+void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,
+        psr_angle *psi )
+/* This function calculates the polarisation angle, Ψ, for a pulsar at a
+ * given phase, φ.
+ *
+ * Inputs:
+ *   pulsar *psr      : the pulsar geometry
+ *   point *A         : the acceleration vector
+ *   psr_angle *phase : the rotation phase
+ * Outputs:
+ *   psr_angle *psi   : the polsarisation angle. Guaranteed to be in the range
+ *                      0° ≤ Ψ < 180°
+ */
+{
     point u; // (u)nrotated
     psr_angle uz; // For (u)nrotating the (z)eta angle
     reverse_psr_angle( &psr->ze, &uz );
 
     rotate_about_axis(  A, &u, phase, 'z', POINT_SET_ALL );
-    rotate_about_axis( &u, &u,   &uz, 'y', POINT_SET_ALL ); 
+    rotate_about_axis( &u, &u,   &uz, 'y', POINT_SET_ALL );
 
     // Now we have a vector whose x and y coords give us the angle we need
     set_psr_angle_rad( psi, atan2( u.x[0], u.x[1] ) );
-
-    return 1; // = success
 }

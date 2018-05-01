@@ -20,7 +20,8 @@ TARGETS = psr_fields \
 		  psr_polangle \
 		  psr_fitwidth \
 		  psr_trajectory \
-		  psr_visiblepoints
+		  psr_visiblepoints \
+		  psr_mcpa
 
 TESTS = calc_fields_test
 
