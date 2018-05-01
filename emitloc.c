@@ -945,6 +945,9 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
         }
         else
         {
+            // Make tstep go up in proportion to our distance from the pulsar
+            tstep *= next_pt.r / prev_pt.r;
+
             copy_point( &next_pt, &prev_pt );
             VzZ_prev = VzZ_next;
         }
