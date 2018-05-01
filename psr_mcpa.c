@@ -156,6 +156,10 @@ int main( int argc, char *argv[] )
             // Now find the emission points along this line!
             // Start 1 metre above the surface
             Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt );
+            set_point_xyz( &init_pt, init_pt.x[0],
+                                     init_pt.x[1],
+                                     init_pt.x[2],
+                                     POINT_SET_ALL );
             while (1)
             {
                 // Climb up the field line to find the next emit_pt
@@ -191,9 +195,19 @@ int main( int argc, char *argv[] )
                             emit_pt.x[2] * xscale,
                             ret_phase.deg, psi.deg );
 
-                // Go another 1 meter along before trying to find the next
-                // emit_pt
-                Bstep( &init_pt, &psr, 1.0, DIR_OUTWARD, &init_pt );
+                // Set the emission point to the new initial point, go another
+                // 100 meters along, and then try to find the next emit_pt
+                // It seems that anything much short than a 100 meter jump
+                // results in the next point being found in the same area. The
+                // size of the volume that converges appears to be larger than
+                // expected. This is probably a bug, but for now I'll just
+                // move along 100 meters before trying again.
+                copy_point( &emit_pt, &init_pt );
+                Bstep( &init_pt, &psr, 100.0, DIR_OUTWARD, &init_pt );
+                set_point_xyz( &init_pt, init_pt.x[0],
+                                         init_pt.x[1],
+                                         init_pt.x[2],
+                                         POINT_SET_ALL );
             }
 
             // If s = 0°, then no need to do any more values of p

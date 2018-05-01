@@ -751,7 +751,7 @@ void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
  *   direction: whether to follow the line DIR_INWARD or DIR_OUTWARD
  *
  * Outputs:
- *   x2       : the ending point
+ *   x2       : the ending point (only Cartesian coordinates are set)
  */
 {
     point slop1, slop2, slop3, slope;

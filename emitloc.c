@@ -958,13 +958,21 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
 
         // Take a step along B
         Bstep( &prev_pt, psr, tstep, direction, &next_pt );
+        set_point_xyz( &next_pt, next_pt.x[0],
+                                 next_pt.x[1],
+                                 next_pt.x[2],
+                                 POINT_SET_R | POINT_SET_RHOSQ );
 
         // Check to see whether we've passed the light cylinder
         // or the pulsar surface
         if (next_pt.rhosq > psr->rL2)
+        {
             return EMIT_PT_TOO_HIGH;
+        }
         if (next_pt.r < psr->r)
+        {
             return EMIT_PT_TOO_LOW;
+        }
 
         // Get velocity vector at the new point
         calc_fields( &next_pt, psr, SPEED_OF_LIGHT,
@@ -1017,6 +1025,10 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
 
         // Calculate the midpoint and the quantity (V̂∙ẑ - ζ) at the midpoint
         Bstep( &prev_pt, psr, tstep, direction, &mid_pt );
+        set_point_xyz( &mid_pt, mid_pt.x[0],
+                                mid_pt.x[1],
+                                mid_pt.x[2],
+                                POINT_SET_ALL );
 
         calc_fields( &mid_pt, psr, SPEED_OF_LIGHT,
                  NULL, &V, NULL, NULL, NULL, NULL ); // (assume soln is found)
