@@ -196,6 +196,10 @@ void find_emission_point_newuoa( pulsar *psr, psr_angle *phase, int direction,
 int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         int direction, point *init_pt, point *emit_pt, FILE *f );
 
+int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
+        double tmult, int retardation, point *emit_pt, psr_angle *phase,
+        FILE *f );
+
 void psr_cost_deriv( point *X, pulsar *psr, psr_angle *phase, int direction,
                      double dx, point *grad );
 void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,

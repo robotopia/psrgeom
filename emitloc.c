@@ -859,3 +859,202 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
 
     return EMIT_PT_FOUND; // = successful
 }
+
+
+int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
+        double tmult, int retardation, point *emit_pt, psr_angle *phase,
+        FILE *f )
+/* Finds the next emission point that occurs on the field line that passes
+ * through init_pt. The algorithm climbs along the field line, starting at
+ * init_pt, and moving with step sizes specified by tmult, in the specified
+ * direction. For each step, we recognise that an emission point has been
+ * passed when the quantity (V̂∙ẑ - ζ) changes sign, where V̂ is the velocity
+ * field, ẑ is the rotation axis, and ζ is the angle between the rotation
+ * axis and the line of sight. Then we use bisection to home in on the
+ * emission point.
+ *
+ * Inputs:
+ *   pulsar *psr       : the pulsar properties
+ *   point  *init_pt   : the starting point
+ *   int     direction : which direction to move along the field line
+ *                       DIR_OUTWARD = in same direction as B
+ *                       DIR_INWARD  = in opposite direction
+ *   double  tmult     : step size as a fraction of the light cylinder radius
+ *   int   retardation : (boolean) whether or not to include retardation in
+ *                       the calculation of phase
+ *
+ * Outputs:
+ *   point  *emit_pt   : the next found emission point
+ *   psr_angle *phase  : the phase at which the emission is seen
+ *
+ * Returns:
+ *   The possible return values are:
+ *
+ *     EMIT_PT_FOUND      (if an emission point is found)
+ *     EMIT_PT_TOO_HIGH   (if the light cylinder is reached)
+ *     EMIT_PT_TOO_LOW    (if the pulsar surface is reached)
+ *
+ */
+{
+    // We use the initial point as our reference. If the quantity
+    // (V̂∙ẑ - ζ) at that point vanishes, then we use the next point.
+    // If this function is called twice consecutively using the emit_pt
+    // of the first call as the init_pt for the second call, then the
+    // onus is on the caller to ensure that the quantity (V̂∙ẑ - ζ) of
+    // (2nd) init_pt is of the appropriate sign, and not flipped due to
+    // floating point precision limits. Safest would be to take a minute
+    // step before calling this function again.
+    point B, V;
+    int nsols;
+    double VzZ_prev = NAN, VzZ_next;
+
+    // Now step along the field line and re-evaluate (V̂∙ẑ - ζ) at each step,
+    // checking if it has changed sign.
+    point prev_pt, next_pt;
+    copy_point( init_pt, &prev_pt );
+    double tstep = tmult * init_pt->r;
+    while (1)
+    {
+        // First time through, evaluate (V̂∙ẑ - ζ) at the initial point.
+        // If not first time through, copy value from previous iteration.
+        if (isnan( VzZ_prev )) // <-- proxy for "if first time through"
+        {
+            calc_fields( &prev_pt, psr, SPEED_OF_LIGHT,
+                 NULL, &V, NULL, NULL, NULL, &nsols );
+
+            if (nsols == 0)
+            {
+                fprintf( stderr, "error: find_next_line_emission_point: "
+                                 "velocity could not be calculated at "
+                                 "init_pt [%f, %f, %f]\n",
+                                 prev_pt.x[0], prev_pt.x[1], prev_pt.x[2] );
+                exit(EXIT_FAILURE);
+            }
+
+            VzZ_prev = acos(V.x[2]) - psr->ze.rad;
+
+            if (VzZ_prev == 0.0)
+            {
+                fprintf( stderr, "warning: find_next_line_emission_point: "
+                                 "init_pt is an emission point\n" );
+                copy_point( &prev_pt, &next_pt );
+                break;
+            }
+
+        }
+        else
+        {
+            copy_point( &next_pt, &prev_pt );
+            VzZ_prev = VzZ_next;
+        }
+
+        // Take a step along B
+        Bstep( &prev_pt, psr, tstep, direction, &next_pt );
+
+        // Check to see whether we've passed the light cylinder
+        // or the pulsar surface
+        if (next_pt.rhosq > psr->rL2)
+            return EMIT_PT_TOO_HIGH;
+        if (next_pt.r < psr->r)
+            return EMIT_PT_TOO_LOW;
+
+        // Get velocity vector at the new point
+        calc_fields( &next_pt, psr, SPEED_OF_LIGHT,
+                 NULL, &V, NULL, NULL, NULL, &nsols );
+
+        // Make sure that a solution was found
+        if (nsols == 0)
+        {
+            fprintf( stderr, "error: find_next_line_emission_point: "
+                             "velocity could not be calculated at "
+                             "point [%f, %f, %f]\n",
+                             next_pt.x[0], next_pt.x[1], next_pt.x[2] );
+            exit(EXIT_FAILURE);
+        }
+
+        // Evaluate (V̂∙ẑ - ζ)
+        VzZ_next = acos(V.x[2]) - psr->ze.rad;
+
+        // Check to see if we've stumbled on an emission point
+        if (VzZ_next == 0.0)
+        {
+            copy_point( &next_pt, &prev_pt );
+            break;
+        }
+
+        // Otherwise, compare the sign against the initial value
+        if (VzZ_prev / VzZ_next < 0.0) // <-- i.e. if sign has changed
+        {
+            break; // and go onto the bisection section
+        }
+    }
+
+    // The "bisection" section: home in on the emission point which
+    // must be on the field line between prev_pt and next_pt.
+
+    point mid_pt;
+    double VzZ_mid;
+
+    // The main stopping criteria is that the quantity (V̂∙ẑ - ζ) evaluated
+    // at the "midpoint" between prev_pt and next_pt is not within the range
+    // (VzZ_prev, VzZ_next). We will, however, also check that the step size
+    // is always getting smaller.
+    while (1)
+    {
+        // Stopping criterion #1: tstep has reached underflow
+        if (tstep >= tstep / 2.0)
+            break;
+
+        tstep /= 2.0;
+
+        // Calculate the midpoint and the quantity (V̂∙ẑ - ζ) at the midpoint
+        Bstep( &prev_pt, psr, tstep, direction, &mid_pt );
+
+        calc_fields( &mid_pt, psr, SPEED_OF_LIGHT,
+                 NULL, &V, NULL, NULL, NULL, NULL ); // (assume soln is found)
+
+        VzZ_mid = acos(V.x[2]) - psr->ze.rad;
+
+        // Stopping criterion #2: VzZ_mid is exactly zero!
+        if (VzZ_mid == 0)
+        {
+            // Copy mid_pt to prev_pt and break out of this loop
+            copy_point( &mid_pt, &prev_pt );
+            break;
+        }
+
+        // Stopping criterion #3: VzZ_mid is not closer to zero than either
+        // VzZ_prev or VzZ_next
+        if (fabs(VzZ_mid) >= fabs(VzZ_prev) ||
+            fabs(VzZ_mid) >= fabs(VzZ_next))
+        {
+            break;
+        }
+
+        // Depending on the relative sign of VzZ_mid, turn mid_pt into the new
+        // prev_pt or next_pt
+        if (VzZ_prev / VzZ_mid < 0.0) // then the emission point must be
+                                      // between prev_pt and mid_pt
+        {
+            copy_point( &mid_pt, &next_pt );
+            VzZ_next = VzZ_mid;
+        }
+        else // the emission point must be between mid_pt and next_pt
+        {
+            copy_point( &mid_pt, &prev_pt );
+            VzZ_prev = VzZ_mid;
+        }
+    }
+
+    // By this point, we know that either prev_pt or next_pt is as close as
+    // we're ever going to get. We declare the emission point to be whichever
+    // of the two is the better solution
+    if (fabs(VzZ_prev) <= fabs(VzZ_next))
+    {
+        copy_point( &VzZ_prev, emit_pt );
+    }
+    else
+    {
+        copy_point( &VzZ_next, emit_pt );
+    }
+}
