@@ -966,3 +966,27 @@ void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,
     // Now we have a vector whose x and y coords give us the angle we need
     set_psr_angle_rad( psi, atan2( u.x[0], u.x[1] ) );
 }
+
+
+double calc_curvature( point *V, point *A )
+/* Calculate the curvature, given the velocity and acceleration vectors:
+ *
+ *       |v⃗×a⃗|         |a⃗|
+ *   κ = ----- = |v̂×â| ---
+ *        |v⃗|³         |v⃗|²
+ *
+ * V and A are expected to have the normalised components stored in V.x[0],
+ * etc, and the lengths to be in V.r, etc.
+ */
+{
+    // Calculate v̂×â (i.e. the cross product of the normalised v⃗ and a⃗)
+    point VxA;
+    set_point_xyz( &VxA, 
+                   V->x[1] * A->x[2]  -  A->x[1] * V->x[2],
+                   V->x[2] * A->x[0]  -  A->x[2] * V->x[0],
+                   V->x[0] * A->x[1]  -  A->x[0] * V->x[1],
+                   POINT_SET_R );
+
+    // Now multiply the length by |a⃗|/|v⃗|² to get the final curvature
+    return VxA.r * A->r / (V->r * V->r);
+}

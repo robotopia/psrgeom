@@ -1,7 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
-#define PSRGEOM_VERSION "1.2.5"
+#define PSRGEOM_VERSION "1.2.6"
 
 #include <stdio.h>
 #include <math.h>
@@ -165,6 +165,7 @@ int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
                     point *init_pt, point *emit_pt, psr_angle *psi );
 void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,
         psr_angle *psi );
+double calc_curvature( point *V, point *A );
 
 
 /**** Dipole field functions ****/

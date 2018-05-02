@@ -27,6 +27,7 @@
  *   2) the Cartesian coordinates of the emission point
  *   3) the retarded (observed) emission phase
  *   4) the observed polarisation angle
+ *   5) the curvature of the particle's trajectory at the emission point
  *
  ****************************************************************************/
 
@@ -46,6 +47,7 @@ struct opts
     char   *outfile;     // name of output file (NULL means stdout)
     double  foot_ds_deg; // step size in "distance" from mag. pole in deg
     double  foot_dp_deg; // step size in "φ" around polar cap in deg
+    double  sstart;      // starting value of mag. pole distance, "s"
     double  tmult;       // step size along field lines
 };
 
@@ -64,6 +66,7 @@ int main( int argc, char *argv[] )
     o.outfile     = NULL;
     o.foot_ds_deg = NAN;
     o.foot_dp_deg = NAN;
+    o.sstart      = 0.0;
     o.tmult       = NAN;
 
     parse_cmd_line( argc, argv, &o );
@@ -113,13 +116,15 @@ int main( int argc, char *argv[] )
     // Loop over the polar cap
     psr_angle s; // The "polar cap distance" to the magnetic pole
     psr_angle p; // The azimuth angle around the polar cap
-    double s_deg = 0.0, p_deg;
+    double s_deg = o.sstart;
+    double p_deg;
     int open_found; // Set to 1 if an open line is found for a given s
     int linetype;   // either CLOSED_LINE or OPEN_LINE
     point foot_pt, foot_pt_mag;
     point init_pt, emit_pt;
     psr_angle phase;     // The emission phase
     psr_angle ret_phase; // The retarded (observed) phase
+    double kappa; // The curvature
     int find_emitpt_result;
 
     while (1) // This is for looping over s values (where s is the "polar cap
@@ -174,10 +179,11 @@ int main( int argc, char *argv[] )
 
                 // Calculate the (retarded) phase at which the emission would
                 // be seen. First, set the LoS to the velocity vector. While
-                // we're at it, get the acceleration vector too.
+                // we're at it, get the acceleration vector and the curvature.
                 calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, NULL, &LoS,
                              NULL, &A, NULL, NULL );
                 calc_retardation( &emit_pt, &psr, &LoS, &dph, &retarded_LoS );
+                kappa = calc_curvature( &LoS, &A );
 
                 // Now, the observed phase is the negative of the azimuthal
                 // angle of the retarded line of sight
@@ -188,22 +194,23 @@ int main( int argc, char *argv[] )
                 accel_to_pol_angle( &psr, &A, &phase, &psi );
 
                 // Print out results!
-                fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
+                fprintf( f, "%.15e %.15e %.15e %.15e "
+                            "%.15e %.15e %.15e %.15e\n",
                             s_deg, p_deg,
                             emit_pt.x[0] * xscale,
                             emit_pt.x[1] * xscale,
                             emit_pt.x[2] * xscale,
-                            ret_phase.deg, psi.deg );
+                            ret_phase.deg, psi.deg, kappa );
 
                 // Set the emission point to the new initial point, go another
-                // 100 meters along, and then try to find the next emit_pt
-                // It seems that anything much short than a 100 meter jump
+                // 1 km along, and then try to find the next emit_pt
+                // It seems that anything much short than a 1 km jump
                 // results in the next point being found in the same area. The
                 // size of the volume that converges appears to be larger than
                 // expected. This is probably a bug, but for now I'll just
-                // move along 100 meters before trying again.
+                // move along 1 km before trying again.
                 copy_point( &emit_pt, &init_pt );
-                Bstep( &init_pt, &psr, 100.0, DIR_OUTWARD, &init_pt );
+                Bstep( &init_pt, &psr, 1000.0, DIR_OUTWARD, &init_pt );
                 set_point_xyz( &init_pt, init_pt.x[0],
                                          init_pt.x[1],
                                          init_pt.x[2],
@@ -244,11 +251,11 @@ void usage()
     printf( "REQUIRED OPTIONS:\n" );
     printf( "  -a  alpha    The angle between the rotation and magetic axes "
                            "in degrees (required)\n" );
-    printf( "  -p  step     Step size for distance from magnetic pole, in "
-                           "degrees (required)\n" );
     printf( "  -P  period   The rotation period of the pulsar, in seconds "
                            "(required)\n" );
-    printf( "  -s  step     Step size for moving around the polar cap, in "
+    printf( "  -p  step     Step size for moving around the polar cap, in "
+                           "degrees (required)\n" );
+    printf( "  -s  step     Step size for distance from magnetic pole, in "
                            "degrees (required)\n" );
     printf( "  -t  step     Step size for moving along magnetic field lines, "
                            "as a fraction of the light cylinder radius "
@@ -260,6 +267,8 @@ void usage()
     printf( "  -L           Normalise distances to light cylinder radius\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
+    printf( "  -S  start    Starting distance from magnetic pole, in "
+                           "degrees [default = 0.0]\n" );
 }
 
 
@@ -267,7 +276,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:hLo:p:P:s:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:hLo:p:P:s:S:t:z:")) != -1)
     {
         switch (c)
         {
@@ -292,6 +301,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 break;
             case 's':
                 o->foot_ds_deg = atof(optarg);
+                break;
+            case 'S':
+                o->sstart = atof(optarg);
                 break;
             case 't':
                 o->tmult = atof(optarg);
@@ -328,10 +340,11 @@ void print_col_headers( FILE *f )
  *   2) the Cartesian coordinates of the emission point
  *   3) the retarded (observed) emission phase
  *   4) the observed polarisation angle
+ *   5) the curvature of the particle's trajectory at the emission point
  */
 {
     // Print out a line to file handle f
-    fprintf( f, "#  s_deg  p_deg  x  y  z  phase  pol\n" );
+    fprintf( f, "#  s(deg)  p(deg)  x  y  z  φ(deg)  Ψ(deg)  κ\n" );
 }
 
 
