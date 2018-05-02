@@ -154,7 +154,7 @@ int main( int argc, char *argv[] )
             linetype = get_fieldline_type( &foot_pt, &psr, o.tmult, NULL );
             if (linetype == CLOSED_LINE)
             {
-                break;
+                continue;
             }
             open_found = 1;
 
