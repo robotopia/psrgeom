@@ -37,6 +37,12 @@ void calc_fields( point *X, pulsar *psr, double v,
  * Moreover, this function tries to limit the calculation actually performed
  * to only what is needed to calculate the requested fields.
  *
+ * If the pulsar is spinning in the negative direction, the strategy is to
+ * flip the y-coordinate so that all the calculations are done in the "mirror"
+ * universe where the pulsar is spinning in the positive direction, and then
+ * flip back the y-coordinates of the derived B, V, and A vectors at the end
+ * of the calculations.
+ *
  * This function assumes that both the Cartesian and spherical coordinates of
  * X are set.
  *
@@ -75,7 +81,7 @@ void calc_fields( point *X, pulsar *psr, double v,
 
     // Paul Arendt's equations
     double x     = X->x[0];
-    double y     = X->x[1];
+    double y     = X->x[1] * psr->spin;
     double z     = X->x[2];
 
     double xx    = x*x;
@@ -151,6 +157,7 @@ void calc_fields( point *X, pulsar *psr, double v,
         for (i = 0; i < 3; i++)
             B1->x[i] = Bn[i];
 
+        B1->x[1] *= psr->spin;
         B1->r = Blen;
     }
 
@@ -161,6 +168,12 @@ void calc_fields( point *X, pulsar *psr, double v,
     /***********************************************************
      * Both V and A need the calculation of V, so do this now. * 
      ***********************************************************/
+
+    /*
+     *     V_B = -Ω(φ∙B̂) ± √[Ω²(φ∙B̂)² - (ρ²Ω² - v²)]
+     *
+     *     V = Ωφ + (V_B)B̂
+     */
 
     double pdBn  = -y*Bn[0] + x*Bn[1];   // ph dot Bn
     double Om2   = Om*Om;
@@ -214,11 +227,13 @@ void calc_fields( point *X, pulsar *psr, double v,
         if (V1)
         {
             V1->x[i] = Vpos[i] / Vpos_len;
+            if (i == 1) V1->x[i] *= psr->spin;
             V1->r    = Vpos_len;
         }
         if (V2)
         {
             V2->x[i] = Vneg[i] / Vneg_len;
+            if (i == 1) V2->x[i] *= psr->spin;
             V2->r    = Vneg_len;
         }
     }
@@ -249,6 +264,8 @@ void calc_fields( point *X, pulsar *psr, double v,
     for (j = 0; j < 3; j++)
     {
         da[i][j] = a_temp[i]*X->x[j];
+        if (j == 1) // The y-coordinate that may need to be flipped
+            da[i][j] *= psr->spin;
     }
 
     // The derivatives of c[][] above, with respect to (x,y,z):
@@ -377,11 +394,13 @@ void calc_fields( point *X, pulsar *psr, double v,
         if (A1)
         {
             A1->x[i] = Apos[i] / Apos_len;
+            if (i == 1) A1->x[i] *= psr->spin;
             A1->r    = Apos_len;
         }
         if (A2)
         {
             A2->x[i] = Aneg[i] / Aneg_len;
+            if (i == 1) A2->x[i] *= psr->spin;
             A2->r    = Aneg_len;
         }
     }

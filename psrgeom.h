@@ -66,6 +66,9 @@ typedef struct psr_angle_t
 #define  ANGLE_HALF  (psr_angle){180.0,PI,-1.0,0.0}
 #define  ANGLE_FULL  (psr_angle){360.0,2.0*PI,1.0,0.0}
 
+#define SPIN_POS   1
+#define SPIN_NEG  -1
+
 typedef struct point_t {
     double    x[3];   // x,y,z coordinates
     double    r;      // distance from origin = sqrt(x^2 + y^2 + z^2)
@@ -85,6 +88,7 @@ typedef struct pulsar_t {
     double       rL2;   // = rL^2 (because it comes up quite often)
     psr_angle    al;    // Angle between the rotation and magnetic axes
     psr_angle    ze;    // Angle between the rotation axis and the line of sight
+    int          spin;  // Spin direction (SPIN_POS or SPIN_NEG)
 } pulsar;
 
 

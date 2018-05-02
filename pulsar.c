@@ -70,12 +70,21 @@ void destroy_pulsar( pulsar *psr )
 }
 
 void set_pulsar_period( pulsar *psr, double P )
+/* Sets the pulsar period, the light cylinder radius, and the spin direction.
+ * The spin direction is set according to the sign of the period. If a
+ * positive period is given, then the spin direction is positive in the sense
+ * that the pulsar spins counterclockwise when viewed from "above" (i.e.
+ * positive z).
+ */
 {
-    psr->P   = P;
-    psr->rL  = light_cylinder( P );
-    psr->rL2 = psr->rL * psr->rL;
+    psr->P    = fabs(P);
 
-    set_psr_angle_rad( &psr->Om, 2.0*PI/P );
+    psr->spin = (P >= 0.0 ? SPIN_POS : SPIN_NEG);
+
+    psr->rL   = light_cylinder( psr->P );
+    psr->rL2  = psr->rL * psr->rL;
+
+    set_psr_angle_rad( &psr->Om, 2.0*PI/psr->P );
 }
 
 
@@ -97,13 +106,16 @@ void line_of_sight( pulsar *psr, psr_angle *phase, point *LoS )
 {
     // A positive rotation of the pulsar equals an apparent reverse rotation
     // of the line of sight in the rotating frame
-    psr_angle rev_phase;
-    set_psr_angle_deg( &rev_phase, 360.0 - phase->deg );
+    double apparent_phase_deg =
+        (psr->spin == SPIN_POS ? -phase->deg : phase->deg);
+
+    psr_angle apparent_phase;
+    set_psr_angle_deg( &apparent_phase, apparent_phase_deg );
 
     // Set the spherical coordinates for the line of sight
     double     r  = 1.0; // A unit vector
     psr_angle *th = &(psr->ze);
-    psr_angle *ph = &rev_phase;
+    psr_angle *ph = &apparent_phase;
 
     set_point_sph( LoS, r, th, ph, POINT_SET_ALL );
 }
@@ -125,8 +137,11 @@ void pol_zero( pulsar *psr, psr_angle *phase, point *pz )
 {
     // A positive rotation of the pulsar equals an apparent reverse rotation
     // of the line of sight in the rotating frame
-    psr_angle rev_phase;
-    set_psr_angle_deg( &rev_phase, 360.0 - phase->deg );
+    double apparent_phase_deg =
+        (psr->spin == SPIN_POS ? -phase->deg : phase->deg);
+
+    psr_angle apparent_phase;
+    set_psr_angle_deg( &apparent_phase, apparent_phase_deg );
 
     psr_angle LoS90;
     set_psr_angle_deg( &LoS90, psr->ze.deg - 90.0 );
@@ -134,7 +149,7 @@ void pol_zero( pulsar *psr, psr_angle *phase, point *pz )
     // Set the spherical coordinates for the line of sight
     double     r  = 1.0; // A unit vector
     psr_angle *th = &LoS90;
-    psr_angle *ph = &rev_phase;
+    psr_angle *ph = &apparent_phase;
 
     set_point_sph( pz, r, th, ph, POINT_SET_ALL );
 }
@@ -178,7 +193,7 @@ void calc_retardation( point *X, pulsar *psr, point *LoS,
     double t = proj / SPEED_OF_LIGHT;
 
     // Convert the photon travel time into a pulsar rotation phase
-    set_psr_angle_rad( dph, t*psr->Om.rad );
+    set_psr_angle_rad( dph, t * psr->Om.rad * psr->spin );
 
     // Rotate the line of sight by that amount (around the z-axis = pulsar's
     // rotation axis), if requested

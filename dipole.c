@@ -33,7 +33,7 @@ void obs_to_mag_frame( point *xo, pulsar *psr, psr_angle *ph, point *xm )
     // Un-rotate the phase
     if (ph)
     {
-        set_psr_angle_deg( &iph, 360.0-ph->deg );
+        set_psr_angle_deg( &iph, -ph->deg * psr->spin );
         rotate_about_axis( xo, xm, &iph, 'z', POINT_SET_ALL );
     }
     else
@@ -42,7 +42,7 @@ void obs_to_mag_frame( point *xo, pulsar *psr, psr_angle *ph, point *xm )
     }
 
     // Un-rotate the inclination alpha
-    set_psr_angle_deg( &ial, 360.0-psr->al.deg );
+    set_psr_angle_deg( &ial, -psr->al.deg );
     rotate_about_axis( xm, xm, &ial, 'y', POINT_SET_ALL );
 }
 
@@ -66,7 +66,10 @@ void mag_to_obs_frame( point *xm, pulsar *psr, psr_angle *ph, point *xo )
     // Rotate the phase
     if (ph)
     {
-        rotate_about_axis( xo, xo, ph, 'z', POINT_SET_ALL );
+        // Adjust for pulsar's spin direction
+        psr_angle iph;
+        set_psr_angle_deg( &iph, ph->deg * psr->spin );
+        rotate_about_axis( xo, xo, &iph, 'z', POINT_SET_ALL );
     }
 }
 

@@ -106,8 +106,7 @@ int main( int argc, char *argv[] )
     psr_angle *ze = create_psr_angle_deg( o.ze_deg );
 
     double P = o.P_sec;
-    double r = 1e4; /* This doesn't actually make a difference to any of the
-                       outputs of this program */
+    double r = 1e4;
 
     set_pulsar( &psr, ra, dec, P, r, al, ze );
 
