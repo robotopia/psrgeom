@@ -964,7 +964,7 @@ void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,
     rotate_about_axis( &u, &u,   &uz, 'y', POINT_SET_ALL );
 
     // Now we have a vector whose x and y coords give us the angle we need
-    set_psr_angle_rad( psi, atan2( u.x[0], u.x[1] ) );
+    set_psr_angle_rad( psi, atan( u.x[1] / u.x[0] ) );
 }
 
 

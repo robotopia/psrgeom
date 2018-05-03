@@ -108,7 +108,8 @@ int main( int argc, char *argv[] )
     print_col_headers( f );
 
     // For calculating the (retarded) line of sight
-    point LoS, retarded_LoS;
+    point B; // The magnetic field at the emission point
+    point V, retarded_LoS;
     point A; // The acceleration vector at the emission point
     psr_angle dph; // The retardation angle
     psr_angle psi; // The polarisation angle
@@ -178,22 +179,23 @@ int main( int argc, char *argv[] )
                 }
 
                 // Calculate the (retarded) phase at which the emission would
-                // be seen. First, set the LoS to the velocity vector. While
+                // be seen. First, set the V to the velocity vector. While
                 // we're at it, get the acceleration vector and the curvature.
-                calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, NULL, &LoS,
+                calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, &B, &V,
                              NULL, &A, NULL, NULL );
-                calc_retardation( &emit_pt, &psr, &LoS, &dph, &retarded_LoS );
-                kappa = calc_curvature( &LoS, &A );
+                calc_retardation( &emit_pt, &psr, &V, &dph, &retarded_LoS );
+                kappa = calc_curvature( &V, &A );
 
                 // Now, the observed phase is the negative of the azimuthal
                 // angle of the retarded line of sight
-                set_psr_angle_deg( &phase, -(LoS.ph.deg) );
+                set_psr_angle_deg( &phase, -(V.ph.deg) );
                 set_psr_angle_deg( &ret_phase, -(retarded_LoS.ph.deg) );
 
                 // Calculate the observed polarisation angle at emit_pt
                 accel_to_pol_angle( &psr, &A, &phase, &psi );
 
                 // Print out results!
+                /*
                 fprintf( f, "%.15e %.15e %.15e %.15e "
                             "%.15e %.15e %.15e %.15e\n",
                             s_deg, p_deg,
@@ -201,6 +203,20 @@ int main( int argc, char *argv[] )
                             emit_pt.x[1] * xscale,
                             emit_pt.x[2] * xscale,
                             ret_phase.deg, psi.deg, kappa );
+                */
+                fprintf( f, "%.15e %.15e %.15e %.15e "
+                            "%.15e %.15e %.15e %.15e "
+                            "%.15e %.15e %.15e %.15e "
+                            "%.15e %.15e %.15e %.15e "
+                            "%.15e %.15e %.15e %.15e\n",
+                            s_deg, p_deg,
+                            emit_pt.x[0] * xscale,
+                            emit_pt.x[1] * xscale,
+                            emit_pt.x[2] * xscale,
+                            ret_phase.deg, psi.deg, kappa,
+                            B.x[0], B.x[1], B.x[2], B.r,
+                            V.x[0], V.x[1], V.x[2], V.r,
+                            A.x[0], A.x[1], A.x[2], A.r );
 
                 // Set the emission point to the new initial point, go another
                 // 1 km along, and then try to find the next emit_pt
@@ -344,7 +360,11 @@ void print_col_headers( FILE *f )
  */
 {
     // Print out a line to file handle f
-    fprintf( f, "#  s(deg)  p(deg)  x  y  z  φ(deg)  Ψ(deg)  κ\n" );
+    //fprintf( f, "#  s(deg)  p(deg)  x  y  z  φ(deg)  Ψ(deg)  κ\n" );
+    fprintf( f, "#  s(deg)  p(deg)  x  y  z  φ(deg)  Ψ(deg)  κ  "
+                "Bx  By  Bz  |B|  "
+                "Vx  Vy  Vz  |V|  "
+                "Ax  Ay  Az  |A|\n" );
 }
 
 
