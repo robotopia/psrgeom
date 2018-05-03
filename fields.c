@@ -959,12 +959,17 @@ void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,
     point u; // (u)nrotated
     psr_angle uz; // For (u)nrotating the (z)eta angle
     reverse_psr_angle( &psr->ze, &uz );
+    psr_angle ph;
+    if (psr->spin == SPIN_POS)
+        copy_psr_angle( phase, &ph );
+    else
+        reverse_psr_angle( phase, &ph );
 
-    rotate_about_axis(  A, &u, phase, 'z', POINT_SET_ALL );
-    rotate_about_axis( &u, &u,   &uz, 'y', POINT_SET_ALL );
+    rotate_about_axis(  A, &u, &ph, 'z', POINT_SET_ALL );
+    rotate_about_axis( &u, &u, &uz, 'y', POINT_SET_ALL );
 
     // Now we have a vector whose x and y coords give us the angle we need
-    set_psr_angle_rad( psi, atan( u.x[1] / u.x[0] ) );
+    set_psr_angle_rad( psi, -atan( u.x[1] / u.x[0] ) );
 }
 
 

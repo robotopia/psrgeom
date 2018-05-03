@@ -188,7 +188,11 @@ int main( int argc, char *argv[] )
 
                 // Now, the observed phase is the negative of the azimuthal
                 // angle of the retarded line of sight
-                set_psr_angle_deg( &phase, -(V.ph.deg) );
+                set_point_xyz( &V, V.x[0], V.x[1], V.x[2], POINT_SET_PH );
+                if (psr.spin == SPIN_POS)
+                    set_psr_angle_deg( &phase, -V.ph.deg );
+                else
+                    copy_psr_angle( &(V.ph), &phase );
                 set_psr_angle_deg( &ret_phase, -(retarded_LoS.ph.deg) );
 
                 // Calculate the observed polarisation angle at emit_pt
@@ -213,7 +217,7 @@ int main( int argc, char *argv[] )
                             emit_pt.x[0] * xscale,
                             emit_pt.x[1] * xscale,
                             emit_pt.x[2] * xscale,
-                            ret_phase.deg, psi.deg, kappa,
+                            phase.deg, psi.deg, kappa,
                             B.x[0], B.x[1], B.x[2], B.r,
                             V.x[0], V.x[1], V.x[2], V.r,
                             A.x[0], A.x[1], A.x[2], A.r );
