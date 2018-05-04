@@ -365,10 +365,10 @@ void print_col_headers( FILE *f )
 {
     // Print out a line to file handle f
     //fprintf( f, "#  s(deg)  p(deg)  x  y  z  φ(deg)  Ψ(deg)  κ\n" );
-    fprintf( f, "#  s(deg)  p(deg)  x  y  z  φ(deg)  Ψ(deg)  κ  "
-                "Bx  By  Bz  |B|  "
-                "Vx  Vy  Vz  |V|  "
-                "Ax  Ay  Az  |A|\n" );
+    fprintf( f, "#  s_deg  p_deg  x  y  z  phase_deg  polangle_deg  curvature  "
+                "Bx  By  Bz  B  "
+                "Vx  Vy  Vz  V  "
+                "Ax  Ay  Az  A\n" );
 }
 
 
