@@ -10,3 +10,5 @@ psr_polangle
 psr_fitwidth
 psr_trajectory
 calc_fields_test
+psr_mcpa
+psr_visiblepoints
