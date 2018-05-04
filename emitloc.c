@@ -863,7 +863,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
 
 
 int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
-        double tmult, point *emit_pt, FILE *f )
+        double tmult, point *emit_pt, double *dist, FILE *f )
 /* Finds the next emission point that occurs on the field line that passes
  * through init_pt. The algorithm climbs along the field line, starting at
  * init_pt, and moving with step sizes specified by tmult, in the specified
@@ -886,6 +886,7 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
  *
  * Outputs:
  *   point  *emit_pt   : the next found emission point
+ *   double *dist      : the total distance travelled from init_pt to emit_pt
  *
  * Returns:
  *   The possible return values are:
@@ -908,6 +909,8 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
     int nsols;
     double VzZ_prev = NAN;
     double VzZ_next = NAN;
+
+    *dist = 0.0; // keep track of total distance travelled
 
     // Now step along the field line and re-evaluate (V̂∙ẑ - ζ) at each step,
     // checking if it has changed sign.
@@ -961,6 +964,7 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
 
         // Take a step along B
         Bstep( &prev_pt, psr, tstep, direction, &next_pt );
+        *dist += tstep;
         set_point_xyz( &next_pt, next_pt.x[0],
                                  next_pt.x[1],
                                  next_pt.x[2],
@@ -1066,6 +1070,7 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
         {
             copy_point( &mid_pt, &prev_pt );
             VzZ_prev = VzZ_mid;
+            *dist += tstep;
         }
 
         // If requested, print out prev_pt

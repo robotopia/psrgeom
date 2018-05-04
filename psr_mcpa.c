@@ -127,6 +127,7 @@ int main( int argc, char *argv[] )
     psr_angle ret_phase; // The retarded (observed) phase
     double kappa; // The curvature
     int find_emitpt_result;
+    double dist, dist_tmp; // Keep track of distance travelled along field lines
 
     while (1) // This is for looping over s values (where s is the "polar cap
               // distance" from the magnetic pole. The stopping criteria is
@@ -166,11 +167,15 @@ int main( int argc, char *argv[] )
                                      init_pt.x[1],
                                      init_pt.x[2],
                                      POINT_SET_ALL );
+            dist = 0.0; // Start distance tracker
+
             while (1)
             {
                 // Climb up the field line to find the next emit_pt
                 find_emitpt_result = find_next_line_emission_point( &psr,
-                        &init_pt, DIR_OUTWARD, o.tmult, &emit_pt, NULL );
+                        &init_pt, DIR_OUTWARD, o.tmult, &emit_pt, &dist_tmp,
+                        NULL );
+                dist += dist_tmp;
 
                 // If no point was found, exit the loop
                 if (find_emitpt_result != EMIT_PT_FOUND)
@@ -212,7 +217,8 @@ int main( int argc, char *argv[] )
                             "%.15e %.15e %.15e %.15e "
                             "%.15e %.15e %.15e %.15e "
                             "%.15e %.15e %.15e %.15e "
-                            "%.15e %.15e %.15e %.15e\n",
+                            "%.15e %.15e %.15e %.15e "
+                            "%.15e\n",
                             s_deg, p_deg,
                             emit_pt.x[0] * xscale,
                             emit_pt.x[1] * xscale,
@@ -220,7 +226,8 @@ int main( int argc, char *argv[] )
                             phase.deg, psi.deg, kappa,
                             B.x[0], B.x[1], B.x[2], B.r,
                             V.x[0], V.x[1], V.x[2], V.r,
-                            A.x[0], A.x[1], A.x[2], A.r );
+                            A.x[0], A.x[1], A.x[2], A.r,
+                            dist );
 
                 // Set the emission point to the new initial point, go another
                 // 1 km along, and then try to find the next emit_pt
@@ -364,11 +371,11 @@ void print_col_headers( FILE *f )
  */
 {
     // Print out a line to file handle f
-    //fprintf( f, "#  s(deg)  p(deg)  x  y  z  φ(deg)  Ψ(deg)  κ\n" );
     fprintf( f, "#  s_deg  p_deg  x  y  z  phase_deg  polangle_deg  curvature  "
                 "Bx  By  Bz  B  "
                 "Vx  Vy  Vz  V  "
-                "Ax  Ay  Az  A\n" );
+                "Ax  Ay  Az  A  "
+                "dist\n" );
 }
 
 

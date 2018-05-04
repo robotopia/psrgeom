@@ -1,7 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
-#define PSRGEOM_VERSION "1.2.8"
+#define PSRGEOM_VERSION "1.2.9"
 
 #include <stdio.h>
 #include <math.h>
@@ -205,7 +205,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         int direction, point *init_pt, point *emit_pt, FILE *f );
 
 int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
-        double tmult, point *emit_pt, FILE *f );
+        double tmult, point *emit_pt, double *dist, FILE *f );
 
 void psr_cost_deriv( point *X, pulsar *psr, psr_angle *phase, int direction,
                      double dx, point *grad );
