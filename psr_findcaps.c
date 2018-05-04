@@ -132,6 +132,6 @@ int main()
 
         // Print out the results for this α
         start_s = (s_low + s_high) / 2.0; // = new start point
-        printf( "%12f %12f %12f\n", alpha_deg, start_s, (s_high - s_low)/2.0 );
+        printf( "%12f %12f %12f\n", alpha_deg, start_s - alpha_deg, (s_high - s_low)/2.0 );
     }
 }
