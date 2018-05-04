@@ -21,7 +21,8 @@ TARGETS = psr_fields \
 		  psr_fitwidth \
 		  psr_trajectory \
 		  psr_visiblepoints \
-		  psr_mcpa
+		  psr_mcpa \
+		  psr_findcaps
 
 TESTS = calc_fields_test
 
