@@ -12,9 +12,19 @@ struct opts
     double  ze_deg;    // zeta angle in deg
     double  P_sec;     // period, in sec
     double  tmult;     // RK4 step size, as a fraction of lt cyl radius
-    int     rL_norm;   // bool: normalise to light cylinder radius?
-    double  rho_lim;    // limit to within rho_lim * light cylinder radius?
+    int     rL_norm;   // bool: normalise output to light cylinder radius?
+    double  rho_lim;   // limit to within rho_lim * light cylinder radius?
     char   *outfile;   // name of output file (NULL means stdout)
+    double  s_start;   // starting value of s
+    double  s_stop;    // stopping value of s
+    int     s_nstep;   // number of s steps
+    double  p_start;   // starting value of p
+    double  p_stop;    // stopping value of p
+    int     p_nstep;   // number of p steps
+    int     dipole;    // bool: use dipole
+    int     mag_axis;  // bool: use magnetic axis as reference axis
+    double  axis_col;  // colatitude of reference axis (deg)
+    double  axis_long; // longitude of reference axis (deg)
 };
 
 void usage();
@@ -35,6 +45,16 @@ int main( int argc, char *argv[] )
     o.rL_norm   = 0;
     o.rho_lim   = 1.2;
     o.outfile   = NULL;
+    o.s_start   = NAN;
+    o.s_stop    = NAN;
+    o.s_nstep   = 0;
+    o.p_start   = NAN;
+    o.p_stop    = NAN;
+    o.p_nstep   = 0;
+    o.dipole    = 0;
+    o.mag_axis  = 0;
+    o.axis_col  = 0.0;
+    o.axis_long = 0.0;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -147,25 +167,44 @@ void usage()
                            "in degrees (required)\n" );
     printf( "  -P  period   The rotation period of the pulsar, in seconds "
                            "(required)\n" );
+    printf( "  -p  p[:P[:n]]   The azimuth relative to the reference axis, "
+                           "in degrees. The range is from p to P with n "
+                           "steps.\n"
+            "                 p      ==> p:p:1\n"
+            "                 p:P    ==> p:P:2\n" );
+    printf( "  -s  s[:S[:n]]   The angular distance from the reference axis, "
+                           "in degrees. The range is from s to S with n "
+                           "steps.\n"
+            "                 s      ==> s:s:1\n"
+            "                 s:S    ==> s:S:2\n" );
     printf( "  -z  zeta     The angle between the rotation axis and the line "
                            "of sight in degrees (required)\n" );
     printf( "\nOTHER OPTIONS:\n" );
+    printf( "  -d           Use the dipole model instead of the full Deutsch "
+                           "solution\n" );
     printf( "  -h           Display this help and exit\n" );
     printf( "  -L           Normalise distances to light cylinder radius\n" );
+    printf( "  -m           Set the reference axis to the magnetic axis "
+                           "(default is reference axis = rotation axis)\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
     printf( "  -r  rho_lim  The maximum distance allowed for lines. "
                            "(default = 1.2)\n" );
     printf( "  -t  tmult    The initial size of the RK4 steps, as a fraction "
                            "of the light cylinder radius (default: 0.01)\n" );
+    printf( "  -X  col:long The reference axis from which s and p are "
+                           "calculated (see -p and -s), in degrees (default ="
+                           " 0:0)\n" );
+
 }
+
 
 
 void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:hLo:P:r:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:dhLmo:p:P:r:s:t:X:z:")) != -1)
     {
         switch (c)
         {

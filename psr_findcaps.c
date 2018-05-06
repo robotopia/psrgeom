@@ -11,17 +11,50 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <psrgeom.h>
 
-int main()
+void usage()
 {
+    printf( "PSRGEOM v%s\n", PSRGEOM_VERSION );
+    printf( "psr_findcaps -h\n" );
+    printf( "    Display this help and exit\n" );
+    printf( "psr_findcaps PERIOD\n" );
+    printf( "    Find the polar caps for a pulsar with period PERIOD (in "
+                "seconds) for alpha angles 0° < α < 90°\n" );
+    printf( "\n" );
+    printf( "The output (stdout) is three columns of numbers [a,s,da], "
+                "where:\n" );
+    printf( "    a  = alpha angle\n" );
+    printf( "    s  = colatitude with respect to magnetic axis\n" );
+    printf( "    da = angular width of polar cap\n" );
+    printf( "[a,s,da] are all given in degrees\n" );
+}
+
+int main( int argc, char* argv[] )
+{
+    // See if -h is passed as first argument on the command line
+    if (argc <= 1)
+    {
+        usage();
+        exit(EXIT_FAILURE);
+    }
+
+    if (strcmp( argv[1], "-h" ) == 0)
+    {
+        usage();
+        exit(EXIT_SUCCESS);
+    }
+
+    // Parse the first argument as the period (in seconds)
     // Set step size (along field lines) to 1% of radial distance from origin
+    double P = atof( argv[1] );
+
     double tmult = 0.01;
 
     // Set up the pulsar struct
     pulsar psr;
     double alpha_deg;
-    double P = 1.0;
     double r = 1e4;
 
     psr_angle *ra  = NULL;
@@ -45,7 +78,7 @@ int main()
     printf( "# alpha_deg  polarcap_colatitude_deg  polarcap_radius_deg\n" );
 
     // Loop over different alpha angles
-    for (alpha_deg = 0.1; alpha_deg <= 90.0; alpha_deg += 0.1)
+    for (alpha_deg = 0.1/P; alpha_deg <= 90.0; alpha_deg += 0.1)
     {
         // For each α, start at the polar cap location of the previous α
         // and scan along the great circle in the xz-plane in both directions

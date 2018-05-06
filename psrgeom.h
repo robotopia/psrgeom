@@ -187,6 +187,7 @@ void move_around_cyl( point *start_pt, psr_angle *xi, double zdist,
 
 /**** PSRGEOM I/O ****/
 void print_psrg_header( FILE *f, int argc, char *argv[] );
+void parse_range( char *str, double *start, double *stop, int *nsteps );
 
 /**** Finding the emission point ****/
 
