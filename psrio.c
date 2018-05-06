@@ -62,3 +62,32 @@ void parse_range( char *str, double *start, double *stop, int *nsteps )
     }
 }
 
+
+void parse_direction( char *str, point *direction )
+/* Parses a string that is assumed to be in the following format:
+ *
+ *   colatitude,longitude
+ *
+ * where both the colatitude and the longitude are in degrees.
+ * If the string fails to parse, an error is thrown and execution stops.
+ * Otherwise, the colatitude and longitude are converted into a unit
+ * vector (cast as a "point") in 3D space.
+ */
+{
+    double col_deg, long_deg;
+    int nitems = sscanf( str, "%lf,%lf", &col_deg, &long_deg );
+    if (nitems == 2)
+    {
+        fprintf( stderr, "error: parse_direction: failed to parse \"%s\" as "
+                         "\"colatitude,longitude\"\n", str );
+        exit(EXIT_FAILURE);
+    }
+
+    // Turn the angles into psr_angles
+    psr_angle c, l; // (c)olatitude, (l)ongitude
+    set_psr_angle_deg( &c, col_deg );
+    set_psr_angle_deg( &l, long_deg );
+
+    // Convert into a point struct
+    set_point_sph( direction, 1.0, &c, &l, POINT_SET_ALL );
+}

@@ -23,8 +23,7 @@ struct opts
     int     p_nstep;   // number of p steps
     int     dipole;    // bool: use dipole
     int     mag_axis;  // bool: use magnetic axis as reference axis
-    double  axis_col;  // colatitude of reference axis (deg)
-    double  axis_long; // longitude of reference axis (deg)
+    point   ref_axis;  // the reference axis for s and p
 };
 
 void usage();
@@ -53,8 +52,7 @@ int main( int argc, char *argv[] )
     o.p_nstep   = 0;
     o.dipole    = 0;
     o.mag_axis  = 0;
-    o.axis_col  = 0.0;
-    o.axis_long = 0.0;
+    set_point_xyz( &(o.ref_axis), 0.0, 0.0, 1.0, POINT_SET_ALL );
 
     parse_cmd_line( argc, argv, &o );
 
@@ -85,6 +83,16 @@ int main( int argc, char *argv[] )
     double r = 1e4;      // Pulsar radius
 
     set_pulsar( &psr, ra, dec, P, r, al, ze );
+
+    // Check if -m was supplied, and set o.ref_axis accordingly
+    if (o.mag_axis)
+    {
+        psr_angle zero;
+        set_psr_angle_deg( &zero, 0.0 );
+        set_point_sph( &(o->ref_axis), 1.0, al, &zero, POINT_SET_ALL );
+    }
+
+    // BOOKMARK //
 
     // Set up points
     point emit_pt;
@@ -184,7 +192,8 @@ void usage()
                            "solution\n" );
     printf( "  -h           Display this help and exit\n" );
     printf( "  -L           Normalise distances to light cylinder radius\n" );
-    printf( "  -m           Set the reference axis to the magnetic axis "
+    printf( "  -m           Set the reference axis to the magnetic axis. "
+                           "This option overrides the -X option "
                            "(default is reference axis = rotation axis)\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
@@ -192,9 +201,10 @@ void usage()
                            "(default = 1.2)\n" );
     printf( "  -t  tmult    The initial size of the RK4 steps, as a fraction "
                            "of the light cylinder radius (default: 0.01)\n" );
-    printf( "  -X  col:long The reference axis from which s and p are "
-                           "calculated (see -p and -s), in degrees (default ="
-                           " 0:0)\n" );
+    printf( "  -X  col,long The reference axis from which s and p are "
+                           "calculated (see -p and -s), in degrees. If -m is "
+                           "also given, this option is ignored (default = "
+                           "0,0)\n" );
 
 }
 
@@ -211,6 +221,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
             case 'a':
                 o->al_deg = atof(optarg);
                 break;
+            case 'd':
+                o->dipole = 1;
+                break;
             case 'h':
                 usage();
                 exit(EXIT_SUCCESS);
@@ -218,8 +231,16 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
             case 'L':
                 o->rL_norm = 1;
                 break;
+            case 'm':
+                o->mag_axis = 1;
+                break;
             case 'o':
                 o->outfile = strdup(optarg);
+                break;
+            case 'p':
+                parse_range( optarg, &(o->p_start),
+                                     &(o->p_stop),
+                                     &(o->p_nstep) );
                 break;
             case 'P':
                 o->P_sec = atof(optarg);
@@ -227,8 +248,16 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
             case 'r':
                 o->rho_lim = atof(optarg);
                 break;
+            case 's':
+                parse_range( optarg, &(o->s_start),
+                                     &(o->s_stop),
+                                     &(o->s_nstep) );
+                break;
             case 't':
                 o->tmult = atof(optarg);
+                break;
+            case 'X':
+                parse_direction( optarg, &(o->ref_axis) );
                 break;
             case 'z':
                 o->ze_deg = atof(optarg);
@@ -248,6 +277,13 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
     if (isnan(o->al_deg) || isnan(o->P_sec) || isnan(o->ze_deg))
     {
         fprintf( stderr, "error: -a, -P, and -z options required\n" );
+        usage();
+        exit(EXIT_FAILURE);
+    }
+
+    if (isnan(o->s_start) || isnan(o->p_start))
+    {
+        fprintf( stderr, "error: -p and -s options required\n" );
         usage();
         exit(EXIT_FAILURE);
     }
