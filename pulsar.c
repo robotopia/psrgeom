@@ -30,8 +30,8 @@ double light_cylinder( double P )
 }
 
 
-void set_pulsar( pulsar *psr, psr_angle *ra, psr_angle *dec, double P, double r,
-        psr_angle *al, psr_angle *ze )
+void set_pulsar( pulsar *psr, psr_angle *ra, psr_angle *dec, double P,
+        double r, psr_angle *al, psr_angle *ze )
 {
     // Only set non-NULL angle arguments
     if (ra)

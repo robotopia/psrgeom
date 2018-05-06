@@ -89,68 +89,64 @@ int main( int argc, char *argv[] )
     {
         psr_angle zero;
         set_psr_angle_deg( &zero, 0.0 );
-        set_point_sph( &(o->ref_axis), 1.0, al, &zero, POINT_SET_ALL );
+        set_point_sph( &(o.ref_axis), 1.0, al, &zero, POINT_SET_ALL );
     }
 
-    // BOOKMARK //
-
     // Set up points
-    point emit_pt;
-    point foot_pt; // The end point of either footpoint() or farpoint()
+    point foot_pt;     // The footpoint relative to the ref_axis
+    point obs_foot_pt; // The footpoint in the observer frame
+    point far_pt;      // The furthest point
 
     // Print header and column header to file
     print_psrg_header( f, argc, argv );
     print_col_headers( f );
 
-    // Start at φ = 0° at work around
-    psr_angle ph;
-    set_psr_angle_deg( &ph, 0.0 );
+    // Draw the requested lines
+    int linetype;  // either CLOSED_LINE or OPEN_LINE
+    int s_idx, p_idx;
+    double s_deg, p_deg;
+    double ds, dp;
+    psr_angle s, p;
 
-    // Initially, set the init_pt to an approximate initial guess
-    find_approx_emission_point( &psr, &ph, DIR_OUTWARD, &emit_pt );
-
-    // Make sure the initial "previous" point is at least 2 pulsar radii above
-    // the pulsar's surface
-    double min_height = 3.0*psr.r;
-    if (emit_pt.r < min_height)
+    for (s_idx = 0; s_idx < o.s_nstep; s_idx++)
     {
-        psr_angle za; // "zero angle"
-        set_psr_angle_rad( &za, 0.0 );
-        set_point_sph( &emit_pt, min_height,
-                                 &psr.al,
-                                 &za,
-                                 POINT_SET_ALL );
-    }
+        // Convert s_idx to an angle
+        ds = (o.s_nstep == 1 ?
+                0.0 :
+                (o.s_stop - o.s_start)/(o.s_nstep - 1.0));
+        s_deg = o.s_start + s_idx*ds;
+        set_psr_angle_deg( &s, s_deg );
 
-    int N = 360;
-    int i;
-    for (i = 0; i < N; i++)
-    {
-        // Set the rotation phase
-        set_psr_angle_deg( &ph, i*360.0/N );
-
-        // Get the emission pt (guaranteed to be on a last open field line)
-        int status;
-        status = find_emission_point_elevator( &psr, &ph, DIR_OUTWARD,
-                                               &emit_pt, &emit_pt, NULL );
-        if (status == EMIT_PT_TOO_HIGH)
+        for (p_idx = 0; p_idx < o.p_nstep; p_idx++)
         {
-            fprintf( stderr, "# Stopped at light cylinder\n" );
-            exit(EXIT_SUCCESS);
-        }
-        else if (status == EMIT_PT_TOO_LOW)
-        {
-            fprintf( stderr, "# Stopped at pulsar surface\n" );
-            exit(EXIT_SUCCESS);
-        }
+            // Convert p_idx to an angle
+            dp = (o.p_nstep == 1 ?
+                    0.0 :
+                    (o.p_stop - o.p_start)/(o.p_nstep - 1.0));
+            p_deg = o.p_start + p_idx*dp;
+            set_psr_angle_deg( &p, p_deg );
 
-        // Trace the line back and forwards to the footpoints
-        footpoint( &emit_pt, &psr, o.tmult, DIR_INWARD, f, o.rL_norm,
-                   o.rho_lim, &foot_pt );
-        fprintf( f, "\n" );
-        footpoint( &emit_pt, &psr, o.tmult, DIR_OUTWARD, f, o.rL_norm,
-                   o.rho_lim, &foot_pt );
-        fprintf( f, "\n\n" );
+            // From s and p, get a footpoint (rel. to reference axis)
+            set_point_sph( &foot_pt, psr.r, &s, &p, POINT_SET_ALL );
+
+            // Rotate it into the observer's frame
+            rotate_about_axis( &foot_pt, &obs_foot_pt, &(o.ref_axis.th),
+                    'y', POINT_SET_ALL );
+            rotate_about_axis( &obs_foot_pt, &obs_foot_pt, &(o.ref_axis.ph),
+                    'z', POINT_SET_ALL );
+
+            // Follow the mag field line to the extreme
+            linetype = get_fieldline_type( &obs_foot_pt, &psr, o.tmult,
+                    o.rL_norm, f, &far_pt );
+            if (linetype == CLOSED_LINE)
+            {
+                footpoint( &far_pt, &psr, o.tmult, DIR_OUTWARD, f, o.rL_norm,
+                        1.0, NULL );
+            }
+
+            // Insert a blank line into the output
+            fprintf( f, "\n\n" );
+        }
     }
 
     // Clean up
@@ -293,7 +289,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 void print_col_headers( FILE *f )
 {
     // Print out a line to file handle f
-    fprintf( f, "# x y z\n" );
+    fprintf( f, "# x y z tstep\n" );
 }
 
 

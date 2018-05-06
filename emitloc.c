@@ -672,15 +672,14 @@ void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
 }
 
 
-int get_fieldline_type( point *X, pulsar *psr, double tmult, FILE *f )
+int get_fieldline_type( point *X, pulsar *psr, double tmult, int rL_norm,
+        FILE *f, point *far_pt )
 {
-    int    rL_norm = 0;
     double rL_lim  = 1.0;  // Stop at the light cylinder
 
     int stop_type;
-    point far_pt;
 
-    stop_type = farpoint( X, psr, tmult, f, rL_norm, rL_lim, &far_pt );
+    stop_type = farpoint( X, psr, tmult, f, rL_norm, rL_lim, far_pt );
 
     if (stop_type == STOP_FOUND)
         return CLOSED_LINE;
@@ -745,7 +744,8 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
     int temp_type = -1; //  "
 
     double tmult = 0.01;
-    rlo_type = get_fieldline_type( &rlo_pt, psr, tmult, NULL );
+    int rL_norm = 0;
+    rlo_type = get_fieldline_type( &rlo_pt, psr, tmult, rL_norm, NULL, NULL );
 
     // Iterate both inwards and outwards until an opposite-type field line
     // is found
@@ -770,7 +770,8 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
             return EMIT_PT_TOO_LOW; // Return with error code "too low"
 
         // And the field line type there
-        rlo_type = get_fieldline_type( &rlo_pt, psr, tmult, NULL );
+        rlo_type = get_fieldline_type( &rlo_pt, psr, tmult, rL_norm, NULL,
+                NULL );
 
         // If they differ, then we have a match!
         if (rlo_type != temp_type)
@@ -800,7 +801,8 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
             return EMIT_PT_TOO_HIGH; // Return with error code "too high"
 
         // And the field line type there
-        rhi_type = get_fieldline_type( &rhi_pt, psr, tmult, NULL );
+        rhi_type = get_fieldline_type( &rhi_pt, psr, tmult, rL_norm, NULL,
+                NULL );
 
         // If they differ, then we have a match!
         if (rhi_type != temp_type)
@@ -836,7 +838,8 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         find_LoS_at_r( &mid_pt, psr, phase, direction, &temp_pt, NULL );
 
         // And get it's field line type
-        temp_type = get_fieldline_type( &temp_pt, psr, tmult, NULL );
+        temp_type = get_fieldline_type( &temp_pt, psr, tmult, rL_norm, NULL,
+                NULL );
 
         // Have the new point replace whichever of the two straddling points
         // it has the same type as

@@ -153,7 +153,8 @@ int main( int argc, char *argv[] )
             mag_to_obs_frame( &foot_pt_mag, &psr, NULL, &foot_pt );
 
             // Now check that we're on an open field line
-            linetype = get_fieldline_type( &foot_pt, &psr, o.tmult, NULL );
+            linetype = get_fieldline_type( &foot_pt, &psr, o.tmult, o.rL_norm,
+                    NULL, NULL );
             if (linetype == CLOSED_LINE)
             {
                 continue;

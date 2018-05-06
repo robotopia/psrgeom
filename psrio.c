@@ -60,6 +60,12 @@ void parse_range( char *str, double *start, double *stop, int *nsteps )
                          "\"start:stop:nsteps\"\n", str );
         exit(EXIT_FAILURE);
     }
+
+    if (*nsteps < 1)
+    {
+        fprintf( stderr, "error: parse_range: nsteps must be > 0\n" );
+        exit(EXIT_FAILURE);
+    }
 }
 
 

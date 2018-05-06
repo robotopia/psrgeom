@@ -447,13 +447,6 @@ int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
  *   STOP_EXCEED : The outer limit (rL_lim) was reached
  */
 {
-    // Error checking: foot_pt must be a valid pointer to a point struct
-    if (!foot_pt)
-    {
-        fprintf( stderr, "error: footpoint: foot_pt cannot be NULL\n" );
-        exit(EXIT_FAILURE);
-    }
-
     int retval = STOP_FOUND;
 
     point x, old_x;
@@ -486,8 +479,8 @@ int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
         // Write out the current xyz position, if requested,
         // but only if we're still moving "forward"
         if (write_xyz && (temp_drctn == direction))
-            fprintf( write_xyz, "%.15e %.15e %.15e\n",
-                     xscale*x.x[0], xscale*x.x[1], xscale*x.x[2] );
+            fprintf( write_xyz, "%.15e %.15e %.15e %.15e\n",
+                     xscale*x.x[0], xscale*x.x[1], xscale*x.x[2], tstep );
 
         // Take a single RK4 step along the magnetic field
         Bstep( &old_x, psr, tstep, temp_drctn, &x );
@@ -536,7 +529,8 @@ int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
     }
 
     // Make the final point available to the caller
-    copy_point( &x, foot_pt );
+    if (foot_pt != NULL)
+        copy_point( &x, foot_pt );
 
     return retval;
 }
@@ -663,13 +657,6 @@ int farpoint( point *start_pt, pulsar *psr, double tmult,
  *   STOP_EXCEED : The outer limit (rL_lim) was reached
  */
 {
-    // Error checking: far_pt must be a valid pointer to a point struct
-    if (!far_pt)
-    {
-        fprintf( stderr, "error: farpoint: far_pt cannot be NULL\n" );
-        exit(EXIT_FAILURE);
-    }
-
     int retval = STOP_FOUND;
     point x, old_x;
 
@@ -753,7 +740,8 @@ int farpoint( point *start_pt, pulsar *psr, double tmult,
     }
 
     // Make the final point available to the caller
-    copy_point( &x, far_pt );
+    if (far_pt != NULL)
+        copy_point( &x, far_pt );
 
     return retval;
 }
