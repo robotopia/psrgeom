@@ -115,7 +115,7 @@ void calc_fields( point *X, pulsar *psr, double v,
 
     double a[] =
     {
-        r5i,
+        psr->al.cos * r5i,
         psr->al.sin * phC/(r3*rL2),
         psr->al.sin * ( phC*r5i + phS/(r4*rL)),
        -psr->al.sin * phS/(r3*rL2),
@@ -251,7 +251,7 @@ void calc_fields( point *X, pulsar *psr, double v,
     double r5rL3i = 1.0 / (r5 * rL3);
     double a_temp[] =
     {
-        -5.0 / r7,
+        -5.0*psr->al.cos / r7,
         -r5rL3i * psr->al.sin * (r*phS + 3.0*rL*phC),
         -r7rL2i * psr->al.sin * (5.0*r*rL*phS + (5.0*rL2 - rr)*phC),
         -r5rL3i * psr->al.sin * (r*phC - 3.0*rL*phS),

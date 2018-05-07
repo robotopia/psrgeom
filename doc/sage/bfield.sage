@@ -27,6 +27,17 @@ assume(th,'real')
 assume(c,'real')
 assume(rmin,'real')
 
+#x = 2.385672579618471e+07
+#y = 9.542690318473887e+06
+#z = -4.771345159236941e+06
+#P = 0.5
+#c = 299792458
+#r = sqrt(x^2+y^2+z^2)
+#Om = 2*n(pi)/P
+#rL = c/Om
+#rmin = 1e4
+#al = 90*pi/180
+
 k = 1/rL
 rhat = vector([x/r,y/r,z/r])
 #ph = (r-rmin)/rL # leave commented to keep the "ph" as an abbreviation for "(r-rmin)/rL"
@@ -41,14 +52,14 @@ mz    = m0*cos(al)
 
 Bpart1 = mperp*((xhat - rhat*(rhat.dot_product(xhat)))*(k^2*cos(ph)/r) + (3*rhat*(xhat.dot_product(rhat)) - xhat)*(k*r*sin(ph) + cos(ph))/r^3)
 Bpart2 = mperp*((rhat*(rhat.dot_product(yhat)) - yhat)*(k^2*sin(ph)/r) + (3*rhat*(yhat.dot_product(rhat)) - yhat)*(k*r*cos(ph) - sin(ph))/r^3)
-Bpart3 = 1/r^3 * (3*rhat*(rhat.dot_product(zhat)) - zhat)
+Bpart3 = mz/r^3 * (3*rhat*(rhat.dot_product(zhat)) - zhat)
 
 B1 = Bpart1+Bpart2+Bpart3
 B1x = B1[0]
 B1y = B1[1]
 B1z = B1[2]
 
-A1 =  1/r^5
+A1 =  cos(al)/r^5
 A2 =  sin(al)*cos(ph)/r^3/rL^2
 A3 =  sin(al)*cos(ph)/r^5    + sin(al)*sin(ph)/r^4/rL
 A4 = -sin(al)*sin(ph)/r^3/rL^2
@@ -62,3 +73,8 @@ B2z = A1*(3*z^2-r^2) - A2*(x*z)     + A3*(3*x*z)     - A4*(y*z)     + A5*(3*y*z)
 # B1x == B2x
 # B1y == B2y
 # B1z == B2z
+
+B1_len = sqrt(B1x^2 + B1y^2 + B1z^2)
+B1xn = B1x / B1_len
+B1yn = B1y / B1_len
+B1zn = B1z / B1_len
