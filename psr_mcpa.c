@@ -45,10 +45,13 @@ struct opts
     double  P_sec;       // period, in sec
     int     rL_norm;     // bool: normalise to light cylinder radius?
     char   *outfile;     // name of output file (NULL means stdout)
-    double  foot_ds_deg; // step size in "distance" from mag. pole in deg
-    double  foot_dp_deg; // step size in "φ" around polar cap in deg
-    double  sstart;      // starting value of mag. pole distance, "s"
     double  tmult;       // step size along field lines
+    double  s_start;     // starting value of s
+    double  s_stop;      // stopping value of s
+    int     s_nstep;     // number of s steps
+    double  p_start;     // starting value of p
+    double  p_stop;      // stopping value of p
+    int     p_nstep;     // number of p steps
 };
 
 void usage();
@@ -64,10 +67,13 @@ int main( int argc, char *argv[] )
     o.ze_deg      = NAN;
     o.rL_norm     = 0;
     o.outfile     = NULL;
-    o.foot_ds_deg = NAN;
-    o.foot_dp_deg = NAN;
-    o.sstart      = 0.0;
     o.tmult       = NAN;
+    o.s_start   = NAN;
+    o.s_stop    = NAN;
+    o.s_nstep   = 0;
+    o.p_start   = NAN;
+    o.p_stop    = NAN;
+    o.p_nstep   = 0;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -115,10 +121,6 @@ int main( int argc, char *argv[] )
     psr_angle psi; // The polarisation angle
 
     // Loop over the polar cap
-    psr_angle s; // The "polar cap distance" to the magnetic pole
-    psr_angle p; // The azimuth angle around the polar cap
-    double s_deg = o.sstart;
-    double p_deg;
     int open_found; // Set to 1 if an open line is found for a given s
     int linetype;   // either CLOSED_LINE or OPEN_LINE
     point foot_pt, foot_pt_mag;
@@ -129,21 +131,32 @@ int main( int argc, char *argv[] )
     int find_emitpt_result;
     double dist, dist_tmp; // Keep track of distance travelled along field lines
 
-    while (1) // This is for looping over s values (where s is the "polar cap
-              // distance" from the magnetic pole. The stopping criteria is
-              // when a full circuit is done around the polar cap without
-              // finding any open field lines
+    int s_idx, p_idx;
+    double s_deg, p_deg;
+    double ds, dp;
+    psr_angle s; // The "polar cap distance" to the magnetic pole
+    psr_angle p; // The azimuth angle around the polar cap
+
+    for (s_idx = 0; s_idx < o.s_nstep; s_idx++)
     {
-        // Turn the s_deg into a psr_angle type
+        // Convert s_idx to an angle
+        ds = (o.s_nstep == 1 ?
+                0.0 :
+                (o.s_stop - o.s_start)/(o.s_nstep - 1.0));
+        s_deg = o.s_start + s_idx*ds;
         set_psr_angle_deg( &s, s_deg );
 
         // Reset open_found to NOT found
         open_found = 0;
 
         // Loop around the polar cap in azimuth
-        for (p_deg = 0.0; p_deg < 360.0; p_deg += o.foot_dp_deg)
+        for (p_idx = 0; p_idx < o.p_nstep; p_idx++)
         {
-            // Turn the p_deg into a psr_angle type
+            // Convert p_idx to an angle
+            dp = (o.p_nstep == 1 ?
+                    0.0 :
+                    (o.p_stop - o.p_start)/(o.p_nstep - 1.0));
+            p_deg = o.p_start + p_idx*dp;
             set_psr_angle_deg( &p, p_deg );
 
             // Convert (s,p) into a point in the magnetic frame
@@ -253,9 +266,6 @@ int main( int argc, char *argv[] )
         // Check to see if any open lines were found. If not, exit the loop
         if (open_found == 0)
             break;
-
-        // Increment the s angle
-        s_deg += o.foot_ds_deg;
     }
 
 
@@ -281,10 +291,16 @@ void usage()
                            "in degrees (required)\n" );
     printf( "  -P  period   The rotation period of the pulsar, in seconds "
                            "(required)\n" );
-    printf( "  -p  step     Step size for moving around the polar cap, in "
-                           "degrees (required)\n" );
-    printf( "  -s  step     Step size for distance from magnetic pole, in "
-                           "degrees (required)\n" );
+    printf( "  -p  p[:P[:n]]   The azimuth relative to the magnetic axis, "
+                           "in degrees. The range is from p to P with n "
+                           "steps.\n"
+            "                 p      ==> p:p:1\n"
+            "                 p:P    ==> p:P:2\n" );
+    printf( "  -s  s[:S[:n]]   The angular distance from the magnetic axis, "
+                           "in degrees. The range is from s to S with n "
+                           "steps.\n"
+            "                 s      ==> s:s:1\n"
+            "                 s:S    ==> s:S:2\n" );
     printf( "  -t  step     Step size for moving along magnetic field lines, "
                            "as a fraction of the light cylinder radius "
                            "(default: 0.01)\n" );
@@ -295,8 +311,6 @@ void usage()
     printf( "  -L           Normalise distances to light cylinder radius\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
-    printf( "  -S  start    Starting distance from magnetic pole, in "
-                           "degrees [default = 0.0]\n" );
 }
 
 
@@ -322,16 +336,17 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 o->outfile = strdup(optarg);
                 break;
             case 'p':
-                o->foot_dp_deg = atof(optarg);
+                parse_range( optarg, &(o->p_start),
+                                     &(o->p_stop),
+                                     &(o->p_nstep) );
                 break;
             case 'P':
                 o->P_sec = atof(optarg);
                 break;
             case 's':
-                o->foot_ds_deg = atof(optarg);
-                break;
-            case 'S':
-                o->sstart = atof(optarg);
+                parse_range( optarg, &(o->s_start),
+                                     &(o->s_stop),
+                                     &(o->s_nstep) );
                 break;
             case 't':
                 o->tmult = atof(optarg);
@@ -352,10 +367,17 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 
     // Check that all the arguments are valid
     if (isnan(o->al_deg) || isnan(o->P_sec) || isnan(o->ze_deg) ||
-        isnan(o->foot_dp_deg) || isnan(o->foot_ds_deg) || isnan(o->tmult))
+        isnan(o->tmult))
     {
-        fprintf( stderr, "error: -a, -p, -P, -s, -t, and -z options required"
+        fprintf( stderr, "error: -a, -P, -t, and -z options required"
                          "\n" );
+        usage();
+        exit(EXIT_FAILURE);
+    }
+
+    if (isnan(o->s_start) || isnan(o->p_start))
+    {
+        fprintf( stderr, "error: -p and -s options required\n" );
         usage();
         exit(EXIT_FAILURE);
     }

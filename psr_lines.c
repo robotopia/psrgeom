@@ -185,7 +185,7 @@ void usage()
                            "of sight in degrees (required)\n" );
     printf( "\nOTHER OPTIONS:\n" );
     printf( "  -d           Use the dipole model instead of the full Deutsch "
-                           "solution\n" );
+                           "solution (not yet implemented)\n" );
     printf( "  -h           Display this help and exit\n" );
     printf( "  -L           Normalise distances to light cylinder radius\n" );
     printf( "  -m           Set the reference axis to the magnetic axis. "

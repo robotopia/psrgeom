@@ -50,7 +50,7 @@ int main( int argc, char* argv[] )
     // Set step size (along field lines) to 1% of radial distance from origin
     double P = atof( argv[1] );
 
-    double tmult = 0.01;
+    double tmult = 0.001;
     int rL_norm = 0;
 
     // Set up the pulsar struct
