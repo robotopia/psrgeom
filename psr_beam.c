@@ -37,7 +37,7 @@ struct opts
     double  al_deg;      // alpha angle in deg
     double  ze_deg;      // zeta angle in deg
     double  P_sec;       // period, in sec
-    int     rL_norm;     // bool: normalise to light cylinder radius?
+    double  gamma;       // The Lorentz factor
     char   *outfile;     // name of output file (NULL means stdout)
     double  tmult;       // step size along field lines
     double  s_start;     // starting value of s
@@ -46,6 +46,8 @@ struct opts
     double  p_start;     // starting value of p
     double  p_stop;      // stopping value of p
     int     p_nstep;     // number of p steps
+    int     open_only;   // only consider open field lines
+    int     num_lines;   // sample this many lines
 };
 
 void usage();
@@ -56,18 +58,20 @@ int main( int argc, char *argv[] )
 {
     // Set up struct for command line options and set default values
     struct opts o;
-    o.al_deg      = NAN;
-    o.P_sec       = NAN;
-    o.ze_deg      = NAN;
-    o.rL_norm     = 0;
-    o.outfile     = NULL;
-    o.tmult       = NAN;
+    o.al_deg    = NAN;
+    o.P_sec     = NAN;
+    o.ze_deg    = NAN;
+    o.gamma     = NAN;
+    o.outfile   = NULL;
+    o.tmult     = NAN;
     o.s_start   = NAN;
     o.s_stop    = NAN;
     o.s_nstep   = 0;
     o.p_start   = NAN;
     o.p_stop    = NAN;
     o.p_nstep   = 0;
+    o.open_only = 0;
+    o.num_lines = 10000;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -131,134 +135,110 @@ int main( int argc, char *argv[] )
     psr_angle s; // The "polar cap distance" to the magnetic pole
     psr_angle p; // The azimuth angle around the polar cap
 
-    for (s_idx = 0; s_idx < o.s_nstep; s_idx++)
+    int i;
+    for (i = 0; i < o.num_lines; i++)
     {
-        // Convert s_idx to an angle
-        ds = (o.s_nstep == 1 ?
-                0.0 :
-                (o.s_stop - o.s_start)/(o.s_nstep - 1.0));
-        s_deg = o.s_start + s_idx*ds;
-        set_psr_angle_deg( &s, s_deg );
+        // Obtain a random point on the pulsar surface
+        set_point_sph( &foot_pt_mag, psr.r, &s, &p, POINT_SET_ALL );
 
-        // Reset open_found to NOT found
-        open_found = 0;
+        // Convert the foot_pt into observer coordinates
+        mag_to_obs_frame( &foot_pt_mag, &psr, NULL, &foot_pt );
 
-        // Loop around the polar cap in azimuth
-        for (p_idx = 0; p_idx < o.p_nstep; p_idx++)
+        // Now check that we're on an open field line
+        linetype = get_fieldline_type( &foot_pt, &psr, o.tmult, o.rL_norm,
+                NULL, NULL );
+        if (linetype == CLOSED_LINE)
         {
-            // Convert p_idx to an angle
-            dp = (o.p_nstep == 1 ?
-                    0.0 :
-                    (o.p_stop - o.p_start)/(o.p_nstep - 1.0));
-            p_deg = o.p_start + p_idx*dp;
-            set_psr_angle_deg( &p, p_deg );
+            continue;
+        }
+        open_found = 1;
 
-            // Convert (s,p) into a point in the magnetic frame
-            set_point_sph( &foot_pt_mag, psr.r, &s, &p, POINT_SET_ALL );
+        // Now find the emission points along this line!
+        // Start 1 metre above the surface
+        Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt );
+        set_point_xyz( &init_pt, init_pt.x[0],
+                init_pt.x[1],
+                init_pt.x[2],
+                POINT_SET_ALL );
+        dist = 0.0; // Start distance tracker
 
-            // Convert the foot_pt into observer coordinates
-            mag_to_obs_frame( &foot_pt_mag, &psr, NULL, &foot_pt );
+        while (1)
+        {
+            // Climb up the field line to find the next emit_pt
+            find_emitpt_result = find_next_line_emission_point( &psr,
+                    &init_pt, DIR_OUTWARD, o.tmult, &emit_pt, &dist_tmp,
+                    NULL );
+            dist += dist_tmp;
 
-            // Now check that we're on an open field line
-            linetype = get_fieldline_type( &foot_pt, &psr, o.tmult, o.rL_norm,
-                    NULL, NULL );
-            if (linetype == CLOSED_LINE)
+            // If no point was found, exit the loop
+            if (find_emitpt_result != EMIT_PT_FOUND)
             {
-                continue;
-            }
-            open_found = 1;
-
-            // Now find the emission points along this line!
-            // Start 1 metre above the surface
-            Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt );
-            set_point_xyz( &init_pt, init_pt.x[0],
-                                     init_pt.x[1],
-                                     init_pt.x[2],
-                                     POINT_SET_ALL );
-            dist = 0.0; // Start distance tracker
-
-            while (1)
-            {
-                // Climb up the field line to find the next emit_pt
-                find_emitpt_result = find_next_line_emission_point( &psr,
-                        &init_pt, DIR_OUTWARD, o.tmult, &emit_pt, &dist_tmp,
-                        NULL );
-                dist += dist_tmp;
-
-                // If no point was found, exit the loop
-                if (find_emitpt_result != EMIT_PT_FOUND)
-                {
-                    break;
-                }
-
-                // Calculate the (retarded) phase at which the emission would
-                // be seen. First, set the V to the velocity vector. While
-                // we're at it, get the acceleration vector and the curvature.
-                calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, &B, &V,
-                             NULL, &A, NULL, NULL );
-                calc_retardation( &emit_pt, &psr, &V, &dph, &retarded_LoS );
-                kappa = calc_curvature( &V, &A );
-
-                // Now, the observed phase is the negative of the azimuthal
-                // angle of the retarded line of sight
-                set_point_xyz( &V, V.x[0], V.x[1], V.x[2], POINT_SET_PH );
-                if (psr.spin == SPIN_POS)
-                    set_psr_angle_deg( &phase, -V.ph.deg );
-                else
-                    copy_psr_angle( &(V.ph), &phase );
-                set_psr_angle_deg( &ret_phase, -(retarded_LoS.ph.deg) );
-
-                // Calculate the observed polarisation angle at emit_pt
-                accel_to_pol_angle( &psr, &A, &phase, &psi );
-
-                // Print out results!
-                /*
-                fprintf( f, "%.15e %.15e %.15e %.15e "
-                            "%.15e %.15e %.15e %.15e\n",
-                            s_deg, p_deg,
-                            emit_pt.x[0] * xscale,
-                            emit_pt.x[1] * xscale,
-                            emit_pt.x[2] * xscale,
-                            ret_phase.deg, psi.deg, kappa );
-                */
-                fprintf( f, "%.15e %.15e %.15e %.15e "
-                            "%.15e %.15e %.15e %.15e "
-                            "%.15e %.15e %.15e %.15e "
-                            "%.15e %.15e %.15e %.15e "
-                            "%.15e %.15e %.15e %.15e "
-                            "%.15e\n",
-                            s_deg, p_deg,
-                            emit_pt.x[0] * xscale,
-                            emit_pt.x[1] * xscale,
-                            emit_pt.x[2] * xscale,
-                            phase.deg, psi.deg, kappa,
-                            B.x[0], B.x[1], B.x[2], B.r,
-                            V.x[0], V.x[1], V.x[2], V.r,
-                            A.x[0], A.x[1], A.x[2], A.r,
-                            dist );
-
-                // Set the emission point to the new initial point, go another
-                // 1 km along, and then try to find the next emit_pt
-                // It seems that anything much short than a 1 km jump
-                // results in the next point being found in the same area. The
-                // size of the volume that converges appears to be larger than
-                // expected. This is probably a bug, but for now I'll just
-                // move along 1 km before trying again.
-                copy_point( &emit_pt, &init_pt );
-                Bstep( &init_pt, &psr, 1000.0, DIR_OUTWARD, &init_pt );
-                set_point_xyz( &init_pt, init_pt.x[0],
-                                         init_pt.x[1],
-                                         init_pt.x[2],
-                                         POINT_SET_ALL );
-            }
-
-            // If s = 0°, then no need to do any more values of p
-            if (s_deg == 0.0)
                 break;
+            }
+
+            // Calculate the (retarded) phase at which the emission would
+            // be seen. First, set the V to the velocity vector. While
+            // we're at it, get the acceleration vector and the curvature.
+            calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, &B, &V,
+                    NULL, &A, NULL, NULL );
+            calc_retardation( &emit_pt, &psr, &V, &dph, &retarded_LoS );
+            kappa = calc_curvature( &V, &A );
+
+            // Now, the observed phase is the negative of the azimuthal
+            // angle of the retarded line of sight
+            set_point_xyz( &V, V.x[0], V.x[1], V.x[2], POINT_SET_PH );
+            if (psr.spin == SPIN_POS)
+                set_psr_angle_deg( &phase, -V.ph.deg );
+            else
+                copy_psr_angle( &(V.ph), &phase );
+            set_psr_angle_deg( &ret_phase, -(retarded_LoS.ph.deg) );
+
+            // Calculate the observed polarisation angle at emit_pt
+            accel_to_pol_angle( &psr, &A, &phase, &psi );
+
+            // Print out results!
+            /*
+               fprintf( f, "%.15e %.15e %.15e %.15e "
+               "%.15e %.15e %.15e %.15e\n",
+               s_deg, p_deg,
+               emit_pt.x[0] * xscale,
+               emit_pt.x[1] * xscale,
+               emit_pt.x[2] * xscale,
+               ret_phase.deg, psi.deg, kappa );
+               */
+            fprintf( f, "%.15e %.15e %.15e %.15e "
+                    "%.15e %.15e %.15e %.15e "
+                    "%.15e %.15e %.15e %.15e "
+                    "%.15e %.15e %.15e %.15e "
+                    "%.15e %.15e %.15e %.15e "
+                    "%.15e\n",
+                    s_deg, p_deg,
+                    emit_pt.x[0] * xscale,
+                    emit_pt.x[1] * xscale,
+                    emit_pt.x[2] * xscale,
+                    phase.deg, psi.deg, kappa,
+                    B.x[0], B.x[1], B.x[2], B.r,
+                    V.x[0], V.x[1], V.x[2], V.r,
+                    A.x[0], A.x[1], A.x[2], A.r,
+                    dist );
+
+            // Set the emission point to the new initial point, go another
+            // 1 km along, and then try to find the next emit_pt
+            // It seems that anything much short than a 1 km jump
+            // results in the next point being found in the same area. The
+            // size of the volume that converges appears to be larger than
+            // expected. This is probably a bug, but for now I'll just
+            // move along 1 km before trying again.
+            copy_point( &emit_pt, &init_pt );
+            Bstep( &init_pt, &psr, 1000.0, DIR_OUTWARD, &init_pt );
+            set_point_xyz( &init_pt, init_pt.x[0],
+                    init_pt.x[1],
+                    init_pt.x[2],
+                    POINT_SET_ALL );
         }
 
-        // Check to see if any open lines were found. If not, exit the loop
-        if (open_found == 0)
+        // If s = 0°, then no need to do any more values of p
+        if (s_deg == 0.0)
             break;
     }
 
@@ -283,6 +263,7 @@ void usage()
     printf( "REQUIRED OPTIONS:\n" );
     printf( "  -a  alpha    The angle between the rotation and magetic axes "
                            "in degrees (required)\n" );
+    printf( "  -g  gamma    The Lorentz factor\n" );
     printf( "  -P  period   The rotation period of the pulsar, in seconds "
                            "(required)\n" );
     printf( "  -p  p[:P[:n]]   The azimuth relative to the magnetic axis, "
@@ -302,9 +283,11 @@ void usage()
                            "of sight in degrees (required)\n" );
     printf( "\nOTHER OPTIONS:\n" );
     printf( "  -h           Display this help and exit\n" );
-    printf( "  -L           Normalise distances to light cylinder radius\n" );
+    printf( "  -n  nlines   Sample nlines magnetic field lines "
+                           "(default: 10000)\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
+    printf( "  -O           Only consider open field lines (default: off)\n" );
 }
 
 
@@ -312,22 +295,28 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:hLo:p:P:s:S:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:g:hn:o:Op:P:s:S:t:z:")) != -1)
     {
         switch (c)
         {
             case 'a':
                 o->al_deg = atof(optarg);
                 break;
+            case 'g':
+                o->gamma = atof(optarg);
+                break;
             case 'h':
                 usage();
                 exit(EXIT_SUCCESS);
                 break;
-            case 'L':
-                o->rL_norm = 1;
+            case 'n':
+                o->num_lines = atoi(optarg);
                 break;
             case 'o':
                 o->outfile = strdup(optarg);
+                break;
+            case 'O':
+                o->open_only = 1;
                 break;
             case 'p':
                 parse_range( optarg, &(o->p_start),
@@ -361,9 +350,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 
     // Check that all the arguments are valid
     if (isnan(o->al_deg) || isnan(o->P_sec) || isnan(o->ze_deg) ||
-        isnan(o->tmult))
+        isnan(o->tmult)  || isnan(o->gamma))
     {
-        fprintf( stderr, "error: -a, -P, -t, and -z options required"
+        fprintf( stderr, "error: -a, -g, -P, -t, and -z options required"
                          "\n" );
         usage();
         exit(EXIT_FAILURE);
