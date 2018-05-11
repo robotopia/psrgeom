@@ -166,6 +166,7 @@ int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
 void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,
         psr_angle *psi );
 double calc_curvature( point *V, point *A );
+double calc_crit_freq( double gamma, double curvature );
 
 
 /**** Dipole field functions ****/

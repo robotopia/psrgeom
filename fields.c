@@ -983,3 +983,19 @@ double calc_curvature( point *V, point *A )
     // Now multiply the length by |a⃗|/|v⃗|² to get the final curvature
     return VxA.r * A->r / (V->r * V->r);
 }
+
+
+double calc_crit_freq( double gamma, double curvature )
+/* Implementation of the formula (see Jackson, 3rd edition, Eqn 14.81):
+ *
+ *          3γ³cκ
+ *    f_c = -----
+ *           4π
+ *
+ * where γ = "gamma", the Lorentz factor,
+ *       κ = "curvature" (in inverse metres),
+ *       c = the speed of light (m/s)
+ */
+{
+    return 0.75*gamma*gamma*gamma*SPEED_OF_LIGHT*curvature/PI;
+}
