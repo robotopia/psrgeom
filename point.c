@@ -143,3 +143,71 @@ void spherical_midpoint( point *p1, point *p2, point *mid_pt, int flags )
                            &sum_pt.ph,
                            flags );
 }
+
+
+void random_direction( point *rand_pt )
+/* This function generates a uniformly distributed random point on the unit
+ * sphere, which is set in rand_pt.
+ * This function assumes that srand() has already been called.
+ */
+{
+    double th_rad, ph_rad;
+    psr_angle th, ph;
+
+    th_rad = RANDTH;
+    ph_rad = RAND(2.0*PI);
+
+    set_psr_angle_rad( &th, th_rad );
+    set_psr_angle_rad( &ph, ph_rad );
+
+    set_point_sph( rand_pt, 1.0, &th, &ph, POINT_SET_ALL );
+}
+
+
+void random_direction_bounded( point *rand_pt, double lo_th_rad,
+        double hi_th_rad )
+/* This function generates a uniformly distributed random point on the swath
+ * of the unit sphere in the range θ1 < θ < θ2, which is set in rand_pt.
+ * (θ1 = "lo_th_rad" and θ2 = "hi_th_rad")
+ * This function assumes that srand() has already been called.
+ */
+{
+    double th_rad, ph_rad;
+    psr_angle th, ph;
+
+    th_rad = RANDTHAB(lo_th_rad, hi_th_rad);
+    ph_rad = RAND(2.0*PI);
+
+    set_psr_angle_rad( &th, th_rad );
+    set_psr_angle_rad( &ph, ph_rad );
+
+    set_point_sph( rand_pt, 1.0, &th, &ph, POINT_SET_ALL );
+}
+
+
+void random_direction_spark( point *rand_pt, double th_rad,
+        double spark_size_rad, int nsparks )
+/* This function produces a random direction within one of "nsparks" circular
+ * regions of radius "spark_size_rad", positioned on an annulus with radius
+ * "th_rad". The result is written to rand_pt.
+ */
+{
+    // Generate a random point on a circle centred at the zenith, as if there
+    // were only a single spark located there.
+    point local_pt;
+    random_direction_bounded( &local_pt, 0.0, spark_size_rad );
+
+    // Rotate the point down to the correct annulus
+    psr_angle th;
+    set_psr_angle_rad( &th, th_rad );
+
+    point annulus_pt;
+    rotate_about_axis( &local_pt, &annulus_pt, &th, 'y', POINT_SET_ALL );
+
+    // Choose a random integer 0 <= x < nsparks and rotate the point in
+    // azimuth by the appropriate amount
+    psr_angle ph;
+    set_psr_angle_deg( &ph, (double)(rand()%nsparks)*360.0/(double)nsparks );
+
+    rotate_about_axis( &annulus_pt, rand_pt, &ph, 'z', POINT_SET_ALL );
+}

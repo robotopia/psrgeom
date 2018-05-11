@@ -50,6 +50,8 @@
 // Generate random numbers
 #define RAND(x)   ((x)*(double)rand()/(double)RAND_MAX)   /* 0 < rand < x */
 #define RANDU     (RAND(1.0) * 2.0 - 1.0)                 /* -1 < rand < 1 */
+#define RANDTH    (acos(1.0-2.0*(RAND(PI))))
+#define RANDTHAB(a_rad,b_rad)  (acos(1.0-(cos(a_rad)-cos(b_rad))*(RAND(PI))))
 
 /**** Structures ****/
 
@@ -143,6 +145,11 @@ void pol_zero( pulsar *psr, psr_angle *phase, point *pz );
 void calc_retardation( point *X, pulsar *psr, point *LoS,
         psr_angle *dph, point *retarded_LoS );
 
+void random_direction( point *rand_pt );
+void random_direction_bounded( point *rand_pt, double lo_th_rad,
+        double hi_th_rad );
+void random_direction_spark( point *rand_pt, double th_rad,
+        double spark_size_rad, int nsparks );
 
 /**** Magnetic field functions ****/
 
