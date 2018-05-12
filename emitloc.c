@@ -900,7 +900,7 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
     obs_to_mag_frame( init_pt, psr, NULL, &init_pt_mag );
 
     // Set up points and angles for the fields and other needed quantities
-    point      B, V, A;
+    point      V, A;
     point      retarded_LoS, retarded_LoS_mag;
     psr_angle  phase, dph, psi;
     double     kappa, crit_freq;
@@ -916,7 +916,7 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
     while ((emit_pt.rhosq < psr->rL2) && (emit_pt.r > psr->r))
     {
         // Calculate the necessary fields at this point
-        calc_fields( &emit_pt, psr, SPEED_OF_LIGHT, &B, &V, NULL, &A, NULL,
+        calc_fields( &emit_pt, psr, SPEED_OF_LIGHT, NULL, &V, NULL, &A, NULL,
                 NULL );
         set_point_xyz( &V, V.x[0], V.x[1], V.x[2],
                 POINT_SET_PH | POINT_SET_TH );
@@ -947,12 +947,13 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
             obs_to_mag_frame( &retarded_LoS, psr, NULL, &retarded_LoS_mag );
 
             // Print out the results!
-            fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
+            fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
                     init_pt_mag.th.deg, init_pt_mag.ph.deg,
-                    retarded_LoS_mag.th.deg, retarded_LoS_mag.ph.deg,
+                    V.th.deg, V.ph.deg, // <-- DEBUGGING!
                     psi.deg,
-                    dph.deg,
-                    crit_freq/1.0e6 );
+                    retarded_LoS.ph.deg, //dph.deg,
+                    crit_freq/1.0e6,
+                    emit_pt.r/1.0e3 );
         }
 
         // Climb another rung on the field line ladder

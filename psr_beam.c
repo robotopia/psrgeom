@@ -17,11 +17,12 @@
  * calculated.
  *
  * The final output includes:
- *   1) the polar coordinates of the footpoint of the magnetic field line
- *   2) the polar coordinates of the photon direction (with retardation)
- *   3) the polarisation angle
- *   4) the phase retardation due to the emission height
- *   5) the critical frequency
+ *   1&2) the polar coordinates of the footpoint of the magnetic field line
+ *   3&4) the polar coordinates of the photon direction (with retardation)
+ *   5) the polarisation angle
+ *   6) the phase retardation due to the emission height
+ *   7) the critical frequency (in MHz)
+ *   8) the emission height (in km)
  *
  ****************************************************************************/
 
@@ -282,16 +283,17 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 
 void print_col_headers( FILE *f )
 /* The final output includes:
- *   1) the polar coordinates of the footpoint of the magnetic field line
- *   2) the polar coordinates of the photon direction (with retardation)
- *   3) the polarisation angle
- *   4) the phase retardation due to the emission height
- *   5) the critical frequency
+ *   1&2) the polar coordinates of the footpoint of the magnetic field line
+ *   3&4) the polar coordinates of the photon direction (with retardation)
+ *   5) the polarisation angle
+ *   6) the phase retardation due to the emission height
+ *   7) the critical frequency (in MHz)
+ *   8) the emission height (in km)
  */
 {
     // Print out a line to file handle f
     fprintf( f, "#  s_deg  p_deg  th_deg  ph_deg  polangle_deg  retard_deg  "
-                "freqcrit_MHz\n" );
+                "freqcrit_MHz  height_km\n" );
 }
 
 
