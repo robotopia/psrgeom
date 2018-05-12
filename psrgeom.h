@@ -51,7 +51,7 @@
 #define RAND(x)   ((x)*(double)rand()/(double)RAND_MAX)   /* 0 < rand < x */
 #define RANDU     (RAND(1.0) * 2.0 - 1.0)                 /* -1 < rand < 1 */
 #define RANDTH    (acos(1.0-2.0*(RAND(PI))))
-#define RANDTHAB(a_rad,b_rad)  (acos(1.0-(cos(a_rad)-cos(b_rad))*(RAND(PI))))
+#define RANDTHAB(a_rad,b_rad)  (acos(cos(a_rad)+(cos(b_rad)-cos(a_rad))*(RAND(1.0))))
 
 /**** Structures ****/
 

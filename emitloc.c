@@ -952,6 +952,8 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
 
         // Climb another rung on the field line ladder
         Bstep( &emit_pt, psr, tmult*emit_pt.r, DIR_OUTWARD, &emit_pt );
+        set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
+                POINT_SET_R | POINT_SET_RHOSQ );
     }
 
     // Restore the original zeta value to the pulsar struct

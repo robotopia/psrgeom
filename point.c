@@ -32,10 +32,13 @@ void set_point_xyz( point *p, double x, double y, double z, int flags )
         p->rhosq = x*x + y*y;
 
     // Calculate spherical coordinates
+    double r = 0.0;
     if ((flags & POINT_SET_R) || (flags & POINT_SET_TH))
-        p->r = sqrt( x*x + y*y + z*z );
+        r = sqrt( x*x + y*y + z*z );
+    if (flags & POINT_SET_R)
+        p->r = r;
     if (flags & POINT_SET_TH)
-        set_psr_angle_cos( &p->th, z/(p->r) );
+        set_psr_angle_cos( &p->th, z/r );
     if (flags & POINT_SET_PH)
         set_psr_angle_rad( &p->ph, atan2(y,x) );
 }
@@ -195,7 +198,7 @@ void random_direction_spark( point *rand_pt, double th_rad,
     // Generate a random point on a circle centred at the zenith, as if there
     // were only a single spark located there.
     point local_pt;
-    random_direction_bounded( &local_pt, 0.0, spark_size_rad, 0.0, 360.0 );
+    random_direction_bounded( &local_pt, 0.0, spark_size_rad, 0.0, 2.0*PI );
 
     // Rotate the point down to the correct annulus
     psr_angle th;

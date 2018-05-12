@@ -228,15 +228,15 @@ void calc_fields( point *X, pulsar *psr, double v,
         {
             V1->x[i] = Vpos[i] / Vpos_len;
             if (i == 1) V1->x[i] *= psr->spin;
-            V1->r    = Vpos_len;
         }
         if (V2)
         {
             V2->x[i] = Vneg[i] / Vneg_len;
             if (i == 1) V2->x[i] *= psr->spin;
-            V2->r    = Vneg_len;
         }
     }
+    if (V1)  V1->r = Vpos_len;
+    if (V2)  V2->r = Vneg_len;
 
     // Return, if there's nothing more to calculate
     if (!calcA)
@@ -395,15 +395,16 @@ void calc_fields( point *X, pulsar *psr, double v,
         {
             A1->x[i] = Apos[i] / Apos_len;
             if (i == 1) A1->x[i] *= psr->spin;
-            A1->r    = Apos_len;
         }
         if (A2)
         {
             A2->x[i] = Aneg[i] / Aneg_len;
             if (i == 1) A2->x[i] *= psr->spin;
-            A2->r    = Aneg_len;
         }
     }
+
+    if (A1)  A1->r = Apos_len;
+    if (A2)  A2->r = Aneg_len;
 }
 
 

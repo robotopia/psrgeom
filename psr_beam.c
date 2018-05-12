@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 #include "psrgeom.h"
 
 struct opts
@@ -54,6 +55,9 @@ void print_col_headers( FILE *f );
 
 int main( int argc, char *argv[] )
 {
+    // Seed the random number generator
+    srand( time( NULL ) );
+
     // Set up struct for command line options and set default values
     struct opts o;
     o.al_deg    = NAN;
@@ -141,6 +145,7 @@ int main( int argc, char *argv[] )
                 POINT_SET_ALL );
 
         climb_and_emit( &psr, &init_pt, o.tmult, o.gamma, f );
+        fprintf( f, "\n\n" );
     }
 
 
