@@ -50,6 +50,7 @@ struct opts
     double  f_stop;      // stopping value of freq (MHz)
     int     open_only;   // only consider open field lines
     int     num_lines;   // sample this many lines
+    int     print_los;   // print out the line of sight
 };
 
 void usage();
@@ -60,6 +61,9 @@ int main( int argc, char *argv[] )
 {
     // Seed the random number generator
     srand( time( NULL ) );
+
+    // Generic counter:
+    int i;
 
     // Set up struct for command line options and set default values
     struct opts o;
@@ -77,6 +81,7 @@ int main( int argc, char *argv[] )
     o.f_stop    = NAN;
     o.open_only = 0;
     o.num_lines = 10000;
+    o.print_los = 0;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -109,16 +114,48 @@ int main( int argc, char *argv[] )
 
     set_pulsar( &psr, ra, dec, P, r, al, ze );
 
-    // Write the file and column headers
+    // Write the file header
     print_psrg_header( f, argc, argv );
-    print_col_headers( f );
 
     // Some needed variables
     int linetype;   // either CLOSED_LINE or OPEN_LINE
     point foot_pt, foot_pt_mag;
     point init_pt;
 
-    int i;
+    // If the line of sight is requested, print it out
+    if (o.print_los)
+    {
+        point LoS, LoS_mag;
+        psr_angle LoS_ph;
+
+        // Print out column headers
+        fprintf( f, "# phase_deg  th_deg  ph_deg\n" );
+
+        for (i = 0; i < 360; i++)
+        {
+            // Set up angle
+            set_psr_angle_deg( &LoS_ph, (double)i );
+
+            // Create point in the observer frame, on a unit sphere
+            set_point_sph( &LoS, 1.0, &(psr.ze), &LoS_ph, POINT_SET_ALL );
+
+            // Convert it into the magnetic frame
+            obs_to_mag_frame( &LoS, &psr, NULL, &LoS_mag );
+
+            // Print out the result
+            fprintf( f, "%.15e %.15e %.15e\n",
+                    LoS_ph.deg,
+                    LoS_mag.th.deg,
+                    LoS_mag.ph.deg );
+        }
+
+        // Print out a couple of blank lines to separate it from what follows
+        fprintf( f, "\n\n" );
+    }
+
+    // Write the column headers
+    print_col_headers( f );
+
     for (i = 0; i < o.num_lines; i++)
     {
         // Obtain a random point on the pulsar surface
@@ -186,6 +223,7 @@ void usage()
                            "of sight in degrees (required)\n" );
     printf( "\nOTHER OPTIONS:\n" );
     printf( "  -h           Display this help and exit\n" );
+    printf( "  -l           Print out the line of sight first\n" );
     printf( "  -n  nlines   Sample nlines magnetic field lines "
                            "(default: 10000)\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
@@ -204,7 +242,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:f:g:hn:o:Op:P:s:S:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:f:g:hln:o:Op:P:s:S:t:z:")) != -1)
     {
         switch (c)
         {
@@ -222,6 +260,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
             case 'h':
                 usage();
                 exit(EXIT_SUCCESS);
+                break;
+            case 'l':
+                o->print_los = 1;
                 break;
             case 'n':
                 o->num_lines = atoi(optarg);
