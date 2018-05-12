@@ -866,7 +866,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
 
 
 void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
-        FILE *f )
+        double freq_lo, double freq_hi, FILE *f )
 /* Climb up a field line and emit virtual photons as we go. Stop when either
  * the light cylinder is reached (for an open field line) or when the pulsar
  * surface is reached (for closed field lines).
@@ -921,34 +921,39 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
         set_point_xyz( &V, V.x[0], V.x[1], V.x[2],
                 POINT_SET_PH | POINT_SET_TH );
 
-        // Set the zeta angle to whatever is needed to see this location's
-        // emission
-        copy_psr_angle( &(V.th), &(psr->ze) );
-
-        // Calculate the retardation angle
-        calc_retardation( &emit_pt, psr, &V, &dph, &retarded_LoS );
-
         // Calculate the curvature and thence the critical frequency
         kappa = calc_curvature( &V, &A );
         crit_freq = calc_crit_freq( gamma, kappa );
 
-        // Calculate the polarisation angle
-        if (psr->spin == SPIN_POS)
-            set_psr_angle_deg( &phase, -V.ph.deg );
-        else
-            copy_psr_angle( &(V.ph), &phase );
-        accel_to_pol_angle( psr, &A, &phase, &psi );
+        // If the frequency is within the allowed range, calculate the rest
+        // of the needed quantities
+        if ((freq_lo <= crit_freq) && (crit_freq <= freq_hi))
+        {
+            // Set the zeta angle to whatever is needed to see this location's
+            // emission
+            copy_psr_angle( &(V.th), &(psr->ze) );
 
-        // Convert the emitted beam to magnetic coordinates
-        obs_to_mag_frame( &retarded_LoS, psr, NULL, &retarded_LoS_mag );
+            // Calculate the retardation angle
+            calc_retardation( &emit_pt, psr, &V, &dph, &retarded_LoS );
 
-        // Print out the results!
-        fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
-                init_pt_mag.th.deg, init_pt_mag.ph.deg,
-                retarded_LoS_mag.th.deg, retarded_LoS_mag.ph.deg,
-                psi.deg,
-                dph.deg,
-                crit_freq/1.0e6 );
+            // Calculate the polarisation angle
+            if (psr->spin == SPIN_POS)
+                set_psr_angle_deg( &phase, -V.ph.deg );
+            else
+                copy_psr_angle( &(V.ph), &phase );
+            accel_to_pol_angle( psr, &A, &phase, &psi );
+
+            // Convert the emitted beam to magnetic coordinates
+            obs_to_mag_frame( &retarded_LoS, psr, NULL, &retarded_LoS_mag );
+
+            // Print out the results!
+            fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
+                    init_pt_mag.th.deg, init_pt_mag.ph.deg,
+                    retarded_LoS_mag.th.deg, retarded_LoS_mag.ph.deg,
+                    psi.deg,
+                    dph.deg,
+                    crit_freq/1.0e6 );
+        }
 
         // Climb another rung on the field line ladder
         Bstep( &emit_pt, psr, tmult*emit_pt.r, DIR_OUTWARD, &emit_pt );

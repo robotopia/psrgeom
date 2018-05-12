@@ -45,6 +45,8 @@ struct opts
     double  s_stop;      // stopping value of s
     double  p_start;     // starting value of p
     double  p_stop;      // stopping value of p
+    double  f_start;     // starting value of freq (MHz)
+    double  f_stop;      // stopping value of freq (MHz)
     int     open_only;   // only consider open field lines
     int     num_lines;   // sample this many lines
 };
@@ -70,6 +72,8 @@ int main( int argc, char *argv[] )
     o.s_stop    = NAN;
     o.p_start   = 0.0;
     o.p_stop    = 360.0;
+    o.f_start   = NAN;
+    o.f_stop    = NAN;
     o.open_only = 0;
     o.num_lines = 10000;
 
@@ -144,7 +148,8 @@ int main( int argc, char *argv[] )
                 init_pt.x[2],
                 POINT_SET_ALL );
 
-        climb_and_emit( &psr, &init_pt, o.tmult, o.gamma, f );
+        climb_and_emit( &psr, &init_pt, o.tmult, o.gamma, o.f_start*1.0e6,
+                o.f_stop*1.0e6, f ); /* (1.0e6: convert frequencies to Hz) */
         fprintf( f, "\n\n" );
     }
 
@@ -169,6 +174,8 @@ void usage()
     printf( "REQUIRED OPTIONS:\n" );
     printf( "  -a  alpha    The angle between the rotation and magetic axes "
                            "in degrees (required)\n" );
+    printf( "  -f  f1:f2    The emission frequency, in MHz. "
+                           "The range is from f1 to f2.\n" );
     printf( "  -g  gamma    The Lorentz factor\n" );
     printf( "  -P  period   The rotation period of the pulsar, in seconds "
                            "(required)\n" );
@@ -196,12 +203,17 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:g:hn:o:Op:P:s:S:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:f:g:hn:o:Op:P:s:S:t:z:")) != -1)
     {
         switch (c)
         {
             case 'a':
                 o->al_deg = atof(optarg);
+                break;
+            case 'f':
+                parse_range( optarg, &(o->f_start),
+                                     &(o->f_stop),
+                                     NULL );
                 break;
             case 'g':
                 o->gamma = atof(optarg);
@@ -259,9 +271,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
         exit(EXIT_FAILURE);
     }
 
-    if (isnan(o->s_start))
+    if (isnan(o->s_start) || isnan(o->f_start))
     {
-        fprintf( stderr, "error: -s option required\n" );
+        fprintf( stderr, "error: -f and -s options required\n" );
         usage();
         exit(EXIT_FAILURE);
     }
