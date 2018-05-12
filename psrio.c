@@ -40,19 +40,29 @@ void parse_range( char *str, double *start, double *stop, int *nsteps )
  *
  * where start and stop are floating point numbers and nsteps is an integer.
  * If the string fails to parse, an error is thrown and execution stops.
+ *
+ * nsteps can be NULL, in which case it is ignored.
  */
 {
-    int nitems = sscanf( str, "%lf:%lf:%d", start, stop, nsteps );
+    int nitems;
+
+    if (nsteps == NULL)
+        nitems = sscanf( str, "%lf:%lf", start, stop );
+    else
+        nitems = sscanf( str, "%lf:%lf:%d", start, stop, nsteps );
+
     if (nitems == 3)
         ; // do nothing, all is well
     else if (nitems == 2)
     {
-        *nsteps = 2;
+        if (nsteps != NULL)
+            *nsteps = 2;
     }
     else if (nitems == 1)
     {
         *stop = *start;
-        *nsteps  = 1;
+        if (nsteps != NULL)
+            *nsteps  = 1;
     }
     else
     {
@@ -61,10 +71,13 @@ void parse_range( char *str, double *start, double *stop, int *nsteps )
         exit(EXIT_FAILURE);
     }
 
-    if (*nsteps < 1)
+    if (nsteps != NULL)
     {
-        fprintf( stderr, "error: parse_range: nsteps must be > 0\n" );
-        exit(EXIT_FAILURE);
+        if (*nsteps < 1)
+        {
+            fprintf( stderr, "error: parse_range: nsteps must be > 0\n" );
+            exit(EXIT_FAILURE);
+        }
     }
 }
 

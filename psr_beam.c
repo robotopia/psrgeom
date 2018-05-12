@@ -19,9 +19,9 @@
  * The final output includes:
  *   1) the polar coordinates of the footpoint of the magnetic field line
  *   2) the polar coordinates of the photon direction (with retardation)
- *   2) the polarisation angle, relative to a fixed direction
- *   3) the phase retardation due to the emission height
- *   4) the critical frequency
+ *   3) the polarisation angle
+ *   4) the phase retardation due to the emission height
+ *   5) the critical frequency
  *
  ****************************************************************************/
 
@@ -42,10 +42,8 @@ struct opts
     double  tmult;       // step size along field lines
     double  s_start;     // starting value of s
     double  s_stop;      // stopping value of s
-    int     s_nstep;     // number of s steps
     double  p_start;     // starting value of p
     double  p_stop;      // stopping value of p
-    int     p_nstep;     // number of p steps
     int     open_only;   // only consider open field lines
     int     num_lines;   // sample this many lines
 };
@@ -66,10 +64,8 @@ int main( int argc, char *argv[] )
     o.tmult     = NAN;
     o.s_start   = NAN;
     o.s_stop    = NAN;
-    o.s_nstep   = 0;
-    o.p_start   = NAN;
-    o.p_stop    = NAN;
-    o.p_nstep   = 0;
+    o.p_start   = 0.0;
+    o.p_stop    = 360.0;
     o.open_only = 0;
     o.num_lines = 10000;
 
@@ -139,21 +135,26 @@ int main( int argc, char *argv[] )
     for (i = 0; i < o.num_lines; i++)
     {
         // Obtain a random point on the pulsar surface
-        set_point_sph( &foot_pt_mag, psr.r, &s, &p, POINT_SET_ALL );
+        random_direction_bounded( &foot_pt_mag, o.s_start*DEG2RAD,
+                o.s_stop*DEG2RAD, o.p_start*DEG2RAD, o.p_stop*DEG2RAD );
+        scale_point( &foot_pt_mag, psr.r, &foot_pt_mag );
 
         // Convert the foot_pt into observer coordinates
         mag_to_obs_frame( &foot_pt_mag, &psr, NULL, &foot_pt );
 
-        // Now check that we're on an open field line
-        linetype = get_fieldline_type( &foot_pt, &psr, o.tmult, o.rL_norm,
-                NULL, NULL );
-        if (linetype == CLOSED_LINE)
+        // If requested, check that we're on an open field line
+        if (o.open_only)
         {
-            continue;
+            int rL_norm = 0;
+            linetype = get_fieldline_type( &foot_pt, &psr, o.tmult, rL_norm,
+                    NULL, NULL );
+            if (linetype == CLOSED_LINE)
+            {
+                continue;
+            }
         }
-        open_found = 1;
 
-        // Now find the emission points along this line!
+        // Now climb up the field line, emitting as we go
         // Start 1 metre above the surface
         Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt );
         set_point_xyz( &init_pt, init_pt.x[0],
@@ -266,16 +267,8 @@ void usage()
     printf( "  -g  gamma    The Lorentz factor\n" );
     printf( "  -P  period   The rotation period of the pulsar, in seconds "
                            "(required)\n" );
-    printf( "  -p  p[:P[:n]]   The azimuth relative to the magnetic axis, "
-                           "in degrees. The range is from p to P with n "
-                           "steps.\n"
-            "                 p      ==> p:p:1\n"
-            "                 p:P    ==> p:P:2\n" );
-    printf( "  -s  s[:S[:n]]   The angular distance from the magnetic axis, "
-                           "in degrees. The range is from s to S with n "
-                           "steps.\n"
-            "                 s      ==> s:s:1\n"
-            "                 s:S    ==> s:S:2\n" );
+    printf( "  -s  s1:s2    The angular distance from the magnetic axis, "
+                           "in degrees. The range is from s1 to s2.\n" );
     printf( "  -t  step     Step size for moving along magnetic field lines, "
                            "as a fraction of the light cylinder radius "
                            "(default: 0.01)\n" );
@@ -288,6 +281,9 @@ void usage()
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
     printf( "  -O           Only consider open field lines (default: off)\n" );
+    printf( "  -p  p1:p2    The azimuth relative to the magnetic axis, "
+                           "in degrees. The range is from p1 to p2. Ensure "
+                           "p1 < p2 [default = 0:360]\n" );
 }
 
 
@@ -321,7 +317,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
             case 'p':
                 parse_range( optarg, &(o->p_start),
                                      &(o->p_stop),
-                                     &(o->p_nstep) );
+                                     NULL );
                 break;
             case 'P':
                 o->P_sec = atof(optarg);
@@ -329,7 +325,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
             case 's':
                 parse_range( optarg, &(o->s_start),
                                      &(o->s_stop),
-                                     &(o->s_nstep) );
+                                     NULL );
                 break;
             case 't':
                 o->tmult = atof(optarg);
@@ -358,9 +354,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
         exit(EXIT_FAILURE);
     }
 
-    if (isnan(o->s_start) || isnan(o->p_start))
+    if (isnan(o->s_start))
     {
-        fprintf( stderr, "error: -p and -s options required\n" );
+        fprintf( stderr, "error: -s option required\n" );
         usage();
         exit(EXIT_FAILURE);
     }
@@ -370,18 +366,15 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 void print_col_headers( FILE *f )
 /* The final output includes:
  *   1) the polar coordinates of the footpoint of the magnetic field line
- *   2) the Cartesian coordinates of the emission point
- *   3) the retarded (observed) emission phase
- *   4) the observed polarisation angle
- *   5) the curvature of the particle's trajectory at the emission point
+ *   2) the polar coordinates of the photon direction (with retardation)
+ *   3) the polarisation angle
+ *   4) the phase retardation due to the emission height
+ *   5) the critical frequency
  */
 {
     // Print out a line to file handle f
-    fprintf( f, "#  s_deg  p_deg  x  y  z  phase_deg  polangle_deg  curvature  "
-                "Bx  By  Bz  B  "
-                "Vx  Vy  Vz  V  "
-                "Ax  Ay  Az  A  "
-                "dist\n" );
+    fprintf( f, "#  s_deg  p_deg  th_deg  ph_deg  polangle_deg  retard_deg  "
+                "freqcrit_MHz\n" );
 }
 
 

@@ -128,6 +128,7 @@ double norm_dot( point *p1, point *p2 );
 
 void spherical_midpoint( point *p1, point *p2, point *mid_pt, int flags );
 
+void scale_point( point *in, double scale, point *out );
 
 /**** Pulsar functions ****/
 
@@ -147,7 +148,7 @@ void calc_retardation( point *X, pulsar *psr, point *LoS,
 
 void random_direction( point *rand_pt );
 void random_direction_bounded( point *rand_pt, double lo_th_rad,
-        double hi_th_rad );
+        double hi_th_rad, double lo_ph_rad, double hi_ph_rad );
 void random_direction_spark( point *rand_pt, double th_rad,
         double spark_size_rad, int nsparks );
 

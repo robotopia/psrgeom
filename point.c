@@ -165,7 +165,7 @@ void random_direction( point *rand_pt )
 
 
 void random_direction_bounded( point *rand_pt, double lo_th_rad,
-        double hi_th_rad )
+        double hi_th_rad, double lo_ph_rad, double hi_ph_rad )
 /* This function generates a uniformly distributed random point on the swath
  * of the unit sphere in the range θ1 < θ < θ2, which is set in rand_pt.
  * (θ1 = "lo_th_rad" and θ2 = "hi_th_rad")
@@ -176,7 +176,7 @@ void random_direction_bounded( point *rand_pt, double lo_th_rad,
     psr_angle th, ph;
 
     th_rad = RANDTHAB(lo_th_rad, hi_th_rad);
-    ph_rad = RAND(2.0*PI);
+    ph_rad = RAND(hi_ph_rad - lo_ph_rad) + lo_ph_rad;
 
     set_psr_angle_rad( &th, th_rad );
     set_psr_angle_rad( &ph, ph_rad );
@@ -210,4 +210,23 @@ void random_direction_spark( point *rand_pt, double th_rad,
     set_psr_angle_deg( &ph, (double)(rand()%nsparks)*360.0/(double)nsparks );
 
     rotate_about_axis( &annulus_pt, rand_pt, &ph, 'z', POINT_SET_ALL );
+}
+
+
+void scale_point( point *in, double scale, point *out )
+/* Scale a point by a given amount. The in and out pointers can point to the
+ * same point. ;-)
+ */
+{
+    int i;
+    for (i = 0; i < 3; i++)
+        out->x[i] = in->x[i] * scale;
+    out->r = in->r * scale;
+    out->rhosq = in->rhosq * scale;
+
+    if (in != out)
+    {
+        copy_psr_angle( &(in->th), &(out->th) );
+        copy_psr_angle( &(in->ph), &(out->ph) );
+    }
 }

@@ -865,6 +865,78 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
 }
 
 
+void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
+        FILE *f )
+/* Climb up a field line and emit virtual photons as we go. Stop when either
+ * the light cylinder is reached (for an open field line) or when the pulsar
+ * surface is reached (for closed field lines).
+ *
+ * This function has no "output". Its utility is the side-effect of writing
+ * results out to the specified file handle. It prints out the following:
+ *
+ *   1) the polar coordinates of the footpoint of the magnetic field line
+ *   2) the polar coordinates of the photon direction (with retardation)
+ *   3) the polarisation angle
+ *   4) the phase retardation due to the emission height
+ *   5) the critical frequency
+ *
+ * Inputs:
+ *   pulsar *psr      : the pulsar properties
+ *   point  *init_pt  : the starting point
+ *   double  tmult    : step size as a fraction of init point radial vector
+ *                      length
+ *   double  gamma    : the Lorentz factor of the particles
+ *   FILE   *f        : the file stream to write results to
+ */
+{
+    // Set up a point for moving up the field line
+    point emit_pt;
+    copy_point( init_pt, &emit_pt );
+
+    // Set up points and angles for the fields and other needed quantities
+    point      B, V, A;
+    point      retarded_LoS;
+    psr_angle  dph;
+    double     kappa, crit_freq;
+
+    // Because we're looking at pulsar emission that could be seen from a
+    // range of angles ζ, we'll save off the original value of ζ as set in
+    // the pulsar struct, change it as we need throughout this algorithm,
+    // and restore the original value when we're done.
+    psr_angle orig_zeta;
+    copy_psr_angle( &(psr->ze), &orig_zeta );
+
+    // Loop for all valid points within the light cylinder
+    while ((emit_pt.rhosq < psr->rL2) && (emit_pt.r > psr->r))
+    {
+        // Calculate the necessary fields at this point
+        calc_fields( &emit_pt, psr, SPEED_OF_LIGHT, &B, &V, NULL, &A, NULL,
+                NULL );
+        set_point_xyz( &V, V.x[0], V.x[1], V.x[2],
+                POINT_SET_PH | POINT_SET_TH );
+
+        // Set the zeta angle to whatever is needed to see this location's
+        // emission
+        copy_psr_angle( &(V.th), &(psr->ze) );
+
+        // Calculate the retardation angle
+        calc_retardation( &emit_pt, psr, &V, &dph, &retarded_LoS );
+
+        // Calculate the curvature and thence the critical frequency
+        kappa = calc_curvature( &V, &A );
+        crit_freq = calc_crit_freq( gamma, kappa );
+
+
+
+        // Climb another rung on the field line ladder
+        Bstep( &emit_pt, psr, tmult*emit_pt.r, DIR_OUTWARD, &emit_pt );
+    }
+
+    // Restore the original zeta value to the pulsar struct
+    copy_psr_angle( &orig_zeta, &(psr->ze) );
+}
+
+
 int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
         double tmult, point *emit_pt, double *dist, FILE *f )
 /* Finds the next emission point that occurs on the field line that passes
