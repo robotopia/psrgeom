@@ -949,7 +949,7 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
             // Print out the results!
             fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
                     init_pt_mag.th.deg, init_pt_mag.ph.deg,
-                    V.th.deg, V.ph.deg, // <-- DEBUGGING!
+                    retarded_LoS_mag.th.deg, retarded_LoS_mag.ph.deg,
                     psi.deg,
                     retarded_LoS.ph.deg, //dph.deg,
                     crit_freq/1.0e6,
