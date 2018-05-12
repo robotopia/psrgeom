@@ -880,6 +880,8 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
  *   4) the phase retardation due to the emission height
  *   5) the critical frequency
  *
+ * The polar coordinates are all given in the magnetic field reference frame.
+ *
  * Inputs:
  *   pulsar *psr      : the pulsar properties
  *   point  *init_pt  : the starting point
@@ -893,10 +895,14 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
     point emit_pt;
     copy_point( init_pt, &emit_pt );
 
+    // Get the initial point in magnetic coordinates
+    point init_pt_mag;
+    obs_to_mag_frame( init_pt, psr, NULL, &init_pt_mag );
+
     // Set up points and angles for the fields and other needed quantities
     point      B, V, A;
-    point      retarded_LoS;
-    psr_angle  dph;
+    point      retarded_LoS, retarded_LoS_mag;
+    psr_angle  phase, dph, psi;
     double     kappa, crit_freq;
 
     // Because we're looking at pulsar emission that could be seen from a
@@ -926,7 +932,23 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
         kappa = calc_curvature( &V, &A );
         crit_freq = calc_crit_freq( gamma, kappa );
 
+        // Calculate the polarisation angle
+        if (psr->spin == SPIN_POS)
+            set_psr_angle_deg( &phase, -V.ph.deg );
+        else
+            copy_psr_angle( &(V.ph), &phase );
+        accel_to_pol_angle( psr, &A, &phase, &psi );
 
+        // Convert the emitted beam to magnetic coordinates
+        obs_to_mag_frame( &retarded_LoS, psr, NULL, &retarded_LoS_mag );
+
+        // Print out the results!
+        fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
+                init_pt_mag.th.deg, init_pt_mag.ph.deg,
+                retarded_LoS_mag.th.deg, retarded_LoS_mag.ph.deg,
+                psi.deg,
+                dph.deg,
+                crit_freq/1.0e6 );
 
         // Climb another rung on the field line ladder
         Bstep( &emit_pt, psr, tmult*emit_pt.r, DIR_OUTWARD, &emit_pt );

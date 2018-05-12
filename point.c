@@ -195,7 +195,7 @@ void random_direction_spark( point *rand_pt, double th_rad,
     // Generate a random point on a circle centred at the zenith, as if there
     // were only a single spark located there.
     point local_pt;
-    random_direction_bounded( &local_pt, 0.0, spark_size_rad );
+    random_direction_bounded( &local_pt, 0.0, spark_size_rad, 0.0, 360.0 );
 
     // Rotate the point down to the correct annulus
     psr_angle th;

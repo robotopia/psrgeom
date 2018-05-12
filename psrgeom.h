@@ -224,6 +224,9 @@ void psr_cost_deriv( point *X, pulsar *psr, psr_angle *phase, int direction,
 void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
                     int direction, point *end_pt, FILE *f );
 
+void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
+        FILE *f );
+
 /**** Finding the pulse width ****/
 
 double fitwidth( pulsar *psr, int direction, double width_rad,
