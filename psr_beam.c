@@ -51,6 +51,7 @@ struct opts
     int     open_only;   // only consider open field lines
     int     num_lines;   // sample this many lines
     int     print_los;   // print out the line of sight
+    int     nsparks;     // number of sparks in carousel
 };
 
 void usage();
@@ -82,6 +83,7 @@ int main( int argc, char *argv[] )
     o.open_only = 0;
     o.num_lines = 10000;
     o.print_los = 0;
+    o.nsparks   = 0;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -159,8 +161,18 @@ int main( int argc, char *argv[] )
     for (i = 0; i < o.num_lines; i++)
     {
         // Obtain a random point on the pulsar surface
-        random_direction_bounded( &foot_pt_mag, o.s_start*DEG2RAD,
-                o.s_stop*DEG2RAD, o.p_start*DEG2RAD, o.p_stop*DEG2RAD );
+        if (o.nsparks == 0)
+        {
+            random_direction_bounded( &foot_pt_mag, o.s_start*DEG2RAD,
+                    o.s_stop*DEG2RAD, o.p_start*DEG2RAD, o.p_stop*DEG2RAD );
+        }
+        else /* a carousel of sparks! */
+        {
+            random_direction_spark( &foot_pt_mag,
+                    (o.s_start + o.s_stop )/2.0 * DEG2RAD,
+                    (o.s_stop  - o.s_start)/2.0 * DEG2RAD,
+                    o.nsparks );
+        }
         scale_point( &foot_pt_mag, psr.r, &foot_pt_mag );
 
         // Convert the foot_pt into observer coordinates
@@ -188,7 +200,6 @@ int main( int argc, char *argv[] )
 
         climb_and_emit( &psr, &init_pt, o.tmult, o.gamma, o.f_start*1.0e6,
                 o.f_stop*1.0e6, f ); /* (1.0e6: convert frequencies to Hz) */
-        fprintf( f, "\n\n" );
     }
 
 
@@ -226,6 +237,10 @@ void usage()
     printf( "  -l           Print out the line of sight first\n" );
     printf( "  -n  nlines   Sample nlines magnetic field lines "
                            "(default: 10000)\n" );
+    printf( "  -N  nsparks  The number of sparks in the carousel. If nsparks "
+                           "= 0 (default), the footpoints are sampled "
+                           "uniformly in the range given by -s. Otherwise, "
+                           "the s-range is used to define the spark size.\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
     printf( "  -O           Only consider open field lines (default: off)\n" );
@@ -242,7 +257,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:f:g:hln:o:Op:P:s:S:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:f:g:hln:N:o:Op:P:s:S:t:z:")) != -1)
     {
         switch (c)
         {
@@ -266,6 +281,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 break;
             case 'n':
                 o->num_lines = atoi(optarg);
+                break;
+            case 'N':
+                o->nsparks = atoi(optarg);
                 break;
             case 'o':
                 o->outfile = strdup(optarg);
@@ -317,6 +335,12 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
     {
         fprintf( stderr, "error: -f and -s options required\n" );
         usage();
+        exit(EXIT_FAILURE);
+    }
+
+    if (o->nsparks < 0)
+    {
+        fprintf( stderr, "error: -N (=%d) must be >= 0\n", o->nsparks );
         exit(EXIT_FAILURE);
     }
 }
