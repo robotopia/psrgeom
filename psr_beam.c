@@ -358,7 +358,7 @@ void print_col_headers( FILE *f )
 {
     // Print out a line to file handle f
     fprintf( f, "#  s_deg  p_deg  th_deg  ph_deg  polangle_deg  retard_deg  "
-                "freqcrit_MHz  height_km\n" );
+                "freqcrit_MHz  height_km  curvature_inv_km  x_km  y_km  z_km\n" );
 }
 
 
