@@ -23,6 +23,32 @@ void calc_fields( point *X, pulsar *psr, double v,
                   point *V1, point *V2,
                   point *A1, point *A2,
                   int *nsols )
+/* This is a wrapper function for:
+ *     calc_dipole_fields(), and
+ *     calc_deutsch_fields().
+ * It merely tests what field type has been assigned to the pulsar (psr)
+ * and calls the appropriate function.
+ */
+{
+    switch (psr->field_type)
+    {
+        case DIPOLE:
+            calc_dipole_fields( X, psr, v, B1, V1, V2, A1, A2, nsols );
+            break;
+        case DEUTSCH:
+            calc_deutsch_fields( X, psr, v, B1, V1, V2, A1, A2, nsols );
+            break;
+        default:
+            fprintf( stderr, "error: calc_fields: unrecognised field type\n" );
+            break;
+    }
+}
+
+void calc_deutsch_fields( point *X, pulsar *psr, double v,
+                  point *B1,
+                  point *V1, point *V2,
+                  point *A1, point *A2,
+                  int *nsols )
 /* This returns the normalised vectors corresponding to the magnetic field, B;
  * the velocity field, V; and the acceleration field, A. These are the fields
  * corresponding to a particle instantaneously at point X (observer frame)

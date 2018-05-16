@@ -49,6 +49,9 @@ void set_pulsar( pulsar *psr, psr_angle *ra, psr_angle *dec, double P,
         copy_psr_angle( al, &psr->al );
     if (ze)
         copy_psr_angle( ze, &psr->ze );
+
+    // Set to Deutsch field by default
+    psr->field_type = DEUTSCH;
 }
 
 pulsar *create_pulsar( psr_angle *ra, psr_angle *dec, double P, double r,

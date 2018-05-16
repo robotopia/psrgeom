@@ -25,6 +25,7 @@ struct opts
     double  rho_max;   // largest rho to consider for gridpoints
     double  z_max;     // largest (abs) z to consider for gridpoints
     double  vsize;     // ratio of vector size to grid cell size
+    int     dipole;    // use dipole field?
 };
 
 #define MAX_NTOKENS  64
@@ -69,6 +70,7 @@ int main( int argc, char *argv[] )
     o.rho_max   = 1.0;
     o.z_max     = NAN;
     o.vsize     = 0.5;
+    o.dipole    = 0; // Default is to use Deutsch field
 
     parse_cmd_line( argc, argv, &o );
 
@@ -109,6 +111,9 @@ int main( int argc, char *argv[] )
     double r = 1e4;
 
     set_pulsar( &psr, ra, dec, P, r, al, ze );
+
+    if (o.dipole)
+        psr.field_type = DIPOLE;
 
     // Set up rotation phase
     psr_angle *phase = create_psr_angle_deg( o.ph_deg );
@@ -249,6 +254,8 @@ void usage()
     printf( "  -z  zeta     The angle between the rotation axis and the line "
                            "of sight in degrees (required)\n" );
     printf( "\nOTHER OPTIONS:\n" );
+    printf( "  -d           Use a dipole field instead of the default "
+                           "Deutsch field\n" );
     printf( "  -f  format   The output format string. For complete list of "
                            "format specifiers, see the man page. (default: "
                            "\"Xx Xy Xz Bx By Bz\")\n" );
@@ -284,12 +291,15 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:f:g:hlLN:o:p:P:r:v:z:Z:")) != -1)
+    while ((c = getopt( argc, argv, "a:df:g:hlLN:o:p:P:r:v:z:Z:")) != -1)
     {
         switch (c)
         {
             case 'a':
                 o->al_deg = atof(optarg);
+                break;
+            case 'd':
+                o->dipole = 1;
                 break;
             case 'f':
                 o->format = strdup(optarg);

@@ -84,6 +84,9 @@ int main( int argc, char *argv[] )
 
     set_pulsar( &psr, ra, dec, P, r, al, ze );
 
+    if (o.dipole)
+        psr.field_type = DIPOLE;
+
     // Check if -m was supplied, and set o.ref_axis accordingly
     if (o.mag_axis)
     {
@@ -184,8 +187,8 @@ void usage()
     printf( "  -z  zeta     The angle between the rotation axis and the line "
                            "of sight in degrees (required)\n" );
     printf( "\nOTHER OPTIONS:\n" );
-    printf( "  -d           Use the dipole model instead of the full Deutsch "
-                           "solution (not yet implemented)\n" );
+    printf( "  -d           Use a dipole field instead of the default "
+                           "Deutsch field\n" );
     printf( "  -h           Display this help and exit\n" );
     printf( "  -L           Normalise distances to light cylinder radius\n" );
     printf( "  -m           Set the reference axis to the magnetic axis. "

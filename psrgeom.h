@@ -1,7 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
-#define PSRGEOM_VERSION "1.3.1"
+#define PSRGEOM_VERSION "1.3.2"
 
 #include <stdio.h>
 #include <math.h>
@@ -42,6 +42,10 @@
 #define  EMIT_PT_TOO_LOW  -1
 #define  EMIT_PT_FOUND     0
 #define  EMIT_PT_TOO_HIGH  1
+
+// Field types
+#define DIPOLE   0
+#define DEUTSCH  1
 
 // Field line types
 #define  OPEN_LINE    0
@@ -91,6 +95,7 @@ typedef struct pulsar_t {
     psr_angle    al;    // Angle between the rotation and magnetic axes
     psr_angle    ze;    // Angle between the rotation axis and the line of sight
     int          spin;  // Spin direction (SPIN_POS or SPIN_NEG)
+    int          field_type; // Can be DIPOLE or DEUTSCH
 } pulsar;
 
 
@@ -154,16 +159,12 @@ void random_direction_spark( point *rand_pt, double th_rad,
 
 /**** Magnetic field functions ****/
 
-void calc_fields( point *X, pulsar *psr, double v,
-                  point *B1,
-                  point *V1, point *V2,
-                  point *A1, point *A2,
-                  int *nsols );
-void calc_dipole_fields( point *X, pulsar *psr, double v,
-                  point *B1,
-                  point *V1, point *V2,
-                  point *A1, point *A2,
-                  int *nsols );
+void calc_fields( point *X, pulsar *psr, double v, point *B1, point *V1,
+        point *V2, point *A1, point *A2, int *nsols );
+void calc_dipole_fields( point *X, pulsar *psr, double v, point *B1,
+        point *V1, point *V2, point *A1, point *A2, int *nsols );
+void calc_deutsch_fields( point *X, pulsar *psr, double v, point *B1,
+        point *V1, point *V2, point *A1, point *A2, int *nsols );
 
 void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
 void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,

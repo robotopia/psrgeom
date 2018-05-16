@@ -52,6 +52,7 @@ struct opts
     int     num_lines;   // sample this many lines
     int     print_los;   // print out the line of sight
     int     nsparks;     // number of sparks in carousel
+    int     dipole;      // use dipole field?
 };
 
 void usage();
@@ -84,6 +85,7 @@ int main( int argc, char *argv[] )
     o.num_lines = 10000;
     o.print_los = 0;
     o.nsparks   = 0;
+    o.dipole    = 0; // use Deutsch field by default
 
     parse_cmd_line( argc, argv, &o );
 
@@ -115,6 +117,9 @@ int main( int argc, char *argv[] )
                        pulsar surface */
 
     set_pulsar( &psr, ra, dec, P, r, al, ze );
+
+    if (o.dipole)
+        psr.field_type = DIPOLE;
 
     // Write the file header
     print_psrg_header( f, argc, argv );
@@ -233,6 +238,8 @@ void usage()
     printf( "  -z  zeta     The angle between the rotation axis and the line "
                            "of sight in degrees (required)\n" );
     printf( "\nOTHER OPTIONS:\n" );
+    printf( "  -d           Use a dipole field instead of the default "
+                           "Deutsch field\n" );
     printf( "  -h           Display this help and exit\n" );
     printf( "  -l           Print out the line of sight first\n" );
     printf( "  -n  nlines   Sample nlines magnetic field lines "
@@ -257,12 +264,15 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:f:g:hln:N:o:Op:P:s:S:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:df:g:hln:N:o:Op:P:s:S:t:z:")) != -1)
     {
         switch (c)
         {
             case 'a':
                 o->al_deg = atof(optarg);
+                break;
+            case 'd':
+                o->dipole = 1;
                 break;
             case 'f':
                 parse_range( optarg, &(o->f_start),
