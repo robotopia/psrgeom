@@ -601,7 +601,6 @@ void calc_dipole_fields( point *X, pulsar *psr, double v,
 
     // Temporary values for calculating the derivates of a[] above.
     double r7i = 1.0 / r7;
-    double r6i = r7i * r;
 
     // And now the partial derivatives of the magnetic field with respect to
     // (x,y,z)
@@ -615,33 +614,24 @@ void calc_dipole_fields( point *X, pulsar *psr, double v,
                  psr->al.cos*(   - 5.0*xz) +
                  psr->al.sin*(rr - 5.0*xx) 
                );
-    dB[0][2] = 3.0*r6i/y*(
-                 x*psr->al.cos*(r*y - 5.0*zz) +
+    dB[0][2] = 3.0*r7i*(
+                 x*psr->al.cos*(rr - 5.0*zz) +
                  z*psr->al.sin*(rr - 5.0*xx)
                );
-    dB[1][0] = 3.0*r7i*y*(
-                 psr->al.cos*(   - 5.0*xz) +
-                 psr->al.sin*(rr - 5.0*xx) 
-               );
+    dB[1][0] = dB[0][1];
     dB[1][1] = 3.0*r7i*(
                  z*psr->al.cos*(rr - 5.0*yy) +
                  x*psr->al.sin*(rr - 5.0*yy)
                );
-    dB[1][2] = 3.0*r6i*(
-                 psr->al.cos*(r*y - 5.0*zz) +
-                 psr->al.sin*(    - 5.0*xz) 
-               );
-    dB[2][0] = 3.0*r7i*(
-                 x*psr->al.cos*(rr - 5.0*zz) +
-                 z*psr->al.sin*(rr - 5.0*xx)
-               );
-    dB[2][1] = 3.0*r7i*y*(
+    dB[1][2] = 3.0*r7i*y*(
                  psr->al.cos*(rr - 5.0*zz) +
                  psr->al.sin*(   - 5.0*xz) 
                );
-    dB[2][2] = 3.0*r6i/y*(
-                 z*psr->al.cos*(rr + 2.0*r*y - 5.0*zz) +
-                 x*psr->al.sin*(         r*y - 5.0*zz)
+    dB[2][0] = dB[0][2];
+    dB[2][1] = dB[1][2];
+    dB[2][2] = 3.0*r7i*(
+                 z*psr->al.cos*(3.0*rr - 5.0*zz) +
+                 x*psr->al.sin*(    rr - 5.0*zz)
                );
 
     // There's one more partial derivative we need: dB/dt
