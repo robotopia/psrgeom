@@ -159,6 +159,11 @@ void calc_fields( point *X, pulsar *psr, double v,
                   point *V1, point *V2,
                   point *A1, point *A2,
                   int *nsols );
+void calc_dipole_fields( point *X, pulsar *psr, double v,
+                  point *B1,
+                  point *V1, point *V2,
+                  point *A1, point *A2,
+                  int *nsols );
 
 void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
 void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,

@@ -409,6 +409,309 @@ void calc_fields( point *X, pulsar *psr, double v,
 
 
 
+void calc_dipole_fields( point *X, pulsar *psr, double v,
+                  point *B1,
+                  point *V1, point *V2,
+                  point *A1, point *A2,
+                  int *nsols )
+/* This function is identical to calc_fields(), only instead of returning the
+ * Deutsch solution, it returns a simple dipole field. For an explanation of
+ * this function's inputs and outputs, refer to calc_fields().
+ */
+{
+    // First, figure out how much of the following we need to calculate
+    int calcB = 0;
+    int calcV = 0;
+    int calcA = 0;
+
+    if (B1)         calcB = 1;
+    if (V1 || V2)   calcV = 1;
+    if (A1 || A2)   calcA = 1;
+
+    if (!calcB && !calcV && !calcA)
+        return;
+
+    // Generic loop counters
+    int i, j;
+
+    /**********************************************************************
+     * Everything needs the calculation of B, so do this bit in any case. *
+     **********************************************************************/
+
+    double x     = X->x[0];
+    double y     = X->x[1] * psr->spin;
+    double z     = X->x[2];
+
+    double xx    = x*x;
+    double yy    = y*y;
+    double zz    = z*z;
+
+    double xy    = x*y;
+    double xz    = x*z;
+    double yz    = y*z;
+
+    double rr    = xx + yy + zz;
+    double r     = sqrt( rr );
+    double r3    = r*rr;
+    double r4    = r*r3;
+    double r5    = r*r4;
+    double r6    = r*r5;
+    double r7    = r*r6;
+
+    double r5i   = 1.0/r5;
+    double r3i   = r5i*rr;
+
+    double Om    = psr->Om.rad;
+
+    double B[3];
+    double temp_sin = 3.0*psr->al.sin*r5i;
+    double temp_cos = 3.0*psr->al.cos*r5i;
+    B[0] = xz*temp_cos - psr->al.sin*r3i + xx*temp_sin;
+    B[1] = yz*temp_cos                   + xy*temp_sin;
+    B[2] = zz*temp_cos - psr->al.cos*r3i + xz*temp_sin;
+
+    // Normalise B (--> Bn)
+    double Blen = sqrt( B[0]*B[0] +
+                        B[1]*B[1] +
+                        B[2]*B[2] );
+    double Bn[3];
+    for (i = 0; i < 3; i++)
+        Bn[i] = B[i] / Blen;
+
+    // If requested, record B result:
+    if (calcB)
+    {
+        for (i = 0; i < 3; i++)
+            B1->x[i] = Bn[i];
+
+        B1->x[1] *= psr->spin;
+        B1->r = Blen;
+    }
+
+    // Return, if there's nothing more to calculate
+    if (!calcV && !calcA)
+        return;
+
+    /***********************************************************
+     * Both V and A need the calculation of V, so do this now. * 
+     ***********************************************************/
+
+    /*
+     *     V_B = -Ω(φ∙B̂) ± √[Ω²(φ∙B̂)² - (ρ²Ω² - v²)]
+     *
+     *     V = Ωφ + (V_B)B̂
+     */
+
+    double pdBn  = -y*Bn[0] + x*Bn[1];   // ph dot Bn
+    double Om2   = Om*Om;
+    double pdBn2 = pdBn * pdBn;          // (ph dot Bn)^2
+    double rho2  = x*x + y*y;
+    double det   = Om2*pdBn2 - (rho2*Om2 - v*v);
+    //      ^-- This is the bit under the sqrt sign
+
+    // See how many V solutions we get
+    int nsol; // Use this as a place holder for nsols for now
+    if (det < 0.0)
+    {
+        nsol = 0;
+        return;
+    }
+    else if (det == 1.0)
+    {
+        nsol = 1;
+        calcA = 0; /* If there's only one V solution, then the A solution
+                      corresponds to A = inf, which we don't care about */
+    }
+    else // (det >  0.0)
+    {
+        nsol = 2;
+    }
+
+    // If the caller wants to know nsols, they can request it
+    if (nsols)
+        *nsols = nsol;
+
+    double sqrt_det = sqrt(det);
+    double VBpos    = -Om*pdBn + sqrt_det;
+    double VBneg    = -Om*pdBn - sqrt_det;
+
+    // Calulate the velocity fields
+    double Vpos[3] = { -y*Om + VBpos*Bn[0], x*Om + VBpos*Bn[1], VBpos*Bn[2] };
+    double Vneg[3] = { -y*Om + VBneg*Bn[0], x*Om + VBneg*Bn[1], VBneg*Bn[2] };
+
+    // The length of this velocity should be v, but calculate it explicitly
+    // just to make sure we're doing it correctly.
+    double Vpos_len = sqrt( Vpos[0] * Vpos[0] +
+                            Vpos[1] * Vpos[1] +
+                            Vpos[2] * Vpos[2] );
+    double Vneg_len = sqrt( Vneg[0] * Vneg[0] +
+                            Vneg[1] * Vneg[1] +
+                            Vneg[2] * Vneg[2] );
+
+    // If requested, record V results:
+    for (i = 0; i < 3; i++)
+    {
+        if (V1)
+        {
+            V1->x[i] = Vpos[i] / Vpos_len;
+            if (i == 1) V1->x[i] *= psr->spin;
+        }
+        if (V2)
+        {
+            V2->x[i] = Vneg[i] / Vneg_len;
+            if (i == 1) V2->x[i] *= psr->spin;
+        }
+    }
+    if (V1)  V1->r = Vpos_len;
+    if (V2)  V2->r = Vneg_len;
+
+    // Return, if there's nothing more to calculate
+    if (!calcA)
+        return;
+
+    /********************************************
+     * Now, all that remains is to calculate A. * 
+     ********************************************/
+
+    // Temporary values for calculating the derivates of a[] above.
+    double r7i = 1.0 / r7;
+    double r6i = r7i * r;
+
+    // And now the partial derivatives of the magnetic field with respect to
+    // (x,y,z)
+    double dB[3][4]; /* dB[0][1] means d(B_x)/dy; dB[][3] means d/dt, which is
+                                                  calculated later. */
+    dB[0][0] = 3.0*r7i*(
+                 z*psr->al.cos*(    rr - 5.0*xx) +
+                 x*psr->al.sin*(3.0*rr - 5.0*xx)
+               );
+    dB[0][1] = 3.0*r7i*y*(
+                 psr->al.cos*(   - 5.0*xz) +
+                 psr->al.sin*(rr - 5.0*xx) 
+               );
+    dB[0][2] = 3.0*r6i/y*(
+                 x*psr->al.cos*(r*y - 5.0*zz) +
+                 z*psr->al.sin*(rr - 5.0*xx)
+               );
+    dB[1][0] = dB[0][1];
+    dB[1][1] = 3.0*r7i*(
+                 z*psr->al.cos*(    rr - 5.0*yy) +
+                 x*psr->al.sin*(3.0*rr - 5.0*yy)
+               );
+    dB[1][2] = 3.0*r6i*(
+                 psr->al.cos*(r*y - 5.0*zz) +
+                 psr->al.sin*(    - 5.0*xz) 
+               );
+    dB[2][0] = 3.0*r7i*(
+                 x*psr->al.cos*(rr - 5.0*zz) +
+                 z*psr->al.sin*(rr - 5.0*xx)
+               );
+    dB[2][1] = 3.0*r7i*y*(
+                 psr->al.cos*(rr - 5.0*zz) +
+                 psr->al.sin*(   - 5.0*xz) 
+               );
+    dB[2][2] = 3.0*r6i/y*(
+                 z*psr->al.cos*(rr + 2.0*r*y - 5.0*zz) +
+                 x*psr->al.sin*(         r*y - 5.0*zz)
+               );
+
+    // There's one more partial derivative we need: dB/dt
+    for (i = 0; i < 3; i++)
+        dB[i][3] = Om * (-y*dB[i][0] + x*dB[i][1]);
+
+    // Now calculate how Bn changes with respect to (x,y,z,t)
+    double dBn[3][4];
+    double Bn_dot_dB;
+    for (i = 0; i < 4; i++)
+    {
+        Bn_dot_dB = 0.0;
+        for (j = 0; j < 3; j++)
+            Bn_dot_dB += Bn[j] * dB[j][i];
+
+        for (j = 0; j < 3; j++)
+            dBn[j][i] = (dB[j][i] - Bn_dot_dB * Bn[j]) / Blen;
+    }
+
+    double dpdBn[4] =
+    {
+        -y*dBn[0][0] + x*dBn[1][0] + Bn[1],  // d(ph.Bn)/dx
+        -y*dBn[0][1] + x*dBn[1][1] - Bn[0],  // d(ph.Bn)/dy
+        -y*dBn[0][2] + x*dBn[1][2],          // d(ph.Bn)/dz
+        -y*dBn[0][3] + x*dBn[1][3]           // d(ph.Bn)/dt
+    };
+
+    double chi = Om2 / sqrt_det;
+
+    double dVBpos[4] =
+    {
+        -Om*dpdBn[0] + chi*(pdBn*dpdBn[0] - x), // d(VB)/dx
+        -Om*dpdBn[1] + chi*(pdBn*dpdBn[1] - y), // d(VB)/dy
+        -Om*dpdBn[2] + chi*(pdBn*dpdBn[2]),         // d(VB)/dz
+        -Om*dpdBn[3] + chi*(pdBn*dpdBn[3])          // d(VB)/dt
+    };
+
+    double dVBneg[4] =
+    {
+        -Om*dpdBn[0] - chi*(pdBn*dpdBn[0] - 2.0*x), // d(VB)/dx
+        -Om*dpdBn[1] - chi*(pdBn*dpdBn[1] - 2.0*y), // d(VB)/dy
+        -Om*dpdBn[2] - chi*(pdBn*dpdBn[2]),         // d(VB)/dz
+        -Om*dpdBn[3] - chi*(pdBn*dpdBn[3])          // d(VB)/dt
+    };
+
+    double dVpos[3][4], dVneg[3][4];
+    for (i = 0; i < 3; i++)
+    for (j = 0; j < 4; j++)
+    {
+        dVpos[i][j] = VBpos*dBn[i][j] + dVBpos[j]*Bn[i];
+        dVneg[i][j] = VBneg*dBn[i][j] + dVBneg[j]*Bn[i];
+    }
+    dVpos[1][0] += Om;
+    dVneg[1][0] += Om;
+    dVpos[0][1] -= Om;
+    dVneg[0][1] -= Om;
+
+    // Calculate the acceleration fields
+    double Apos[3], Aneg[3];
+    for (i = 0; i < 3; i++)
+    {
+        Apos[i] = Vpos[0]*dVpos[i][0] +
+                  Vpos[1]*dVpos[i][1] +
+                  Vpos[2]*dVpos[i][2] +
+                          dVpos[i][3];
+        Aneg[i] = Vneg[0]*dVneg[i][0] +
+                  Vneg[1]*dVneg[i][1] +
+                  Vneg[2]*dVneg[i][2] +
+                          dVneg[i][3];
+    };
+
+    // Calculate the magnitudes of the acceleration vectors.
+    double Apos_len = sqrt( Apos[0] * Apos[0] +
+                            Apos[1] * Apos[1] +
+                            Apos[2] * Apos[2] );
+    double Aneg_len = sqrt( Aneg[0] * Aneg[0] +
+                            Aneg[1] * Aneg[1] +
+                            Aneg[2] * Aneg[2] );
+
+    // If requested, record A results:
+    for (i = 0; i < 3; i++)
+    {
+        if (A1)
+        {
+            A1->x[i] = Apos[i] / Apos_len;
+            if (i == 1) A1->x[i] *= psr->spin;
+        }
+        if (A2)
+        {
+            A2->x[i] = Aneg[i] / Aneg_len;
+            if (i == 1) A2->x[i] *= psr->spin;
+        }
+    }
+
+    if (A1)  A1->r = Apos_len;
+    if (A2)  A2->r = Aneg_len;
+}
+
+
 double Bdotrxy( point *x, pulsar *psr )
 /* Returns the dot product of B, the normalised magnetic field, and r_{xy},
  * the vector pointing cylindrically outward, at point *x.
