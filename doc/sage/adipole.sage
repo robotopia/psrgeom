@@ -1,23 +1,57 @@
-# Calculate acceleration field
+load('bdipole.sage')
 
-load('vdipole.sage')
+dr_dx = x/r
+dr_dy = y/r
+dr_dz = z/y
 
-Apos = diff(Vpos,t) + Vpos[0]*diff(Vpos,x) + Vpos[1]*diff(Vpos,y) + Vpos[2]*diff(Vpos,z)
-Aneg = diff(Vneg,t) + Vneg[0]*diff(Vneg,x) + Vneg[1]*diff(Vneg,y) + Vneg[2]*diff(Vneg,z)
+dBdx = diff(B,x) + diff(B,r)*dr_dx
+dBdy = diff(B,y) + diff(B,r)*dr_dy
+dBdz = diff(B,z) + diff(B,r)*dr_dz
 
-Vposlen2 = var('Vposlen2')
-assume(Vposlen2, 'real')
-assume(Vposlen2 > 0)
-Vposlen2 = Vpos.dot_product(Vpos)
-Vposlen = sqrt(Vposlen2)
 
-numvec = Vpos.cross_product(Apos)
-numlen2 = var('numlen2')
-assume(numlen2, 'real')
-assume(numlen2 > 0)
-numlen2 = numvec.dot_product(numvec)
-num = sqrt(numlen2)
+# The following is what's written in my C code:
+r6i = 1/r^6
+r7i = 1/r^7
+rr = r^2
 
-den = Vposlen^3
+xx = x*x
+yy = y*y
+zz = z*z
 
-kappa = num / den
+xy = x*y
+xz = x*z
+yz = y*z
+
+dBdx_x = 3*r7i*(
+                 z*cos(al)*(  rr - 5*xx) +
+                 x*sin(al)*(3*rr - 5*xx)
+               )
+dBdy_x = 3*r7i*y*(
+                 cos(al)*(   - 5*xz) +
+                 sin(al)*(rr - 5*xx)
+               )
+dBdz_x = 3*r6i/y*(
+                 x*cos(al)*(r*y - 5*zz) +
+                 z*sin(al)*(rr - 5*xx)
+               )
+dBdx_y = dBdy_x
+dBdy_y = 3*r7i*(
+                 z*cos(al)*(rr - 5*yy) +
+                 x*sin(al)*(rr - 5*yy)
+               )
+dBdz_y = 3*r6i*(
+                 cos(al)*(r*y - 5*zz) +
+                 sin(al)*(    - 5*xz)
+               )
+dBdx_z = 3*r7i*(
+                 x*cos(al)*(rr - 5*zz) +
+                 z*sin(al)*(rr - 5*xx)
+               )
+dBdy_z = 3*r7i*y*(
+                 cos(al)*(rr - 5*zz) +
+                 sin(al)*(   - 5*xz)
+               )
+dBdz_z = 3*r6i/y*(
+                 z*cos(al)*(rr + 2*r*y - 5*zz) +
+                 x*sin(al)*(         r*y - 5*zz)
+               )

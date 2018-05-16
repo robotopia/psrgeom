@@ -619,10 +619,13 @@ void calc_dipole_fields( point *X, pulsar *psr, double v,
                  x*psr->al.cos*(r*y - 5.0*zz) +
                  z*psr->al.sin*(rr - 5.0*xx)
                );
-    dB[1][0] = dB[0][1];
+    dB[1][0] = 3.0*r7i*y*(
+                 psr->al.cos*(   - 5.0*xz) +
+                 psr->al.sin*(rr - 5.0*xx) 
+               );
     dB[1][1] = 3.0*r7i*(
-                 z*psr->al.cos*(    rr - 5.0*yy) +
-                 x*psr->al.sin*(3.0*rr - 5.0*yy)
+                 z*psr->al.cos*(rr - 5.0*yy) +
+                 x*psr->al.sin*(rr - 5.0*yy)
                );
     dB[1][2] = 3.0*r6i*(
                  psr->al.cos*(r*y - 5.0*zz) +

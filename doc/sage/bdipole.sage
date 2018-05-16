@@ -1,30 +1,15 @@
-# Variables
-x = var('x')
-y = var('y')
-z = var('z')
-r = var('r')
-al = var('al',latex_name='\\alpha')
-m0 = var('m0',latex_name='m_0')
-Om = var('Om',latex_name='\\Omega')
-t = var('t')
+# Create variables
+x = var('x')    # Spatial coordinate 1
+y = var('y')    # Spatial coordinate 2
+z = var('z')    # Spatial coordinate 3
+r = var('r')    # sqrt(x^2 + y^2 + z^2)
+al = var('al')  # angle between rotation and magnetic axes
+m0 = var('m0')  # "mu nought", the magnetic field strength
 
-assume(x,'real')
-assume(y,'real')
-assume(z,'real')
-assume(r,'real')
-assume(al,'real')
-assume(m0,'real')
-assume(Om,'real')
-assume(t,'real')
+m0 = 1  # comment this if you want expressions to contain m0 explicitly
 
-xhat = vector([1,0,0])
-yhat = vector([0,1,0])
-zhat = vector([0,0,1])
+rhat = vector([x/r, y/r, z/r])
 
-# Construct the magnetic axis, inclined by angle alpha and rotated by angle Om*t
-m = m0 * vector([sin(al)*cos(Om*t), sin(al)*sin(Om*t), cos(al)])
+mu = m0*vector([sin(al), 0, cos(al)])
 
-rhat = vector([x/r,y/r,z/r])
-
-# Now put in the standard dipole field aligned along the z-axis
-B = 1/r^3 * (3*m.dot_product(rhat)*rhat - m)
+B = 1/r^3 * (3*mu.dot_product(rhat)*rhat - mu)
