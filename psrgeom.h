@@ -181,6 +181,8 @@ void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,
         psr_angle *psi );
 double calc_curvature( point *V, point *A );
 double calc_crit_freq( double gamma, double curvature );
+void particle_beam_intensity( double freq, double gamma, psr_angle *theta,
+        double rho, double *Ipos, double *Ineg );
 
 
 /**** Dipole field functions ****/
@@ -242,8 +244,8 @@ double fitwidth( pulsar *psr, int direction, double width_rad,
 /**** Functions from Numerical Recipes for C ****/
 
 void nrerror(char *error_text);
-float chebev(float a, float b, float c[], int m, float x);
+double chebev(double a, double b, double c[], int m, double x);
 void beschb(double x, double *gam1, double *gam2, double *gampl, double *gammi);
-void bessik(float x, float xnu, float *ri, float *rk, float *rip, float *rkp);
+void bessik(double x, double xnu, double *ri, double *rk, double *rip, double *rkp);
 
 #endif

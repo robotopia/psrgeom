@@ -13,9 +13,9 @@ void nrerror(char *error_text)
     exit(1);
 }
 
-float chebev(float a, float b, float c[], int m, float x)
+double chebev(double a, double b, double c[], int m, double x)
 {
-	float d=0.0,dd=0.0,sv,y,y2;
+	double d=0.0,dd=0.0,sv,y,y2;
 	int j;
 
 	if ((x-a)*(x-b) > 0.0) nrerror("x not in range in routine CHEBEV");
@@ -33,12 +33,12 @@ float chebev(float a, float b, float c[], int m, float x)
 
 void beschb(double x, double *gam1, double *gam2, double *gampl, double *gammi)
 {
-	float xx;
-	static float c1[] = {
+	double xx;
+	static double c1[] = {
 		-1.142022680371168e0,6.5165112670737e-3,
 		3.087090173086e-4,-3.4706269649e-6,6.9437664e-9,
 		3.67795e-11,-1.356e-13};
-	static float c2[] = {
+	static double c2[] = {
 		1.843740587300905e0,-7.68528408447867e-2,
 		1.2719271366546e-3,-4.9717367042e-6,-3.31261198e-8,
 		2.423096e-10,-1.702e-13,-1.49e-15};
@@ -53,13 +53,16 @@ void beschb(double x, double *gam1, double *gam2, double *gampl, double *gammi)
 #undef NUSE1
 #undef NUSE2
 
-#define EPS 1.0e-10
+#define EPS 1.0e-16
 #define FPMIN 1.0e-30
 #define MAXIT 10000
 #define XMIN 2.0
 //#define PI 3.141592653589793 /* Already defined elsewhere in PSRGEOM */
 
-void bessik(float x, float xnu, float *ri, float *rk, float *rip, float *rkp)
+void bessik(double x, double xnu, double *ri, double *rk, double *rip, double *rkp)
+/* I've made a few minor changes: testing the output pointers, and only
+ * writing to them if they are not NULL.
+ */
 {
     int i,l,nl;
     double a,a1,b,c,d,del,del1,delh,dels,e,f,fact,fact2,ff,gam1,gam2,
@@ -160,18 +163,22 @@ void bessik(float x, float xnu, float *ri, float *rk, float *rip, float *rkp)
     }
     rkmup=xmu*xi*rkmu-rk1;
     rimu=xi/(f*rkmu-rkmup);
-    *ri=(rimu*ril1)/ril;
-    *rip=(rimu*rip1)/ril;
+    if (ri != NULL)
+        *ri=(rimu*ril1)/ril;
+    if (rip != NULL)
+        *rip=(rimu*rip1)/ril;
     for (i=1;i<=nl;i++) {
         rktemp=(xmu+i)*xi2*rk1+rkmu;
         rkmu=rk1;
         rk1=rktemp;
     }
-    *rk=rkmu;
-    *rkp=xnu*xi*rkmu-rk1;
+    if (rk != NULL)
+        *rk=rkmu;
+    if (rkp != NULL)
+        *rkp=xnu*xi*rkmu-rk1;
 }
 #undef EPS
 #undef FPMIN
 #undef MAXIT
 #undef XMIN
-#undef PI
+
