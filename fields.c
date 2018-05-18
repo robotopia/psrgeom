@@ -1322,3 +1322,61 @@ double calc_crit_freq( double gamma, double curvature )
 {
     return 0.75*gamma*gamma*gamma*SPEED_OF_LIGHT*curvature/PI;
 }
+
+
+double particle_beam_intensity( double freq, double gamma, psr_angle *theta,
+        double rho, double *Ipos, double *Ineg )
+/* From Jackson, 3rd ed. pg 706. Problem 14.25:
+ *
+ * For a relativistic particle moving in a path with instantaneous radius of
+ * curvature ρ, the frequency-angle spectra of radiations with positive and
+ * negative helicity are
+ *
+ *    d²I±    e²  / ωρ \² / 1      \² |                   θ                 |²
+ *   ----- = ---- |----|  |--- + θ²|  | K_{2/3}(ξ) ± ----------- K_{1/3}(ξ) |
+ *   dω dΩ   6π²c \ c  /  \ γ²     /  |              √(1/γ² + θ)            |
+ *
+ * where ξ is defined on pg 678 in Eq. (14.76):
+ *
+ *       ωρ /  1      \ 3/2
+ *   ξ = -- | --- + θ²|
+ *       3c \  y²     /
+ *
+ * For now, this function is implemented without the constant out the front,
+ * since the important thing here is the shape of the pulsar, not its absolute
+ * flux density.
+ *
+ * Inputs:
+ *     double freq     : the radiation frequency, in Hz
+ *     double gamma    : the particle's Lorentz factor
+ *     point *V        : the (instantaneous) velocity of the particle
+ *     point *A        : the (instantaneous) acceleration of the particle
+ *     point *LoS      : the direction of the line of sight
+ *     double rho      : the radius of curvature of the particle's trajectory,
+ *                       in m
+ * Outputs:
+ *     double *Ipos    : the intensity with positive helicity (a.u.)
+ *     double *Ineg    : the intensity with negative helicity (a.u.)
+ */
+{
+    double gt      = 1.0/(gamma*gamma) + theta.rad*theta.rad;
+    double sqrt_gt = sqrt(gt);    // i.e. √(gt)
+    double gt2     = gt*gt;       // i.e. (gt)²
+    double gt3_2   = gt*sqrt_gt;  // i.e. (gt)^(3/2)
+
+    double w    = 2.0*PI*freq;             // = ω, the frequency in radians
+    double wp_c = w*rho / SPEED_OF_LIGHT;  // = ωρ/c
+    double xi   = wp_c * gt3_2 / 3.0;      // = ξ
+
+    double K13, K23;
+    K13 = 0.0; // <-- Calculate K_{1/3}(ξ) here
+    K23 = 0.0; // <-- Calculate K_{2/3}(ξ) here
+
+    double A     = wp_c * wp_c * gt2 * gt2;
+    double B     = K13 + theta.rad / sqrt_gt;
+    double Cpos  = K23 + B;
+    double Cneg  = K23 - B;
+
+    *Ipos = A*Cpos*Cpos;
+    *Ineg = A*Cneg*Cneg;
+}
