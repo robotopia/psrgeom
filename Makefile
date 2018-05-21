@@ -23,7 +23,8 @@ TARGETS = psr_fields \
 		  psr_visiblepoints \
 		  psr_mcpa \
 		  psr_findcaps \
-		  psr_beam
+		  psr_beam \
+		  psr_jacksonbeam
 
 TESTS = calc_fields_test
 

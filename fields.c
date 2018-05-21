@@ -1324,6 +1324,9 @@ double calc_crit_freq( double gamma, double curvature )
 }
 
 
+//void particle_beam_intensity( double freq, double gamma, psr_angle *theta,
+//        double rho, double *Epara_R, double *Eperp_R, double *Epara_L,
+//        double *Eperp_L )
 void particle_beam_intensity( double freq, double gamma, psr_angle *theta,
         double rho, double *Ipos, double *Ineg )
 /* From Jackson, 3rd ed. pg 706. Problem 14.25:
@@ -1332,9 +1335,9 @@ void particle_beam_intensity( double freq, double gamma, psr_angle *theta,
  * curvature ρ, the frequency-angle spectra of radiations with positive and
  * negative helicity are
  *
- *    d²I±    e²  / ωρ \² / 1      \² |                   θ                 |²
- *   ----- = ---- |----|  |--- + θ²|  | K_{2/3}(ξ) ± ----------- K_{1/3}(ξ) |
- *   dω dΩ   6π²c \ c  /  \ γ²     /  |              √(1/γ² + θ)            |
+ *    d²I±    e²  / ωρ \² / 1      \² |                   θ                  |²
+ *   ----- = ---- |----|  |--- + θ²|  | K_{2/3}(ξ) ± ------------ K_{1/3}(ξ) |
+ *   dω dΩ   6π²c \ c  /  \ γ²     /  |              √(1/γ² + θ²)            |
  *
  * where ξ is defined on pg 678 in Eq. (14.76):
  *
@@ -1345,6 +1348,11 @@ void particle_beam_intensity( double freq, double gamma, psr_angle *theta,
  * For now, this function is implemented without the constant out the front,
  * since the important thing here is the shape of the pulsar, not its absolute
  * flux density.
+ *
+ * The first term and the second term in the brackets are treated separately,
+ * as they calculate emission parallel to the synchrotron plane and emission
+ * perpendicular to the emission plane respectively. Moreover, the answers are
+ * given in terms of the electric field E, not the intensity I ∝ E².
  *
  * Inputs:
  *     double freq     : the radiation frequency, in Hz
@@ -1361,7 +1369,6 @@ void particle_beam_intensity( double freq, double gamma, psr_angle *theta,
 {
     double gt      = 1.0/(gamma*gamma) + theta->rad*theta->rad;
     double sqrt_gt = sqrt(gt);    // i.e. √(gt)
-    double gt2     = gt*gt;       // i.e. (gt)²
     double gt3_2   = gt*sqrt_gt;  // i.e. (gt)^(3/2)
 
     double w    = 2.0*PI*freq;             // = ω, the frequency in radians
@@ -1372,8 +1379,8 @@ void particle_beam_intensity( double freq, double gamma, psr_angle *theta,
     bessik(xi, 1.0/3.0, NULL, &K13, NULL, NULL);
     bessik(xi, 2.0/3.0, NULL, &K23, NULL, NULL);
 
-    double A     = wp_c * wp_c * gt2 * gt2;
-    double B     = K13 + theta->rad / sqrt_gt;
+    double A     = wp_c * wp_c * gt * gt;
+    double B     = K13 * theta->rad / sqrt_gt;
     double Cpos  = K23 + B;
     double Cneg  = K23 - B;
 
