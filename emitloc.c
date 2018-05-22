@@ -947,18 +947,22 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
             obs_to_mag_frame( &retarded_LoS, psr, NULL, &retarded_LoS_mag );
 
             // Print out the results!
-            fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e "
-                        "%.15e %.15e %.15e %.15e %.15e %.15e\n",
-                    init_pt_mag.th.deg, init_pt_mag.ph.deg,
-                    retarded_LoS_mag.th.deg, retarded_LoS_mag.ph.deg,
-                    psi.deg,
-                    dph.deg,
-                    crit_freq/1.0e6,
-                    emit_pt.r/1.0e3,
-                    kappa*1e3,
-                    emit_pt.x[0]/1e3, emit_pt.x[1]/1e3, emit_pt.x[2]/1e3,
-                    V.x[0], V.x[1], V.x[2],
-                    A.x[0], A.x[1], A.x[2] );
+            if (f != NULL)
+            {
+                fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e "
+                            "%.15e %.15e %.15e %.15e "
+                            "%.15e %.15e %.15e %.15e %.15e %.15e\n",
+                        init_pt_mag.th.deg, init_pt_mag.ph.deg,
+                        retarded_LoS_mag.th.deg, retarded_LoS_mag.ph.deg,
+                        psi.deg,
+                        dph.deg,
+                        crit_freq/1.0e6,
+                        emit_pt.r/1.0e3,
+                        kappa*1e3,
+                        emit_pt.x[0]/1e3, emit_pt.x[1]/1e3, emit_pt.x[2]/1e3,
+                        V.x[0], V.x[1], V.x[2],
+                        A.x[0], A.x[1], A.x[2] );
+            }
         }
 
         // Climb another rung on the field line ladder
