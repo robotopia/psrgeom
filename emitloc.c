@@ -872,13 +872,7 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
  * surface is reached (for closed field lines).
  *
  * This function has no "output". Its utility is the side-effect of writing
- * results out to the specified file handle. It prints out the following:
- *
- *   1) the polar coordinates of the footpoint of the magnetic field line
- *   2) the polar coordinates of the photon direction (with retardation)
- *   3) the polarisation angle
- *   4) the phase retardation due to the emission height
- *   5) the critical frequency
+ * results out to the specified file handle.
  *
  * The polar coordinates are all given in the magnetic field reference frame.
  *
