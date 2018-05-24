@@ -24,7 +24,8 @@ TARGETS = psr_fields \
 		  psr_mcpa \
 		  psr_findcaps \
 		  psr_beam \
-		  psr_jacksonbeam
+		  psr_jacksonbeam \
+		  psr_lofl
 
 TESTS = calc_fields_test
 
