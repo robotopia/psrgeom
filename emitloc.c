@@ -970,6 +970,104 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
 }
 
 
+void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
+        double freq_hi, int nbins, int centre_bin, double *profile )
+/* Climb up a field line and emit virtual photons as we go. Stop when either
+ * the light cylinder is reached (for an open field line) or when the pulsar
+ * surface is reached (for closed field lines). 
+ *
+ * When photons are emitted that would be seen by the observer, calculate
+ * the power and add it to the appropriate phase bin in the profile.
+ *
+ * Inputs:
+ *   pulsar *psr        : the pulsar properties
+ *   point  *init_pt    : the starting point
+ *   double  freq_lo    : the lowest  observed frequency
+ *   double  freq_hi    : the highest observed frequency
+ *   int     nbins      : the size of "profile"
+ *   int     centre_bin : the index of "profile" that represents the phase
+ *                        bin corresponding to the fiducial point, φ = 0°
+ *
+ * Outputs:
+ *   double *profile  : a 1D array representing the profile
+ */
+{
+    // Set up a point for moving up the field line
+    point emit_pt;
+    copy_point( init_pt, &emit_pt );
+
+    // Get the initial point in magnetic coordinates
+    point init_pt_mag;
+    obs_to_mag_frame( init_pt, psr, NULL, &init_pt_mag );
+
+    // Set up points and angles for the fields and other needed quantities
+    point      V, A;
+    point      retarded_LoS, retarded_LoS_mag;
+    psr_angle  phase, dph, psi;
+    double     kappa, crit_freq;
+
+    // Loop for all valid points within the light cylinder
+    while ((emit_pt.rhosq < psr->rL2) && (emit_pt.r > psr->r))
+    {
+        // Calculate the necessary fields at this point
+        calc_fields( &emit_pt, psr, SPEED_OF_LIGHT, NULL, &V, NULL, &A, NULL,
+                NULL );
+        set_point_xyz( &V, V.x[0], V.x[1], V.x[2],
+                POINT_SET_PH | POINT_SET_TH );
+
+        // Calculate the curvature and thence the critical frequency
+        kappa = calc_curvature( &V, &A );
+        crit_freq = calc_crit_freq( gamma, kappa );
+
+        // If the frequency is within the allowed range, calculate the rest
+        // of the needed quantities
+        if ((freq_lo <= crit_freq) && (crit_freq <= freq_hi))
+        {
+            // Loop over different gamma values, drawn from a distribution
+            // [UP TO HERE!]
+            // ...
+
+            // Calculate the retardation angle
+            calc_retardation( &emit_pt, psr, &V, &dph, &retarded_LoS );
+
+            // Calculate the polarisation angle
+            if (psr->spin == SPIN_POS)
+                set_psr_angle_deg( &phase, -V.ph.deg );
+            else
+                copy_psr_angle( &(V.ph), &phase );
+            accel_to_pol_angle( psr, &A, &phase, &psi );
+
+            // Convert the emitted beam to magnetic coordinates
+            obs_to_mag_frame( &retarded_LoS, psr, NULL, &retarded_LoS_mag );
+
+            // Print out the results!
+            if (f != NULL)
+            {
+                fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e "
+                            "%.15e %.15e %.15e %.15e "
+                            "%.15e %.15e %.15e %.15e %.15e %.15e\n",
+                        init_pt_mag.th.deg, init_pt_mag.ph.deg,
+                        retarded_LoS_mag.th.deg, retarded_LoS_mag.ph.deg,
+                        psi.deg,
+                        dph.deg,
+                        crit_freq/1.0e6,
+                        emit_pt.r/1.0e3,
+                        kappa*1e3,
+                        emit_pt.x[0]/1e3, emit_pt.x[1]/1e3, emit_pt.x[2]/1e3,
+                        V.x[0], V.x[1], V.x[2],
+                        A.x[0], A.x[1], A.x[2] );
+            }
+        }
+
+        // Climb another rung on the field line ladder
+        Bstep( &emit_pt, psr, tmult*emit_pt.r, DIR_OUTWARD, &emit_pt );
+        set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
+                POINT_SET_R | POINT_SET_RHOSQ );
+    }
+
+}
+
+
 int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
         double tmult, point *emit_pt, double *dist, FILE *f )
 /* Finds the next emission point that occurs on the field line that passes
