@@ -157,6 +157,8 @@ void random_direction_bounded( point *rand_pt, double lo_th_rad,
 void random_direction_spark( point *rand_pt, double th_rad,
         double spark_size_rad, int nsparks );
 
+double power_law_distr( double lo, double hi, double index );
+
 /**** Magnetic field functions ****/
 
 void calc_fields( point *X, pulsar *psr, double v, point *B1, point *V1,
@@ -181,6 +183,7 @@ void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,
         psr_angle *psi );
 double calc_curvature( point *V, point *A );
 double calc_crit_freq( double gamma, double curvature );
+double calc_crit_gamma( double crit_freq, double curvature );
 void particle_beam_intensity( double freq, double gamma, psr_angle *theta,
         double rho, double *Ipos, double *Ineg );
 

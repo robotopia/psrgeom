@@ -1005,6 +1005,12 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
     point      retarded_LoS, retarded_LoS_mag;
     psr_angle  phase, dph, psi;
     double     kappa, crit_freq;
+    double     gamma;
+    double     g_idx = 6.2; /* The assumed power law index for the gamma
+                               distribution.
+                               Hard-coded for now, because I'm not sure how
+                               to calculate the proper amount for a desired
+                               "global" spectral index */
 
     // Loop for all valid points within the light cylinder
     while ((emit_pt.rhosq < psr->rL2) && (emit_pt.r > psr->r))
@@ -1015,17 +1021,25 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
         set_point_xyz( &V, V.x[0], V.x[1], V.x[2],
                 POINT_SET_PH | POINT_SET_TH );
 
-        // Calculate the curvature and thence the critical frequency
+        // Calculate the curvature
         kappa = calc_curvature( &V, &A );
-        crit_freq = calc_crit_freq( gamma, kappa );
+
+        // Calculate the gamma factor corresponding to the lowest frequency
+        // (and hence, the widest particle beam)
+        gamma = calc_crit_gamma( freq_lo, kappa );
+
+        // CHECK TO SEE IF PARTICLE IS POINTING IN THE RIGHT DIRECTION
+        // (within 2/γ particle beam)
+        // UP TO HERE
 
         // If the frequency is within the allowed range, calculate the rest
         // of the needed quantities
         if ((freq_lo <= crit_freq) && (crit_freq <= freq_hi))
         {
             // Loop over different gamma values, drawn from a distribution
-            // [UP TO HERE!]
-            // ...
+            gamma = power_law_distr( freq_lo, freq_hi, g_idx );
+            // UP TO HERE TOO!
+            crit_freq = calc_crit_freq( gamma, kappa );
 
             // Calculate the retardation angle
             calc_retardation( &emit_pt, psr, &V, &dph, &retarded_LoS );

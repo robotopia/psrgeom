@@ -204,3 +204,33 @@ void calc_retardation( point *X, pulsar *psr, point *LoS,
         rotate_about_axis( LoS, retarded_LoS, dph, 'z', POINT_SET_ALL );
 }
 
+
+double power_law_distr( double lo, double hi, double index )
+/* This function generates a random number between lo and hi that follows a
+ * (negative) power law distribution with the supplied index.
+ *
+ * dN/dx \propto x^(-index)
+ *
+ * This function does not seed the random number generator. The caller is
+ * responsible for doing that.
+ *
+ * Inputs:
+ *   double lo     : the lower bound for the generated random number
+ *   double hi     : the upper bound for the generated random number
+ *   double index  : the power law index for the distribution
+ *
+ * Returns:
+ *   double        : the generated random number
+ */
+{
+    // Generate a (uniform) random number between 0 and 1
+    double C = RAND(1.0);
+
+    // Convert C to a correctly distributed random number via the cumulative
+    // distribution
+    double exp  = 1.0 - index;
+    double expi = 1.0 / exp;
+    double lo_a = pow( lo, exp );
+    double hi_a = pow( hi, exp );
+    return pow( C*(hi_a - lo_a) + lo_a, expi );
+}

@@ -1324,6 +1324,23 @@ double calc_crit_freq( double gamma, double curvature )
 }
 
 
+double calc_crit_gamma( double crit_freq, double curvature )
+/* Implementation of the formula (see Jackson, 3rd edition, Eqn 14.81):
+ *
+ *        |  4πf  |(1/3)
+ *    γ = |-------|
+ *        |  3cκ  |
+ *
+ * where γ = "gamma", the Lorentz factor,
+ *       f = the critical frequency
+ *       κ = "curvature" (in inverse metres),
+ *       c = the speed of light (m/s)
+ */
+{
+    return cbrt( 4.0*PI*crit_freq / (3.0*SPEED_OF_LIGHT*curvature) );
+}
+
+
 //void particle_beam_intensity( double freq, double gamma, psr_angle *theta,
 //        double rho, double *Epara_R, double *Eperp_R, double *Epara_L,
 //        double *Eperp_L )
