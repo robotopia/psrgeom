@@ -1010,13 +1010,15 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
     // Set up points and angles for the fields and other needed quantities
     point      V, A;
     point      LoS, LoS_beam, retarded_LoS;
-    psr_angle  dph;
+    psr_angle  dph, phase;
     double     kappa, gamma, g_lo, g_hi;
-    double     VzZ;
+    double     VzZ, beam_width;
     double     avg_power;
-    int        n, N = 10;
+    int        n, N = 100;
     int        phase_bin;
     double     bin_width;
+    int        bin_count[nbins]; /* Keep track of how many contribution are
+                                    in each bin, for proper normalisation */
     double     g_idx = 6.2; /* The assumed power law index for the gamma
                                distribution.
                                Hard-coded for now, because I'm not sure how
@@ -1046,7 +1048,8 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
         // Check to see if particle is pointing in the right direction
         // (within 2/γ of the widest possible particle beam)
         VzZ = fabs(V.th.rad - psr->ze.rad);
-        if (VzZ <= 1000.0/g_lo)
+        beam_width = 2.0/g_lo;
+        if (VzZ <= beam_width)
         {
             // Remember that this point was visible
             is_emit_pt_visible = 1;
@@ -1057,7 +1060,6 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
             if (!is_prev_pt_visible && (step_dist > 0.01/(g_lo*kappa)))
             {
                 step_dist /= 2.0;
-//fprintf( stderr, "%.15e\n", step_dist );
                 Bstep( &prev_pt, psr, step_dist, DIR_OUTWARD, &emit_pt );
                 set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
                         POINT_SET_R | POINT_SET_RHOSQ );
@@ -1069,7 +1071,8 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
             step_dist = 0.01/(g_lo*kappa);
 
             // Calculate the line of sight
-            line_of_sight( psr, &(V.ph), &LoS );
+            reverse_psr_angle( &(V.ph), &phase );
+            line_of_sight( psr, &phase, &LoS );
 
             // Calculate the gamma factor corresponding to the highest
             // frequency
@@ -1096,13 +1099,14 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
             calc_retardation( &emit_pt, psr, &LoS, &dph, &retarded_LoS );
 
             bin_width = 360.0 / (double)nbins;
-            phase_bin = (int)floor( (retarded_LoS.ph.deg)/bin_width );
+            phase_bin = (int)floor( -(retarded_LoS.ph.deg)/bin_width );
             phase_bin += centre_bin;
             while (phase_bin < 0)       phase_bin += nbins;
             while (phase_bin >= nbins)  phase_bin -= nbins;
 
             // Add the power to the profile
             profile[phase_bin] += avg_power;
+            bin_count[phase_bin]++;
         }
         else
         {
@@ -1114,16 +1118,20 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
                 step_dist = 1.0/(g_lo*kappa);
         }
 
-fprintf( stderr, "%.15e %.15e %.15e %.15e\n", emit_pt.x[0], emit_pt.x[1], emit_pt.x[2], VzZ );
         // Climb another rung on the field line ladder
         copy_point( &emit_pt, &prev_pt );
         is_prev_pt_visible = is_emit_pt_visible;
-//fprintf( stderr, "%.15e\n", step_dist );
         Bstep( &prev_pt, psr, step_dist, DIR_OUTWARD, &emit_pt );
         set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
                 POINT_SET_R | POINT_SET_RHOSQ );
     }
 
+    // Different profile bins would have received different numbers of
+    // contributions, so normalise these out
+    int i;
+    for (i = 0; i < nbins; i++)
+        if (bin_count[i] > 0)
+            profile[i] /= (double)bin_count[i];
 }
 
 
