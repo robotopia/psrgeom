@@ -26,7 +26,8 @@ TARGETS = psr_fields \
 		  psr_beam \
 		  psr_jacksonbeam \
 		  psr_lofl \
-		  psr_profile
+		  psr_profile \
+		  psr_jacksonbeamsingle
 
 TESTS = calc_fields_test
 

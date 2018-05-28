@@ -248,8 +248,7 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
         double freq_lo, double freq_hi, FILE *f );
 
 void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
-        double freq_hi, double tmult, int nbins, int centre_bin,
-        double *profile );
+        double freq_hi, int nbins, int centre_bin, double *profile );
 
 /**** Finding the pulse width ****/
 

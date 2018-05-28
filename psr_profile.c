@@ -31,7 +31,6 @@ struct opts
     double  ze_deg;      // zeta angle in deg
     double  P_sec;       // period, in sec
     char   *outfile;     // name of output file (NULL means stdout)
-    double  tmult;       // step size along field lines
     double  s_start;     // starting value of s
     double  s_stop;      // stopping value of s
     double  p_start;     // starting value of p
@@ -63,7 +62,6 @@ int main( int argc, char *argv[] )
     o.P_sec     = NAN;
     o.ze_deg    = NAN;
     o.outfile   = NULL;
-    o.tmult     = 0.01;
     o.s_start   = NAN;
     o.s_stop    = NAN;
     o.p_start   = 0.0;
@@ -120,6 +118,10 @@ int main( int argc, char *argv[] )
     double profile[o.nbins];
     int centre_bin = o.nbins/2;
 
+    // Some default values
+    int    rL_norm = 0;
+    double tmult   = 0.01;
+
     // Reset profile to zero
     for (i = 0; i < o.nbins; i++)
         profile[i] = 0.0;
@@ -151,8 +153,7 @@ int main( int argc, char *argv[] )
         // If requested, check that we're on an open field line
         if (o.open_only)
         {
-            int rL_norm = 0;
-            linetype = get_fieldline_type( &foot_pt, &psr, o.tmult, rL_norm,
+            linetype = get_fieldline_type( &foot_pt, &psr, tmult, rL_norm,
                     NULL, NULL );
             if (linetype == CLOSED_LINE)
             {
@@ -169,7 +170,7 @@ int main( int argc, char *argv[] )
                 POINT_SET_ALL );
 
         fieldline_to_profile( &psr, &init_pt, o.f_start*1.0e6, o.f_stop*1.0e6,
-                o.tmult, o.nbins, centre_bin, profile );
+                o.nbins, centre_bin, profile );
     }
 
     // Print out the profile
@@ -228,9 +229,6 @@ void usage()
     printf( "  -p  p1:p2    The azimuth relative to the magnetic axis, "
                            "in degrees. The range is from p1 to p2. Ensure "
                            "p1 < p2 [default = 0:360]\n" );
-    printf( "  -t  step     Step size for moving along magnetic field lines, "
-                           "as a fraction of the light cylinder radius "
-                           "(default: 0.01)\n" );
 }
 
 
@@ -238,7 +236,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:b:df:hn:N:o:Op:P:s:S:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:b:df:hn:N:o:Op:P:s:S:z:")) != -1)
     {
         switch (c)
         {
@@ -284,9 +282,6 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 parse_range( optarg, &(o->s_start),
                                      &(o->s_stop),
                                      NULL );
-                break;
-            case 't':
-                o->tmult = atof(optarg);
                 break;
             case 'z':
                 o->ze_deg = atof(optarg);

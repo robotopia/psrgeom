@@ -971,8 +971,7 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
 
 
 void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
-        double freq_hi, double tmult, int nbins, int centre_bin,
-        double *profile )
+        double freq_hi, int nbins, int centre_bin, double *profile )
 /* Climb up a field line and emit virtual photons as we go. Stop when either
  * the light cylinder is reached (for an open field line) or when the pulsar
  * surface is reached (for closed field lines). 
@@ -993,9 +992,16 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
  *   double *profile  : a 1D array representing the profile
  */
 {
-    // Set up a point for moving up the field line
-    point emit_pt;
+    // Set up points for moving up the field line
+    point emit_pt, prev_pt;
+    copy_point( init_pt, &prev_pt );
     copy_point( init_pt, &emit_pt );
+
+    // The step distance controls how quickly we climb the field line.
+    // Its value depends on whether we're in a visible region or not.
+    double step_dist = 0.0;
+    int is_prev_pt_visible = 0;
+    int is_emit_pt_visible = 0;
 
     // Get the initial point in magnetic coordinates
     point init_pt_mag;
@@ -1008,7 +1014,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
     double     kappa, gamma, g_lo, g_hi;
     double     VzZ;
     double     avg_power;
-    int        n, N = 100;
+    int        n, N = 10;
     int        phase_bin;
     double     bin_width;
     double     g_idx = 6.2; /* The assumed power law index for the gamma
@@ -1033,11 +1039,35 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
         // (and hence, the widest particle beam)
         g_lo = calc_crit_gamma( freq_lo, kappa );
 
+        // If we're NOT near an emission region, set the step size ~beam width
+        if (!is_prev_pt_visible && !is_emit_pt_visible)
+            step_dist = 1.0 / (g_lo*kappa);
+
         // Check to see if particle is pointing in the right direction
         // (within 2/γ of the widest possible particle beam)
         VzZ = fabs(V.th.rad - psr->ze.rad);
-        if (VzZ <= 2.0/g_lo)
+        if (VzZ <= 1000.0/g_lo)
         {
+            // Remember that this point was visible
+            is_emit_pt_visible = 1;
+
+            // If the previous point wasn't visible, then we need approach the
+            // visible region more gradually (but not more gradually than
+            // required for ~100 steps through the visible region)
+            if (!is_prev_pt_visible && (step_dist > 0.01/(g_lo*kappa)))
+            {
+                step_dist /= 2.0;
+//fprintf( stderr, "%.15e\n", step_dist );
+                Bstep( &prev_pt, psr, step_dist, DIR_OUTWARD, &emit_pt );
+                set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
+                        POINT_SET_R | POINT_SET_RHOSQ );
+                continue;
+            }
+
+            // Otherwise, set the step dist such that we get about 200 samples
+            // per beam
+            step_dist = 0.01/(g_lo*kappa);
+
             // Calculate the line of sight
             line_of_sight( psr, &(V.ph), &LoS );
 
@@ -1074,9 +1104,21 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
             // Add the power to the profile
             profile[phase_bin] += avg_power;
         }
+        else
+        {
+            is_emit_pt_visible = 0;
+
+            // Check if we've just left a visible region. If so, reset the
+            // step distance
+            if (is_prev_pt_visible)
+                step_dist = 1.0/(g_lo*kappa);
+        }
 
         // Climb another rung on the field line ladder
-        Bstep( &emit_pt, psr, tmult*emit_pt.r, DIR_OUTWARD, &emit_pt );
+        copy_point( &emit_pt, &prev_pt );
+        is_prev_pt_visible = is_emit_pt_visible;
+//fprintf( stderr, "%.15e\n", step_dist );
+        Bstep( &prev_pt, psr, step_dist, DIR_OUTWARD, &emit_pt );
         set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
                 POINT_SET_R | POINT_SET_RHOSQ );
     }
