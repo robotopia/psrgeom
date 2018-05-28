@@ -189,3 +189,4 @@ double calc_crit_gamma( double crit_freq, double curvature )
 {
     return cbrt( 4.0*PI*crit_freq / (3.0*SPEED_OF_LIGHT*curvature) );
 }
+

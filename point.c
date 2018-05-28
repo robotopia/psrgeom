@@ -233,3 +233,19 @@ void scale_point( point *in, double scale, point *out )
         copy_psr_angle( &(in->ph), &(out->ph) );
     }
 }
+
+
+void transform_new_xz( point *v, point *new_z, point *new_x, point *new_v )
+/* Calculate the vector v in the (new) coordinate system in which new_z is the
+ * new z-axis and new_x is the new x-axis. The new y-axis is assumed to be
+ * new_x × new_z.
+ *
+ * Only the Cartesian coordinates of new_x and new_z are used.
+ *
+ * The resulting vector is written to new_v.
+ */
+{
+    // Create a tranformation matrix to get from one coordinate system to the
+    // other
+    double T[3][] = { 
+}
