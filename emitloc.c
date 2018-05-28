@@ -1002,7 +1002,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
 
     // Set up points and angles for the fields and other needed quantities
     point      V, A;
-    point      retarded_LoS, retarded_LoS_mag;
+    point      LoS, retarded_LoS, retarded_LoS_mag;
     psr_angle  phase, dph, psi;
     double     kappa, crit_freq;
     double     gamma, g_lo, g_hi;
@@ -1036,6 +1036,9 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
         VzZ = fabs(V.th.rad - psr->ze.rad);
         if (VzZ <= 2.0/g_lo)
         {
+            // Calculate the line of sight
+            line_of_sight( psr, &(V.ph), &LoS );
+
             // Calculate the gamma factor corresponding to the highest
             // frequency
             g_hi = calc_crit_gamma( freq_hi, kappa );
@@ -1047,6 +1050,8 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
                 gamma = power_law_distr( g_lo, g_hi, g_idx );
 
                 crit_freq = calc_crit_freq( gamma, kappa );
+
+                //
 
                 // Calculate the retardation angle
                 calc_retardation( &emit_pt, psr, &V, &dph, &retarded_LoS );

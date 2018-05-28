@@ -182,10 +182,17 @@ int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
 void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,
         psr_angle *psi );
 double calc_curvature( point *V, point *A );
+
+
+/**** Jackson's Classical Electrodynamics ****/
+
 double calc_crit_freq( double gamma, double curvature );
 double calc_crit_gamma( double crit_freq, double curvature );
 void particle_beam_intensity( double freq, double gamma, psr_angle *theta,
         double rho, double *Ipos, double *Ineg );
+double single_particle_power( point *n, point *beta, point *beta_dot );
+double single_particle_power_perp( double gamma, psr_angle *th, psr_angle *ph,
+        double vdot );
 
 
 /**** Dipole field functions ****/
