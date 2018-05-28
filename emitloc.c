@@ -1020,6 +1020,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
     int        n, N = 100;
     int        phase_bin;
     double     bin_width;
+    double     min_step_dist = 100.0; /* For when inside visible regions */
     double     tmp_profile[nbins]; /* Construct temporary profile first */
     double     g_idx = 6.2; /* The assumed power law index for the gamma
                                distribution.
@@ -1063,7 +1064,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
             // If the previous point wasn't visible, then we need approach the
             // visible region more gradually (but not more gradually than
             // required for ~100 steps through the visible region)
-            if (!is_prev_pt_visible && (step_dist > 0.01/(g_lo*kappa)))
+            if (!is_prev_pt_visible && (step_dist > min_step_dist))
             {
                 step_dist /= 2.0;
                 Bstep( &prev_pt, psr, step_dist, DIR_OUTWARD, &emit_pt );
@@ -1074,7 +1075,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
 
             // Otherwise, set the step dist such that we get about 200 samples
             // per beam
-            step_dist = 0.01/(g_lo*kappa);
+            step_dist = min_step_dist;
 
             // Calculate the line of sight
             reverse_psr_angle( &(V.ph), &phase );

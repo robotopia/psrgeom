@@ -182,14 +182,10 @@ int main( int argc, char *argv[] )
     double bin_width = 360.0 / (double)o.nbins;
     for (i = 0; i < o.nbins; i++)
     {
-        // Normalise the profile
-        if (bin_count[i] > 0)
-            profile[i] /= (double)bin_count[i];
-
         // Convert bin number to phase
         phase_deg = (double)(i - centre_bin) * bin_width;
 
-        fprintf( f, "%.15e %.15e\n", phase_deg, profile[i] );
+        fprintf( f, "%.15e %.15e %d\n", phase_deg, profile[i], bin_count[i] );
     }
 
     // Clean up
