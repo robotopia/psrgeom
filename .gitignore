@@ -9,7 +9,6 @@ psr_emit
 psr_polangle
 psr_fitwidth
 psr_trajectory
-calc_fields_test
 psr_mcpa
 psr_visiblepoints
 psr_findcaps
@@ -18,3 +17,5 @@ psr_jacksonbeam
 psr_lofl
 psr_jacksonbeamsingle
 psr_profile
+calc_fields_test
+transform_new_xz_test

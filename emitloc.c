@@ -1114,6 +1114,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
                 step_dist = 1.0/(g_lo*kappa);
         }
 
+fprintf( stderr, "%.15e %.15e %.15e %.15e\n", emit_pt.x[0], emit_pt.x[1], emit_pt.x[2], VzZ );
         // Climb another rung on the field line ladder
         copy_point( &emit_pt, &prev_pt );
         is_prev_pt_visible = is_emit_pt_visible;
