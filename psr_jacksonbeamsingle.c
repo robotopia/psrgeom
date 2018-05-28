@@ -54,21 +54,21 @@ int main( int argc, char *argv[] )
     // Set up variables for the answers
     double power;
 
-    // Loop over theta angles between -4/γ and 4/γ
+    // Loop over theta angles between -1/γ and 1/γ
     int xi, yi;
     double x, y;
     int X = 500, Y = 500;
     double vdot = 1.0;
-    double pixel_x_size = 1.0/o.gamma / (double)X;
-    double pixel_y_size = 1.0/o.gamma / (double)Y;
+    double pixel_x_size = 2.0/o.gamma / (double)X;
+    double pixel_y_size = 2.0/o.gamma / (double)Y;
     psr_angle th, ph;
     for (xi = 0; xi < X; xi++)
     {
-        x = (double)(xi - X/2)/(double)X * pixel_x_size;
+        x = (double)(xi - X/2) * pixel_x_size;
 
         for (yi = 0; yi < Y; yi++)
         {
-            y = (double)(yi - Y/2)/(double)Y * pixel_y_size;
+            y = (double)(yi - Y/2) * pixel_y_size;
 
             set_psr_angle_rad( &th, sqrt(x*x + y*y) );
             set_psr_angle_rad( &ph, atan2(y, x) );
