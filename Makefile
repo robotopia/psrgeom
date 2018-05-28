@@ -11,7 +11,7 @@ OPTIM   = -O2
 ## Uncomment the following to turn on debugging options
 #DEBUG   = -g -std=gnu99
 
-CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG) -march=native
+CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG) -march=native -fopenmp
 
 TARGETS = psr_fields \
 		  psr_lines \
@@ -25,7 +25,8 @@ TARGETS = psr_fields \
 		  psr_findcaps \
 		  psr_beam \
 		  psr_jacksonbeam \
-		  psr_lofl
+		  psr_lofl \
+		  psr_profile
 
 TESTS = calc_fields_test
 
