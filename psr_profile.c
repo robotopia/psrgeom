@@ -116,6 +116,7 @@ int main( int argc, char *argv[] )
     point foot_pt, foot_pt_mag;
     point init_pt;
     double profile[o.nbins];
+    int bin_count[o.nbins];
     int centre_bin = o.nbins/2;
 
     // Some default values
@@ -124,12 +125,15 @@ int main( int argc, char *argv[] )
 
     // Reset profile to zero
     for (i = 0; i < o.nbins; i++)
-        profile[i] = 0.0;
+    {
+        profile[i]   = 0.0;
+        bin_count[i] = 0;
+    }
 
     // Write the column headers
     print_col_headers( f );
 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (i = 0; i < o.num_lines; i++)
     {
         // Obtain a random point on the pulsar surface
@@ -170,7 +174,7 @@ int main( int argc, char *argv[] )
                 POINT_SET_ALL );
 
         fieldline_to_profile( &psr, &init_pt, o.f_start*1.0e6, o.f_stop*1.0e6,
-                o.nbins, centre_bin, profile );
+                o.nbins, centre_bin, profile, bin_count );
     }
 
     // Print out the profile
@@ -178,6 +182,10 @@ int main( int argc, char *argv[] )
     double bin_width = 360.0 / (double)o.nbins;
     for (i = 0; i < o.nbins; i++)
     {
+        // Normalise the profile
+        if (bin_count[i] > 0)
+            profile[i] /= (double)bin_count[i];
+
         // Convert bin number to phase
         phase_deg = (double)(i - centre_bin) * bin_width;
 

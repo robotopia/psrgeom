@@ -971,7 +971,8 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
 
 
 void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
-        double freq_hi, int nbins, int centre_bin, double *profile )
+        double freq_hi, int nbins, int centre_bin, double *profile,
+        int *bin_count )
 /* Climb up a field line and emit virtual photons as we go. Stop when either
  * the light cylinder is reached (for an open field line) or when the pulsar
  * surface is reached (for closed field lines). 
@@ -989,7 +990,9 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
  *                        bin corresponding to the fiducial point, φ = 0°
  *
  * Outputs:
- *   double *profile  : a 1D array representing the profile
+ *   double *profile    : a 1D array representing the profile
+ *   int    *bin_count  : a 1D array representing how many contributions
+ *                        were made to each phase bin of *profile
  */
 {
     // Set up points for moving up the field line
@@ -1017,13 +1020,16 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
     int        n, N = 100;
     int        phase_bin;
     double     bin_width;
-    int        bin_count[nbins]; /* Keep track of how many contribution are
-                                    in each bin, for proper normalisation */
+    double     tmp_profile[nbins]; /* Construct temporary profile first */
     double     g_idx = 6.2; /* The assumed power law index for the gamma
                                distribution.
                                Hard-coded for now, because I'm not sure how
                                to calculate the proper amount for a desired
                                "global" spectral index */
+
+    int i;
+    for (i = 0; i < nbins; i++)
+        tmp_profile[i] = 0.0;
 
     // Loop for all valid points within the light cylinder
     while ((emit_pt.rhosq < psr->rL2) && (emit_pt.r > psr->r))
@@ -1105,7 +1111,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
             while (phase_bin >= nbins)  phase_bin -= nbins;
 
             // Add the power to the profile
-            profile[phase_bin] += avg_power;
+            tmp_profile[phase_bin] += avg_power;
             bin_count[phase_bin]++;
         }
         else
@@ -1126,12 +1132,9 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
                 POINT_SET_R | POINT_SET_RHOSQ );
     }
 
-    // Different profile bins would have received different numbers of
-    // contributions, so normalise these out
-    int i;
+    // Add the result to the passed-in profile array
     for (i = 0; i < nbins; i++)
-        if (bin_count[i] > 0)
-            profile[i] /= (double)bin_count[i];
+        profile[i] += tmp_profile[i];
 }
 
 
