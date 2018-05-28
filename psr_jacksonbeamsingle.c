@@ -59,8 +59,8 @@ int main( int argc, char *argv[] )
     double x, y;
     int X = 500, Y = 500;
     double vdot = 1.0;
-    double pixel_x_size = 1000.0/o.gamma / X;
-    double pixel_y_size = 1000.0/o.gamma / Y;
+    double pixel_x_size = 1.0/o.gamma / (double)X;
+    double pixel_y_size = 1.0/o.gamma / (double)Y;
     psr_angle th, ph;
     for (xi = 0; xi < X; xi++)
     {
@@ -69,6 +69,7 @@ int main( int argc, char *argv[] )
         for (yi = 0; yi < Y; yi++)
         {
             y = (double)(yi - Y/2)/(double)Y * pixel_y_size;
+
             set_psr_angle_rad( &th, sqrt(x*x + y*y) );
             set_psr_angle_rad( &ph, atan2(y, x) );
             power = single_particle_power_perp( o.gamma, &th, &ph, vdot );
