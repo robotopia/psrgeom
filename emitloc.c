@@ -1005,7 +1005,10 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
     point      retarded_LoS, retarded_LoS_mag;
     psr_angle  phase, dph, psi;
     double     kappa, crit_freq;
-    double     gamma;
+    double     gamma, g_lo, g_hi;
+    double     VzZ;
+    double     sum_power, avg_power;
+    int        n, N = 100;
     double     g_idx = 6.2; /* The assumed power law index for the gamma
                                distribution.
                                Hard-coded for now, because I'm not sure how
@@ -1026,30 +1029,35 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
 
         // Calculate the gamma factor corresponding to the lowest frequency
         // (and hence, the widest particle beam)
-        gamma = calc_crit_gamma( freq_lo, kappa );
+        g_lo = calc_crit_gamma( freq_lo, kappa );
 
-        // CHECK TO SEE IF PARTICLE IS POINTING IN THE RIGHT DIRECTION
-        // (within 2/γ particle beam)
-        // UP TO HERE
-
-        // If the frequency is within the allowed range, calculate the rest
-        // of the needed quantities
-        if ((freq_lo <= crit_freq) && (crit_freq <= freq_hi))
+        // Check to see if particle is pointing in the right direction
+        // (within 2/γ of the widest possible particle beam)
+        VzZ = fabs(V.th.rad - psr->ze.rad);
+        if (VzZ <= 2.0/g_lo)
         {
-            // Loop over different gamma values, drawn from a distribution
-            gamma = power_law_distr( freq_lo, freq_hi, g_idx );
-            // UP TO HERE TOO!
-            crit_freq = calc_crit_freq( gamma, kappa );
+            // Calculate the gamma factor corresponding to the highest
+            // frequency
+            g_hi = calc_crit_gamma( freq_hi, kappa );
 
-            // Calculate the retardation angle
-            calc_retardation( &emit_pt, psr, &V, &dph, &retarded_LoS );
+            // Loop over different gamma values, drawn from a distribution,
+            // and find the average power received
+            for (n = 0; n < N; n++)
+            {
+                gamma = power_law_distr( g_lo, g_hi, g_idx );
 
-            // Calculate the polarisation angle
-            if (psr->spin == SPIN_POS)
-                set_psr_angle_deg( &phase, -V.ph.deg );
-            else
-                copy_psr_angle( &(V.ph), &phase );
-            accel_to_pol_angle( psr, &A, &phase, &psi );
+                crit_freq = calc_crit_freq( gamma, kappa );
+
+                // Calculate the retardation angle
+                calc_retardation( &emit_pt, psr, &V, &dph, &retarded_LoS );
+
+                // Calculate the polarisation angle
+                if (psr->spin == SPIN_POS)
+                    set_psr_angle_deg( &phase, -V.ph.deg );
+                else
+                    copy_psr_angle( &(V.ph), &phase );
+                accel_to_pol_angle( psr, &A, &phase, &psi );
+            }
 
             // Convert the emitted beam to magnetic coordinates
             obs_to_mag_frame( &retarded_LoS, psr, NULL, &retarded_LoS_mag );
@@ -1058,8 +1066,8 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
             if (f != NULL)
             {
                 fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e "
-                            "%.15e %.15e %.15e %.15e "
-                            "%.15e %.15e %.15e %.15e %.15e %.15e\n",
+                        "%.15e %.15e %.15e %.15e "
+                        "%.15e %.15e %.15e %.15e %.15e %.15e\n",
                         init_pt_mag.th.deg, init_pt_mag.ph.deg,
                         retarded_LoS_mag.th.deg, retarded_LoS_mag.ph.deg,
                         psi.deg,
