@@ -971,7 +971,8 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
 
 
 void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
-        double freq_hi, int nbins, int centre_bin, double *profile )
+        double freq_hi, double tmult, int nbins, int centre_bin,
+        double *profile )
 /* Climb up a field line and emit virtual photons as we go. Stop when either
  * the light cylinder is reached (for an open field line) or when the pulsar
  * surface is reached (for closed field lines). 
@@ -1002,13 +1003,14 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
 
     // Set up points and angles for the fields and other needed quantities
     point      V, A;
-    point      LoS, retarded_LoS, retarded_LoS_mag;
-    psr_angle  phase, dph, psi;
-    double     kappa, crit_freq;
-    double     gamma, g_lo, g_hi;
+    point      LoS, LoS_beam, retarded_LoS;
+    psr_angle  dph;
+    double     kappa, gamma, g_lo, g_hi;
     double     VzZ;
-    double     sum_power, avg_power;
+    double     avg_power;
     int        n, N = 100;
+    int        phase_bin;
+    double     bin_width;
     double     g_idx = 6.2; /* The assumed power law index for the gamma
                                distribution.
                                Hard-coded for now, because I'm not sure how
@@ -1043,47 +1045,34 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
             // frequency
             g_hi = calc_crit_gamma( freq_hi, kappa );
 
+            // Calculate where in the particle beam the line of sight sits
+            transform_new_xz( &LoS, &V, &A, &LoS_beam );
+
             // Loop over different gamma values, drawn from a distribution,
             // and find the average power received
+            avg_power = 0.0;
             for (n = 0; n < N; n++)
             {
                 gamma = power_law_distr( g_lo, g_hi, g_idx );
 
-                crit_freq = calc_crit_freq( gamma, kappa );
-
-                //
-
-                // Calculate the retardation angle
-                calc_retardation( &emit_pt, psr, &V, &dph, &retarded_LoS );
-
-                // Calculate the polarisation angle
-                if (psr->spin == SPIN_POS)
-                    set_psr_angle_deg( &phase, -V.ph.deg );
-                else
-                    copy_psr_angle( &(V.ph), &phase );
-                accel_to_pol_angle( psr, &A, &phase, &psi );
+                avg_power += single_particle_power_perp( gamma,
+                        &(LoS_beam.th), &(LoS_beam.ph), A.r );
             }
+            avg_power /= (double)N;
 
-            // Convert the emitted beam to magnetic coordinates
-            obs_to_mag_frame( &retarded_LoS, psr, NULL, &retarded_LoS_mag );
+            // Now, calculate which phase bin to put it in
 
-            // Print out the results!
-            if (f != NULL)
-            {
-                fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e "
-                        "%.15e %.15e %.15e %.15e "
-                        "%.15e %.15e %.15e %.15e %.15e %.15e\n",
-                        init_pt_mag.th.deg, init_pt_mag.ph.deg,
-                        retarded_LoS_mag.th.deg, retarded_LoS_mag.ph.deg,
-                        psi.deg,
-                        dph.deg,
-                        crit_freq/1.0e6,
-                        emit_pt.r/1.0e3,
-                        kappa*1e3,
-                        emit_pt.x[0]/1e3, emit_pt.x[1]/1e3, emit_pt.x[2]/1e3,
-                        V.x[0], V.x[1], V.x[2],
-                        A.x[0], A.x[1], A.x[2] );
-            }
+            // Calculate the retardation angle
+            calc_retardation( &emit_pt, psr, &LoS, &dph, &retarded_LoS );
+
+            bin_width = 360.0 / (double)nbins;
+            phase_bin = (int)floor( (retarded_LoS.ph.deg)/bin_width );
+            phase_bin += centre_bin;
+            while (phase_bin < 0)       phase_bin += nbins;
+            while (phase_bin >= nbins)  phase_bin -= nbins;
+
+            // Add the power to the profile
+            profile[phase_bin] += avg_power;
         }
 
         // Climb another rung on the field line ladder

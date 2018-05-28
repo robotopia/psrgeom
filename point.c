@@ -240,11 +240,34 @@ void transform_new_xz( point *v, point *new_z, point *new_x, point *new_v )
  * new z-axis and new_x is the new x-axis. The new y-axis is assumed to be
  * new_x × new_z.
  *
- * Only the Cartesian coordinates of new_x and new_z are used.
+ * new_x and new_z are assumed to be perpendicular to each other.
+ *
+ * Points are assumed to have spherical coordinates set.
  *
  * The resulting vector is written to new_v.
  */
 {
+    point nxp, nxpp;
+    point vp, vpp;
+    psr_angle tmp;
+
     // Euler rotation #1:
-    // Rotate about z-axis to get V
+    // Rotate about z-axis to get (virtual) new_z in xz-plane
+    reverse_psr_angle( &(new_z->ph), &tmp );
+
+    rotate_about_axis( v,     &vp,  &tmp, 'z', POINT_SET_ALL );
+    rotate_about_axis( new_x, &nxp, &tmp, 'z', POINT_SET_ALL );
+
+    // Euler rotation #2:
+    // Now rotate about the y-axis to get (virtual) new_z parallel to z-axis
+    reverse_psr_angle( &(new_z->th), &tmp );
+
+    rotate_about_axis( &vp,   &vpp,  &tmp, 'y', POINT_SET_ALL );
+    rotate_about_axis( &nxp,  &nxpp, &tmp, 'y', POINT_SET_ALL );
+
+    // Euler rotation #3:
+    // Finally, rotate about the z-axis again to get new_x parallel to x-axis
+    reverse_psr_angle( &(nxpp.ph), &tmp );
+
+    rotate_about_axis( &vpp, new_v, &tmp, 'z', POINT_SET_ALL );
 }

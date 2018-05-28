@@ -135,6 +135,8 @@ void spherical_midpoint( point *p1, point *p2, point *mid_pt, int flags );
 
 void scale_point( point *in, double scale, point *out );
 
+void transform_new_xz( point *v, point *new_z, point *new_x, point *new_v );
+
 /**** Pulsar functions ****/
 
 void set_pulsar( pulsar *psr, psr_angle *ra, psr_angle *dec, double P, double r,
@@ -244,6 +246,10 @@ void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
 
 void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
         double freq_lo, double freq_hi, FILE *f );
+
+void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
+        double freq_hi, double tmult, int nbins, int centre_bin,
+        double *profile );
 
 /**** Finding the pulse width ****/
 
