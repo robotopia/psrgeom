@@ -245,7 +245,6 @@ void transform_new_xz( point *v, point *new_z, point *new_x, point *new_v )
  * The resulting vector is written to new_v.
  */
 {
-    // Create a tranformation matrix to get from one coordinate system to the
-    // other
-    double T[3][] = { 
+    // Euler rotation #1:
+    // Rotate about z-axis to get V
 }
