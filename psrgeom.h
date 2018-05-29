@@ -110,6 +110,7 @@ typedef struct carousel_t
     psr_angle  s;    // The angular radius of a spark
     psr_angle  S;    // The angular radius of the whole carousel
     int        type; // {TOPHAT, GAUSSIAN}
+    double     P4;   // The rotation rate of the carousel (in sec)
 } carousel;
 
 
