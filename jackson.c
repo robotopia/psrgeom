@@ -158,6 +158,28 @@ double single_particle_power_perp( double gamma, psr_angle *th, psr_angle *ph,
 #undef SCALE
 
 
+/* The following scale factor is probably wrong since I used SI units and not
+ * cgs units which are used in Jackson */
+#define  SCALE  6.35136998062667e-64  /* (2e²)/(3c³) */
+
+double single_particle_power_total( double gamma, double vdot )
+/* From Jackson, 3rd ed. pg 671, Eq (14.46):
+ *
+ * In the relativistic limit (γ ≫ 1), the angular distribution of a particle
+ * accelerated instantaneously in a direction perpendicular to the velocity
+ * is given in Eq (14.45). Integrating over all angles gives the total power
+ *
+ *             2 e²|v̇|²
+ *    dP(t′) ≃ — ————— γ⁴
+ *             3   c³
+ */
+{
+    return SCALE*vdot*vdot*gamma*gamma*gamma*gamma;
+}
+
+#undef SCALE
+
+
 double calc_crit_freq( double gamma, double curvature )
 /* Implementation of the formula (see Jackson, 3rd edition, Eqn 14.81):
  *

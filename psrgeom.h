@@ -75,7 +75,8 @@ typedef struct psr_angle_t
 #define SPIN_POS   1
 #define SPIN_NEG  -1
 
-typedef struct point_t {
+typedef struct point_t
+{
     double    x[3];   // x,y,z coordinates
     double    r;      // distance from origin = sqrt(x^2 + y^2 + z^2)
     psr_angle th;     // The colatitude
@@ -83,7 +84,8 @@ typedef struct point_t {
     double    rhosq;  // distance from z axis squared = x^2 + y^2
 } point;
 
-typedef struct pulsar_t {
+typedef struct pulsar_t
+{
     psr_angle    ra;    // Right Ascension
     psr_angle    dec;   // Declination
     double       P;     // Rotation period
@@ -93,11 +95,18 @@ typedef struct pulsar_t {
     double       rL;    // Light cylinder radius
     double       rL2;   // = rL^2 (because it comes up quite often)
     psr_angle    al;    // Angle between the rotation and magnetic axes
-    psr_angle    ze;    // Angle between the rotation axis and the line of sight
+    psr_angle    ze;    // Angle between the rotation axis and the LoS
     int          spin;  // Spin direction (SPIN_POS or SPIN_NEG)
     int          field_type; // Can be DIPOLE or DEUTSCH
 } pulsar;
 
+
+typedef struct photon_t
+{
+    double freq;        // The photon's frequency, in Hz
+    point  source;      // The location of the particle when it emitted
+    point  B, V, A;     // The B-, V-, and A-fields at the source location
+} photon;
 
 
 /**** Angle functions ****/
@@ -195,6 +204,7 @@ void particle_beam_intensity( double freq, double gamma, psr_angle *theta,
 double single_particle_power( point *n, point *beta, point *beta_dot );
 double single_particle_power_perp( double gamma, psr_angle *th, psr_angle *ph,
         double vdot );
+double single_particle_power_total( double gamma, double vdot );
 
 
 /**** Dipole field functions ****/
@@ -250,6 +260,10 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
 void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
         double freq_hi, int nbins, int centre_bin, double *profile,
         int *bin_count );
+
+/**** Photon functions ****/
+
+void emit_photon( pulsar *psr, point *pt, double freq, photon *pn );
 
 /**** Finding the pulse width ****/
 
