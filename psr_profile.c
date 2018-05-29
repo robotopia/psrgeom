@@ -22,7 +22,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include <omp.h>
+//#include <omp.h>
 #include "psrgeom.h"
 
 struct opts
@@ -112,9 +112,6 @@ int main( int argc, char *argv[] )
     print_psrg_header( f, argc, argv );
 
     // Some needed variables
-    int linetype;   // either CLOSED_LINE or OPEN_LINE
-    point foot_pt, foot_pt_mag;
-    point init_pt;
     double profile[o.nbins];
     int bin_count[o.nbins];
     int centre_bin = o.nbins/2;
@@ -133,9 +130,14 @@ int main( int argc, char *argv[] )
     // Write the column headers
     print_col_headers( f );
 
-//#pragma omp parallel for
+//#pragma omp parallel for /* At the moment, this doesn't seem to help */
     for (i = 0; i < o.num_lines; i++)
     {
+        fprintf( stderr, "\r\r\r\r%3d%%", (int)(100.0*(double)i/(double)(o.num_lines-1)) );
+        int linetype;   // either CLOSED_LINE or OPEN_LINE
+        point foot_pt, foot_pt_mag;
+        point init_pt;
+
         // Obtain a random point on the pulsar surface
         if (o.nsparks == 0)
         {
@@ -176,6 +178,7 @@ int main( int argc, char *argv[] )
         fieldline_to_profile( &psr, &init_pt, o.f_start*1.0e6, o.f_stop*1.0e6,
                 o.nbins, centre_bin, profile, bin_count );
     }
+    fprintf( stderr, "\n" );
 
     // Print out the profile
     double phase_deg;

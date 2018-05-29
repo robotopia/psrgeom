@@ -896,7 +896,7 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
     // Set up points and angles for the fields and other needed quantities
     point      V, A;
     point      retarded_LoS, retarded_LoS_mag;
-    psr_angle  phase, dph, psi;
+    psr_angle  phase, dph, psi, obs_phase;
     double     kappa, crit_freq;
 
     // Because we're looking at pulsar emission that could be seen from a
@@ -932,10 +932,20 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
 
             // Calculate the polarisation angle
             if (psr->spin == SPIN_POS)
-                set_psr_angle_deg( &phase, -V.ph.deg );
+            {
+                reverse_psr_angle( &(V.ph), &phase );
+                reverse_psr_angle( &(retarded_LoS.ph), &obs_phase );
+            }
             else
+            {
                 copy_psr_angle( &(V.ph), &phase );
+                copy_psr_angle( &(retarded_LoS.ph), &obs_phase );
+            }
             accel_to_pol_angle( psr, &A, &phase, &psi );
+
+            // Make sure observed phase is in range [-180:180]
+            while (obs_phase.deg < -180.0)  obs_phase.deg += 360.0;
+            while (obs_phase.deg >= 180.0)  obs_phase.deg -= 360.0;
 
             // Convert the emitted beam to magnetic coordinates
             obs_to_mag_frame( &retarded_LoS, psr, NULL, &retarded_LoS_mag );
@@ -944,18 +954,15 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
             if (f != NULL)
             {
                 fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e "
-                            "%.15e %.15e %.15e %.15e "
-                            "%.15e %.15e %.15e %.15e %.15e %.15e\n",
+                            "%.15e %.15e %.15e %.15e\n",
                         init_pt_mag.th.deg, init_pt_mag.ph.deg,
                         retarded_LoS_mag.th.deg, retarded_LoS_mag.ph.deg,
                         psi.deg,
-                        dph.deg,
+                        obs_phase.deg,
                         crit_freq/1.0e6,
                         emit_pt.r/1.0e3,
                         kappa*1e3,
-                        emit_pt.x[0]/1e3, emit_pt.x[1]/1e3, emit_pt.x[2]/1e3,
-                        V.x[0], V.x[1], V.x[2],
-                        A.x[0], A.x[1], A.x[2] );
+                        emit_pt.x[0]/1e3, emit_pt.x[1]/1e3, emit_pt.x[2]/1e3 );
             }
         }
 
@@ -1078,7 +1085,10 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
             step_dist = min_step_dist;
 
             // Calculate the line of sight
-            reverse_psr_angle( &(V.ph), &phase );
+            if (psr->spin == SPIN_POS)
+                reverse_psr_angle( &(V.ph), &phase );
+            else
+                copy_psr_angle( &(V.ph), &phase );
             line_of_sight( psr, &phase, &LoS );
 
             // Calculate the gamma factor corresponding to the highest
