@@ -45,7 +45,8 @@ OBJS = psr_angle.o \
 	   psrio.o \
 	   fitwidth.o \
 	   numrec.o \
-	   jackson.o
+	   jackson.o \
+	   photon.o
 
 all: $(TARGETS) $(TESTS) $(LIBFILE) man-pages
 

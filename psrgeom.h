@@ -100,12 +100,27 @@ typedef struct pulsar_t
     int          field_type; // Can be DIPOLE or DEUTSCH
 } pulsar;
 
+// Carousel types
+#define  TOPHAT    0   /* Uniform distribution, sharp cutoff */
+#define  GAUSSIAN  1   /* Sparks have 2D Gaussian profiles */
+
+typedef struct carousel_t
+{
+    int        n;    // Number of sparks in the carousel (0 = annulus)
+    psr_angle  s;    // The angular radius of a spark
+    psr_angle  S;    // The angular radius of the whole carousel
+    int        type; // {TOPHAT, GAUSSIAN}
+} carousel;
+
 
 typedef struct photon_t
 {
-    double freq;        // The photon's frequency, in Hz
-    point  source;      // The location of the particle when it emitted
-    point  B, V, A;     // The B-, V-, and A-fields at the source location
+    double    freq;        // The photon's frequency, in Hz
+    point     source;      // The location of the particle when it emitted
+    point     B, V, A;     // The B-, V-, and A-fields at the source location
+    double    curvature;   // The curvature of the particle's trajectory
+    psr_angle phase;       // The phase at which the particle is observed
+    psr_angle psi;         // The photon's polarisation angle (kind of...)
 } photon;
 
 
@@ -264,6 +279,8 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
 /**** Photon functions ****/
 
 void emit_photon( pulsar *psr, point *pt, double freq, photon *pn );
+double weight_photon_by_particle_density( photon *pn );
+double weight_photon_by_power( photon *pn );
 
 /**** Finding the pulse width ****/
 
