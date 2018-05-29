@@ -183,6 +183,9 @@ void random_direction_bounded( point *rand_pt, double lo_th_rad,
         double hi_th_rad, double lo_ph_rad, double hi_ph_rad );
 void random_direction_spark( point *rand_pt, double th_rad,
         double spark_size_rad, int nsparks );
+void random_point_in_cyl( point *rand_pt, double max_rho, double max_z );
+void random_point_in_lightcyl( point *rand_pt, pulsar *psr, double frac,
+        double z_max_frac );
 
 double power_law_distr( double lo, double hi, double index );
 
@@ -229,6 +232,7 @@ void obs_to_mag_frame( point *xo, pulsar *psr, psr_angle *ph, point *xm );
 void mag_to_obs_frame( point *xm, pulsar *psr, psr_angle *ph, point *xo );
 
 double calc_dipole_R( point *xm );
+double calc_dipole_curvature( point *xm );
 void dipole_footpoint( pulsar *psr, double R, psr_angle *si, point *foot_pt );
 
 void beamangle_to_posangle( psr_angle *ba, psr_angle *pa );

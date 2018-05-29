@@ -234,3 +234,21 @@ double power_law_distr( double lo, double hi, double index )
     double hi_a = pow( hi, exp );
     return pow( C*(hi_a - lo_a) + lo_a, expi );
 }
+
+
+void random_point_in_lightcyl( point *rand_pt, pulsar *psr, double frac,
+        double z_max_frac )
+/* Generate a random point (RAND_PT) within fraction FRAC of the light
+ * cylinder of pulsar PSR. The returned point is guaranteed to be outside of
+ * the pulsar itself. The absolute value of the point's z coordinate is
+ * guaranteed to be not more than Z_MAX_FRAC × FRAC × the light cylinder
+ * radius.
+ */
+{
+    double rho   = frac * psr->rL;
+    double max_z = z_max_frac * rho;
+
+    rand_pt->r = 0.0;
+    while (rand_pt->r < psr->r)
+        random_point_in_cyl( rand_pt, rho, max_z );
+}

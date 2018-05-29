@@ -77,11 +77,32 @@ void mag_to_obs_frame( point *xm, pulsar *psr, psr_angle *ph, point *xo )
 double calc_dipole_R( point *xm )
 /* Calculates the maximum extent, R, of a dipole magnetic field line that
  * passes through the given point, *xm, assumed to be in magnetic coordinates.
- * It is assumed that the given point's "r" value is defined.
+ * It is assumed that the given point's spherical coordinates are set.
  */
 {
     return xm->r / (xm->th.sin * xm->th.sin);
 }
+
+
+double calc_dipole_curvature( point *xm )
+/* Calculates the curvature of the dipole field line at the point XM, given in
+ * magnetic coordinates. It is assumed that XM's spherical coordinates are
+ * set.
+ */
+{
+    double sth  = xm->th.sin;
+    double cth  = xm->th.cos;
+    double cth2 = cth*cth;
+    double fact = 3.0*cth2 + 1.0;
+    double sqtf = sqrt(fact);
+    double f3_2 = fact * sqtf;
+
+    double num  = 3.0*sth*(cth2 + 1.0);
+    double den  = xm->r * f3_2;
+
+    return num / den;
+}
+
 
 void dipole_footpoint( pulsar *psr, double R, psr_angle *si, point *foot_pt )
 /* Calculates the footpoint of a magnetic field line assuming a dipole

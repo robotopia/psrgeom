@@ -216,6 +216,21 @@ void random_direction_spark( point *rand_pt, double th_rad,
 }
 
 
+void random_point_in_cyl( point *rand_pt, double max_rho, double max_z )
+/* Generate a random point (RAND_PT) within a cylinder of dimensions:
+ *   ρ = MAX_RHO,  z = ± MAX_Z
+ */
+{
+    double rho     = max_rho * sqrt(RAND(1.0));
+    double z       = max_z * RANDU;
+    double ph_rad  = RAND(2.0*PI);
+    psr_angle ph;
+    set_psr_angle_rad( &ph, ph_rad );
+
+    set_point_cyl( &rand_pt, rho, &ph, z, POINT_SET_ALL )
+}
+
+
 void scale_point( point *in, double scale, point *out )
 /* Scale a point by a given amount. The in and out pointers can point to the
  * same point. ;-)
