@@ -1024,10 +1024,10 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
     double     kappa, gamma, g_lo, g_hi;
     double     VzZ, beam_width;
     double     avg_power;
-    int        n, N = 100;
+    int        n, N = 1;
     int        phase_bin;
     double     bin_width;
-    double     min_step_dist = 100.0; /* For when inside visible regions */
+    double     min_step_dist = 500.0; /* For when inside visible regions */
     double     tmp_profile[nbins]; /* Construct temporary profile first */
     double     g_idx = 6.2; /* The assumed power law index for the gamma
                                distribution.
