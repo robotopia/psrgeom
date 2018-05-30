@@ -227,7 +227,7 @@ void random_point_in_cyl( point *rand_pt, double max_rho, double max_z )
     psr_angle ph;
     set_psr_angle_rad( &ph, ph_rad );
 
-    set_point_cyl( &rand_pt, rho, &ph, z, POINT_SET_ALL )
+    set_point_cyl( rand_pt, rho, &ph, z, POINT_SET_ALL );
 }
 
 

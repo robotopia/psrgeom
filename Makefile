@@ -30,7 +30,8 @@ TARGETS = psr_fields \
 		  psr_jacksonbeamsingle
 
 TESTS = calc_fields_test \
-		transform_new_xz_test
+		transform_new_xz_test \
+		bstep_error_test
 
 LIBRARY = psrgeom
 LIBFILE = lib$(LIBRARY).a
