@@ -252,3 +252,25 @@ void random_point_in_lightcyl( point *rand_pt, pulsar *psr, double frac,
     while (rand_pt->r < psr->r)
         random_point_in_cyl( rand_pt, rho, max_z );
 }
+
+
+void set_pulsar_carousel( pulsar *psr, int n, psr_angle *s, psr_angle *S,
+        int type, double P4 )
+/*
+ * Parameters:
+ *   pulsar    *psr   : The pulsar whose carousel parameters are to be set
+ *   int        n     : Number of sparks in the carousel (0 = annulus)
+ *   psr_angle  s     : The angular radius of a spark
+ *   psr_angle  S     : The angular radius of the whole carousel
+ *   int        type  : One of {TOPHAT, GAUSSIAN}
+ *   double     P4    : The rotation rate of the carousel (in sec)
+ */
+{
+    psr->csl.n    = n;
+    psr->csl.type = type;
+    psr->csl.P4   = P4;
+    copy_psr_angle( s, &(psr->csl.s) );
+    copy_psr_angle( S, &(psr->csl.S) );
+}
+
+

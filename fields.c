@@ -1134,6 +1134,26 @@ void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
 }
 
 
+void B_large_step( point *x1, pulsar *psr, double step, int direction,
+        point *x2 )
+/* This function is similar to Bstep, except it breaks up the journey into
+ * multiple smaller steps. The step size is chosen so that the error is
+ * roughly of order 1 m. This equates to single step sizes not more than
+ * about 0.5% of the light cylinder radius.
+ *
+ * See the bstep_error_test program for an estimate of the errors as a
+ * function of step size.
+ */
+{
+    int nsteps = (int)ceil( step / (0.005*psr->rL) );
+    double tstep = step / (double)nsteps;
+    int i;
+    copy_point( x1, x2 );
+    for (i = 0; i < nsteps; i++)
+        Bstep( x2, psr, tstep, direction, x2 );
+}
+
+
 void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
             point *x2, int rL_norm, FILE *f )
 /* This follows a particle's trajectory from a given starting point to time t.

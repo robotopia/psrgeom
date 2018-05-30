@@ -84,6 +84,20 @@ typedef struct point_t
     double    rhosq;  // distance from z axis squared = x^2 + y^2
 } point;
 
+// Carousel types
+#define  TOPHAT    0   /* Uniform distribution, sharp cutoff */
+#define  GAUSSIAN  1   /* Sparks have 2D Gaussian profiles */
+
+typedef struct carousel_t
+{
+    int        n;    // Number of sparks in the carousel (0 = annulus)
+    psr_angle  s;    // The angular radius of a spark
+    psr_angle  S;    // The angular radius of the whole carousel
+    int        type; // {TOPHAT, GAUSSIAN}
+    double     P4;   // The rotation rate of the carousel (in sec)
+} carousel;
+
+
 typedef struct pulsar_t
 {
     psr_angle    ra;    // Right Ascension
@@ -98,21 +112,8 @@ typedef struct pulsar_t
     psr_angle    ze;    // Angle between the rotation axis and the LoS
     int          spin;  // Spin direction (SPIN_POS or SPIN_NEG)
     int          field_type; // Can be DIPOLE or DEUTSCH
+    carousel     csl;   // The carousel parameters
 } pulsar;
-
-// Carousel types
-#define  TOPHAT    0   /* Uniform distribution, sharp cutoff */
-#define  GAUSSIAN  1   /* Sparks have 2D Gaussian profiles */
-
-typedef struct carousel_t
-{
-    int        n;    // Number of sparks in the carousel (0 = annulus)
-    psr_angle  s;    // The angular radius of a spark
-    psr_angle  S;    // The angular radius of the whole carousel
-    int        type; // {TOPHAT, GAUSSIAN}
-    double     P4;   // The rotation rate of the carousel (in sec)
-} carousel;
-
 
 typedef struct photon_t
 {
@@ -177,6 +178,8 @@ void pol_zero( pulsar *psr, psr_angle *phase, point *pz );
 
 void calc_retardation( point *X, pulsar *psr, point *LoS,
         psr_angle *dph, point *retarded_LoS );
+void set_pulsar_carousel( pulsar *psr, int n, psr_angle *s, psr_angle *S,
+        int type, double P4 );
 
 void random_direction( point *rand_pt );
 void random_direction_bounded( point *rand_pt, double lo_th_rad,
@@ -199,6 +202,8 @@ void calc_deutsch_fields( point *X, pulsar *psr, double v, point *B1,
         point *V1, point *V2, point *A1, point *A2, int *nsols );
 
 void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
+void B_large_step( point *x1, pulsar *psr, double step, int direction,
+        point *x2 );
 void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
                 point *x2, int rL_norm, FILE *f );
 double Bdotrxy( point *x, pulsar *psr );
