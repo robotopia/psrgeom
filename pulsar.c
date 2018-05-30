@@ -205,11 +205,11 @@ void calc_retardation( point *X, pulsar *psr, point *LoS,
 }
 
 
-double power_law_distr( double lo, double hi, double index )
+double neg_power_law_distr( double lo, double hi, double index )
 /* This function generates a random number between lo and hi that follows a
  * (negative) power law distribution with the supplied index.
  *
- * dN/dx \propto x^(-index)
+ * dN/dx ∝ x⁻ᵅ
  *
  * This function does not seed the random number generator. The caller is
  * responsible for doing that.
@@ -274,3 +274,59 @@ void set_pulsar_carousel( pulsar *psr, int n, psr_angle *s, psr_angle *S,
 }
 
 
+double spark_profile( pulsar *psr, double t, point *foot_pt )
+/* This function calculates the spark profile at the given FOOT_PT on the
+ * surface of pulsar PSR at time T.
+ *
+ * Here, a positive P4 is interpreted to mean a "right-handed" rotation
+ * about the magnetic axis, i.e. counterclockwise as viewed from above the
+ * surface.
+ */
+{
+    // Convert the time into a rotation of the carousel
+    psr_angle csl_rot;
+    set_psr_angle_deg( &csl_rot, 360.0*t/(psr->csl.P4) );
+
+    double h = 0.0;     // The "height" of the profile at the given footpoint
+    psr_angle spark_ph; // The magnetic azimuth of a spark
+    point spark_pt;     // The location of the spark centre on the surface
+    psr_angle sep;      // The angular separation (in azimuth) between sparks
+    double dist;        // The angular separation between the foot point and
+                        // the spark (in rad)
+    double dist_norm;   // Same as 'dist', but normalised to the spark size
+
+    set_psr_angle_deg( &sep, 360.0 / psr->csl.n );
+
+    // For each spark...
+    int n;
+    for (n = 0; n < psr->csl.n; n++)
+    {
+        // Calculate how far away the foot_point is from the spark centre
+        set_psr_angle_deg( &spark_ph, (double)n*sep.deg + csl_rot.deg );
+        set_point_sph( &spark_pt, psr->r,
+                                  &(psr->csl.S),
+                                  &spark_ph,
+                                  POINT_SET_ALL );
+        dist      = acos( norm_dot( &spark_pt, foot_pt ) );
+        dist_norm = dist / psr->csl.s.rad;
+
+        // Add this spark's contribution
+        switch (psr->csl.type)
+        {
+            case TOPHAT:
+                if (dist_norm <= 1.0)
+                    h += 1.0;
+                break;
+            case GAUSSIAN:
+                h += exp( -dist_norm*dist_norm );
+                break;
+            default:
+                fprintf( stderr, "error: spark_profile: unrecognised "
+                                 "carousel type\n" );
+                exit(EXIT_FAILURE);
+                break;
+        }
+    }
+
+    return h;
+}

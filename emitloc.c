@@ -1103,7 +1103,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
             avg_power = 0.0;
             for (n = 0; n < N; n++)
             {
-                gamma = power_law_distr( g_lo, g_hi, g_idx );
+                gamma = neg_power_law_distr( g_lo, g_hi, g_idx );
 
                 avg_power += single_particle_power_perp( gamma,
                         &(LoS_beam.th), &(LoS_beam.ph), A.r );

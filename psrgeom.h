@@ -121,6 +121,7 @@ typedef struct photon_t
     point     source;      // The location of the particle when it emitted
     point     B, V, A;     // The B-, V-, and A-fields at the source location
     double    curvature;   // The curvature of the particle's trajectory
+    double    gamma;       // The Lorentz factor of the particle
     psr_angle phase;       // The phase at which the particle is observed
     psr_angle psi;         // The photon's polarisation angle (kind of...)
 } photon;
@@ -190,7 +191,8 @@ void random_point_in_cyl( point *rand_pt, double max_rho, double max_z );
 void random_point_in_lightcyl( point *rand_pt, pulsar *psr, double frac,
         double z_max_frac );
 
-double power_law_distr( double lo, double hi, double index );
+double neg_power_law_distr( double lo, double hi, double index );
+double spark_profile( pulsar *psr, double t, point *foot_pt );
 
 /**** Magnetic field functions ****/
 
@@ -290,7 +292,11 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
 
 void emit_photon( pulsar *psr, point *pt, double freq, photon *pn );
 double weight_photon_by_particle_density( photon *pn );
+double weight_photon_by_line_density( point *init_pt, pulsar *psr );
 double weight_photon_by_power( photon *pn );
+double weight_photon_by_gamma_distr( photon *pn, double index );
+double weight_photon_by_spark( point *foot_pt, photon *pn, pulsar *psr,
+        double height, int pulse_number );
 
 /**** Finding the pulse width ****/
 
