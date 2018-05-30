@@ -295,21 +295,11 @@ double spark_profile( pulsar *psr, double t, point *foot_pt )
                         // the spark (in rad)
     double dist_norm;   // Same as 'dist', but normalised to the spark size
 
-    set_psr_angle_deg( &sep, 360.0 / psr->csl.n );
-
-    // For each spark...
-    int n;
-    for (n = 0; n < psr->csl.n; n++)
+    if (psr->csl.n == 0)
     {
-        // Calculate how far away the foot_point is from the spark centre
-        set_psr_angle_deg( &spark_ph, (double)n*sep.deg + csl_rot.deg );
-        set_point_sph( &spark_pt, psr->r,
-                                  &(psr->csl.S),
-                                  &spark_ph,
-                                  POINT_SET_ALL );
-        dist      = acos( norm_dot( &spark_pt, foot_pt ) );
+        dist      = fabs( psr->csl.S.rad - foot_pt->th.rad );
         dist_norm = dist / psr->csl.s.rad;
-
+        
         // Add this spark's contribution
         switch (psr->csl.type)
         {
@@ -322,10 +312,51 @@ double spark_profile( pulsar *psr, double t, point *foot_pt )
                 break;
             default:
                 fprintf( stderr, "error: spark_profile: unrecognised "
-                                 "carousel type\n" );
+                        "carousel type\n" );
                 exit(EXIT_FAILURE);
                 break;
         }
+    }
+    else if (psr->csl.n > 0)
+    {
+        set_psr_angle_deg( &sep, 360.0 / psr->csl.n );
+
+        // For each spark...
+        int n;
+        for (n = 0; n < psr->csl.n; n++)
+        {
+            // Calculate how far away the foot_point is from the spark centre
+            set_psr_angle_deg( &spark_ph, (double)n*sep.deg + csl_rot.deg );
+            set_point_sph( &spark_pt, psr->r,
+                                      &(psr->csl.S),
+                                      &spark_ph,
+                                      POINT_SET_ALL );
+            dist      = acos( norm_dot( &spark_pt, foot_pt ) );
+            dist_norm = dist / psr->csl.s.rad;
+
+            // Add this spark's contribution
+            switch (psr->csl.type)
+            {
+                case TOPHAT:
+                    if (dist_norm <= 1.0)
+                        h += 1.0;
+                    break;
+                case GAUSSIAN:
+                    h += exp( -dist_norm*dist_norm );
+                    break;
+                default:
+                    fprintf( stderr, "error: spark_profile: unrecognised "
+                                     "carousel type\n" );
+                    exit(EXIT_FAILURE);
+                    break;
+            }
+        }
+    }
+    else
+    {
+        fprintf( stderr, "error: spark_profile: carousel cannot have a "
+                "negative number of sparks\n" );
+        exit(EXIT_FAILURE);
     }
 
     return h;
