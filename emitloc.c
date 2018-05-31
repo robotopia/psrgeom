@@ -1383,3 +1383,5 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
     // Return successful!
     return EMIT_PT_FOUND;
 }
+
+

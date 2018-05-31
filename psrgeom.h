@@ -51,6 +51,13 @@
 #define  OPEN_LINE    0
 #define  CLOSED_LINE  1
 
+// Different weighting options (used in weight_photon_total())
+#define WEIGHT_GAMMA  0x1
+#define WEIGHT_POWER  0x2
+#define WEIGHT_SPARK  0x4
+#define WEIGHT_LDENS  0x8
+#define WEIGHT_TOTAL  0xF
+
 // Generate random numbers
 #define RAND(x)   ((x)*(double)rand()/(double)RAND_MAX)   /* 0 < rand < x */
 #define RANDU     (RAND(1.0) * 2.0 - 1.0)                 /* -1 < rand < 1 */
@@ -117,13 +124,14 @@ typedef struct pulsar_t
 
 typedef struct photon_t
 {
-    double    freq;        // The photon's frequency, in Hz
-    point     source;      // The location of the particle when it emitted
-    point     B, V, A;     // The B-, V-, and A-fields at the source location
-    double    curvature;   // The curvature of the particle's trajectory
-    double    gamma;       // The Lorentz factor of the particle
-    psr_angle phase;       // The phase at which the particle is observed
-    psr_angle psi;         // The photon's polarisation angle (kind of...)
+    double    freq;         // The photon's frequency, in Hz
+    point     source;       // The location of the particle when it emitted
+    point     B, V, A;      // The B-, V-, and A-fields at the source location
+    point     retarded_LoS; // Same as V, but adjusted for retardation
+    double    curvature;    // The curvature of the particle's trajectory
+    double    gamma;        // The Lorentz factor of the particle
+    psr_angle phase;        // The phase at which the particle is observed
+    psr_angle psi;          // The photon's polarisation angle (kind of...)
 } photon;
 
 
@@ -297,6 +305,22 @@ double weight_photon_by_power( photon *pn );
 double weight_photon_by_gamma_distr( photon *pn, double index );
 double weight_photon_by_spark( point *foot_pt, photon *pn, pulsar *psr,
         double height, int pulse_number );
+double weight_photon_total( photon *pn, pulsar *psr, point *foot_pt,
+        double height, int pulse_number, double index, int weight_flags );
+
+void climb_and_emit_photon( pulsar *psr, point *foot_pt, double height,
+        double freq, photon *pn );
+
+void bin_photon_freq( photon *pn, double weight, double fmin,
+        double fbinwidth, int nfbins, double *farray );
+void bin_photon_beam( photon *pn, pulsar *psr, double weight, double xmin,
+        double ymin, double xbinwidth, double ybinwidth, int nxbins,
+        int nybins, double **xyarray );
+void bin_photon_pulsestack( photon *pn, double weight, int pulse_number,
+        int pulsemin, int npulses, double phasemin, double phasebinwidth,
+        int nphasebins, double **pulsestack );
+void bin_photon_profile( photon *pn, double weight, double phasemin,
+        double phasebinwidth, int nphasebins, double *profile );
 
 /**** Finding the pulse width ****/
 

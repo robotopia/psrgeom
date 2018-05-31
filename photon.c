@@ -39,14 +39,13 @@ void emit_pulsar_photon( pulsar *psr, point *pt, double freq, photon *pn )
     pn->gamma = calc_crit_gamma( pn->freq, pn->curvature );
 
     // Calculate the observed phase (incl. retardation)
-    point retarded_LoS;
     psr_angle dph;
-    calc_retardation( pt, psr, &pn->V, &dph, &retarded_LoS );
+    calc_retardation( pt, psr, &pn->V, &dph, &(pn->retarded_LoS) );
 
     if (psr->spin == SPIN_POS)
-        reverse_psr_angle( &(retarded_LoS.ph), &pn->phase );
+        reverse_psr_angle( &(pn->retarded_LoS.ph), &pn->phase );
     else
-        copy_psr_angle( &(retarded_LoS.ph), &pn->phase );
+        copy_psr_angle( &(pn->retarded_LoS.ph), &pn->phase );
 
     // Calculate the polarisation angle
     accel_to_pol_angle( psr, &pn->A, &pn->phase, &pn->psi );
@@ -131,3 +130,153 @@ double weight_photon_by_spark( point *foot_pt, photon *pn, pulsar *psr,
     return spark_profile( psr, t, foot_pt );
 }
 
+
+double weight_photon_total( photon *pn, pulsar *psr, point *foot_pt,
+        double height, int pulse_number, double index, int weight_flags )
+/* This function combines the weights from all the other weight functions.
+ * To choose which weights get applied, set the WEIGHT_FLAG, which can take
+ * the following (logical) values:
+ *
+ *   WEIGHT_GAMMA | WEIGHT_POWER | WEIGHT_SPARK | WEIGHT_LDENS
+ *
+ * All of them combined can be abbreviated to WEIGHT_TOTAL
+ */
+{
+    double w = 1.0;
+
+    if (weight_flags & WEIGHT_GAMMA)
+        w *= weight_photon_by_gamma_distr( pn, index );
+
+    if (weight_flags & WEIGHT_POWER)
+        w *= weight_photon_by_power( pn ) * 1.0e60; // (to avoid underflow)
+
+    if (weight_flags & WEIGHT_SPARK)
+        w *= weight_photon_by_spark( foot_pt, pn, psr, height, pulse_number );
+
+    if (weight_flags & WEIGHT_LDENS)
+        w *= weight_photon_by_line_density( foot_pt, psr );
+
+    return w;
+}
+
+
+void climb_and_emit_photon( pulsar *psr, point *foot_pt, double height,
+        double freq, photon *pn )
+/* This function starts from a given footpoint, climbs the field line to a
+ * given height, and calculates the properties of the photon emitted there
+ *
+ * Inputs:
+ *   pulsar *psr     : pulsar struct
+ *   point  *foot_pt : the footpoint of the magnetic field line to be climbed
+ *   double  height  : the distance to climb up the field line
+ *   double  freq    : the frequency of the emitted photon
+ * Outputs:
+ *   photon *pn      : the photon struct
+ */
+{
+    // Climb the field line up to the speficied emission point
+    point emit_pt;
+    B_large_step( foot_pt, psr, height, DIR_OUTWARD, &emit_pt );
+
+    // Calculate the properties of the emitted point
+    emit_pulsar_photon( psr, &emit_pt, freq, pn );
+}
+
+
+void bin_photon_freq( photon *pn, double weight, double fmin,
+        double fbinwidth, int nfbins, double *farray )
+/* This function bins a photon into the appropriate frequency bin in FARRAY,
+ * weighting it according to WEIGHT.
+ *
+ * This function assumes that FARRAY points to already allocated memory, and
+ * that it has NFBINS elements. Any photon falling outside of the array bounds
+ * is ignored.
+ */
+{
+    int fbin = (int)floor( (pn->freq - fmin) / fbinwidth );
+    if ((0 <= fbin) && (fbin < nfbins))
+        farray[fbin] += weight;
+}
+
+
+void bin_photon_beam( photon *pn, pulsar *psr, double weight, double xmin,
+        double ymin, double xbinwidth, double ybinwidth, int nxbins,
+        int nybins, double **xyarray )
+/* This function bins a photon into the appropriate beam bin in XYARRAY,
+ * weighting it according to WEIGHT.
+ *
+ * This function assumes that XYARRAY points to already allocated memory, and
+ * that it has [NXBINS][NYBINS] elements. Any photon falling outside of the
+ * array bounds is ignored.
+ *
+ * When calculating the x and y coordinates, angular units of degrees are
+ * assumed.
+ *
+ * The x and y values are calculated from the polar coordinates of the
+ * photon's observed emission direction (taking into account retardation)
+ * in magnetic coordinates.
+ */
+{
+    // Convert the beam direction to magnetic coordinates
+    point mag;
+    obs_to_mag_frame( &(pn->retarded_LoS), psr, NULL, &mag );
+
+    // Calculate the x and y coordinates of the beam point
+    double x = mag.th.deg * mag.ph.cos;
+    double y = mag.th.deg * mag.ph.sin;
+
+    int xbin = (int)floor( (x - xmin) / xbinwidth );
+    int ybin = (int)floor( (y - ymin) / ybinwidth );
+
+    // Add the weight to the array
+    if ((0 <= xbin) && (xbin < nxbins) &&
+        (0 <= ybin) && (ybin < nybins))
+    {
+        xyarray[xbin][ybin] += weight;
+    }
+}
+
+
+void bin_photon_pulsestack( photon *pn, double weight, int pulse_number,
+        int pulsemin, int npulses, double phasemin, double phasebinwidth,
+        int nphasebins, double **pulsestack )
+/* This function bins a photon into the appropriate pulsestack bin in
+ * PULSESTACK, weighting it according to WEIGHT.
+ *
+ * This function assumes that PULSESTACK points to already allocated memory,
+ * and that it has [NPULSES][NPHASEBINS] elements. Any photon falling outside
+ * of the array bounds is ignored.
+ *
+ * The rotation phase is assumed to be in degrees.
+ */
+{
+    int phasebin = (int)floor( (pn->phase.deg - phasemin) / phasebinwidth );
+    int pulsebin = pulse_number - pulsemin;
+
+    // Add the weight to the array
+    if ((0 <= phasebin) && (phasebin < nphasebins) &&
+        (0 <= pulsebin) && (pulsebin < npulses))
+    {
+        pulsestack[pulsebin][phasebin] += weight;
+    }
+}
+
+
+void bin_photon_profile( photon *pn, double weight, double phasemin,
+        double phasebinwidth, int nphasebins, double *profile )
+/* This function bins a photon into the appropriate profile bin in PROFILE,
+ * weighting it according to WEIGHT.
+ *
+ * This function assumes that PROFILE points to already allocated memory,
+ * and that it has NPHASEBINS elements. Any photon falling outside of the
+ * array bounds is ignored.
+ *
+ * The rotation phase is assumed to be in degrees.
+ */
+{
+    int phasebin = (int)floor( (pn->phase.deg - phasemin) / phasebinwidth );
+
+    // Add the weight to the array
+    if ((0 <= phasebin) && (phasebin < nphasebins))
+        profile[phasebin] += weight;
+}
