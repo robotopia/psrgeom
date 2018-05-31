@@ -50,7 +50,7 @@ struct opts
 
 void usage();
 void parse_cmd_line( int argc, char *argv[], struct opts *o );
-void print_col_headers( FILE *f );
+void print_col_headers( FILE *f, int nframes, double tstep );
 
 int main( int argc, char *argv[] )
 {
@@ -96,17 +96,16 @@ int main( int argc, char *argv[] )
     // Set up pulsar
     pulsar psr;
 
-    psr_angle *ra  = NULL;
-    psr_angle *dec = NULL;
-
-    psr_angle *al = create_psr_angle_deg( o.al_deg );
-    psr_angle *ze = create_psr_angle_deg( o.ze_deg );
+    psr_angle al;
+    psr_angle ze;
+    set_psr_angle_deg( &al, o.al_deg );
+    set_psr_angle_deg( &ze, 0.0 ); // This isn't used here
 
     double P = o.P_sec;
     double r = 1e4; /* This will be used later as we move outwards from the
                        pulsar surface */
 
-    set_pulsar( &psr, ra, dec, P, r, al, ze );
+    set_pulsar( &psr, NULL, NULL, P, r, &al, &ze );
 
     if (o.dipole)
         psr.field_type = DIPOLE;
@@ -117,10 +116,11 @@ int main( int argc, char *argv[] )
     set_psr_angle_deg( &S, o.S_deg );
     set_pulsar_carousel( &psr, o.nsparks, &s, &S, o.csl_type, o.P4_sec );
 
-    // Calculate the time associated with each frame. Instead of making the
-    // frames span one whole carousel rotation, make them span the time
-    // for one spark to cross the distance to the next spark.
-    double tstep = psr.csl.P4 / (double)psr.csl.n / (double)o.nframes;
+    // Calculate the time associated with each frame. For convenience,
+    // the frames span one pulsar rotation period.
+    double tstep = psr.P / (double)o.nframes;
+    double t;
+    int tbin;
 
     // Write the file header
     print_psrg_header( f, argc, argv );
@@ -130,6 +130,33 @@ int main( int argc, char *argv[] )
     point foot_pt, foot_pt_mag;  // a randomly chosen foot_point
     double height;               // a randomly chosen height
     double max_height;
+    double freq;                 // a randomly chosen frequency (Hz)
+    photon pn;
+    double weight;
+    int pulse_number;
+    int rL_norm = 0;
+
+    // Set up the output array
+    double xmax = 90.0; // deg
+    double ymax = 90.0; // deg
+    double xmin = -xmax; // deg
+    double ymin = -ymax; // deg
+    int X = 200; // size of array in x-direction
+    int Y = 200; // size of array in y-direction
+    double xbinwidth = (xmax - xmin)/(double)X;
+    double ybinwidth = (ymax - ymin)/(double)Y;
+
+    double ***beam;
+    int x, y;
+    beam = (double ***)malloc( o.nframes * sizeof(double **) );
+    for (i = 0; i < o.nframes; i++)
+    {
+        beam[i] = (double **)malloc( X * sizeof(double *) );
+        for (x = 0; x < X; x++)
+        {
+            beam[i][x] = (double *)calloc( Y, sizeof(double) );
+        }
+    }
 
     // Write the column headers
     print_col_headers( f, o.nframes, tstep );
@@ -146,7 +173,7 @@ int main( int argc, char *argv[] )
                               o.S_deg + 3.0*o.s_deg :
                               o.S_deg + o.s_deg) * DEG2RAD;
 
-        if (inner_limit < 0.0)  inner_limit == 0.0;
+        if (inner_limit < 0.0)  inner_limit = 0.0;
 
         random_direction_bounded( &foot_pt_mag, inner_limit, outer_limit,
                 0.0, 2.0*PI );
@@ -156,38 +183,68 @@ int main( int argc, char *argv[] )
         // Convert the foot_pt into observer coordinates
         mag_to_obs_frame( &foot_pt_mag, &psr, NULL, &foot_pt );
 
-        // If requested, check that we're on an open field line
-        if (o.open_only)
+        // Check what kind of field line we're on, and how far it is to the
+        // extreme point.
+        linetype = get_fieldline_type( &foot_pt, &psr, rL_norm, NULL,
+                &max_height, NULL );
+        if (o.open_only && linetype == CLOSED_LINE)
         {
-            int rL_norm = 0;
-            linetype = get_fieldline_type( &foot_pt, &psr, rL_norm,
-                    NULL, *max_height, NULL );
-            if (linetype == CLOSED_LINE)
-            {
-                continue;
-            }
+            continue;
         }
 
-        // Now climb up the field line, emitting as we go
-        // Start 1 metre above the surface
-        Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt );
-        set_point_xyz( &init_pt, init_pt.x[0],
-                init_pt.x[1],
-                init_pt.x[2],
-                POINT_SET_ALL );
+        // Choose a height anywhere up to the max_height for this field line
+        height = RAND(max_height);
 
-        climb_and_emit( &psr, &init_pt, o.gamma, o.f_start*1.0e6,
-                o.f_stop*1.0e6, f ); /* (1.0e6: convert frequencies to Hz) */
+        // Choose a random frequency
+        freq = (RAND(o.f_hi - o.f_lo) + o.f_lo) * 1.0e6;
+
+        // Now climb up the field line to the specified height and emit a
+        // photon, pn.
+        climb_and_emit_photon( &psr, &foot_pt, height, freq, &pn );
+
+        // Weight the photon (for now) only by the max_height of the field
+        // line and the spark profiles
+        pulse_number = 0;
+        weight = weight_photon_total( &pn, &psr, &foot_pt, height,
+                pulse_number, 0.0, WEIGHT_SPARK );
+        //weight *= max_height;
+
+        // Calculate which time bin this photon will fall in
+        t = psr.P * (pulse_number + pn.phase.deg/360.0);
+        tbin = (int)floor( t / tstep );
+        while (tbin < 0)           tbin += o.nframes;
+        while (tbin >= o.nframes)  tbin -= o.nframes;
+
+        // Bin it up!
+        bin_photon_beam( &pn, &psr, weight, xmin, ymin, xbinwidth, ybinwidth,
+                X, Y, beam[tbin] );
     }
 
+    // Print out the results
+    for (x = 0; x < X; x++)
+    {
+        for (y = 0; y < Y; y++)
+        {
+            fprintf( f, "%.15e %.15e", x*xbinwidth+xmin, y*ybinwidth+ymin );
+            for (i = 0; i < o.nframes; i++)
+                fprintf( f, " %.15e", beam[i][x][y] );
+            fprintf( f, "\n" );
+        }
+        fprintf( f, "\n" );
+    }
 
     // Clean up
-    destroy_psr_angle( ra  );
-    destroy_psr_angle( dec );
-    destroy_psr_angle( al  );
-    destroy_psr_angle( ze  );
-
     free( o.outfile );
+
+    for (i = 0; i < o.nframes; i++)
+    {
+        for (x = 0; x < X; x++)
+        {
+            free( beam[i][x] );
+        }
+        free( beam[i] );
+    }
+    free( beam );
 
     if (o.outfile != NULL)
         fclose( f );
@@ -195,7 +252,6 @@ int main( int argc, char *argv[] )
     return 0;
 }
 
-    o.scl_type  = GAUSSIAN;
 void usage()
 {
     printf( "usage: psr_visiblepoints [OPTIONS]\n\n" );
@@ -247,12 +303,13 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                             "GAUSSIAN or TOPHAT\n" );
                     exit(EXIT_FAILURE);
                 }
+                break;
             case 'd':
                 o->dipole = 1;
                 break;
             case 'f':
-                parse_range( optarg, &(o->f_start),
-                                     &(o->f_stop),
+                parse_range( optarg, &(o->f_lo),
+                                     &(o->f_hi),
                                      NULL );
                 break;
             case 'h':
@@ -306,7 +363,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
         exit(EXIT_FAILURE);
     }
 
-    if (isnan(o->s_deg) || isnan(o->S_deg) || isnan(o->f_start))
+    if (isnan(o->s_deg) || isnan(o->S_deg) || isnan(o->f_lo))
     {
         fprintf( stderr, "error: -f, -s and -S options required\n" );
         usage();
