@@ -159,7 +159,7 @@ int main( int argc, char *argv[] )
         if (o.open_only)
         {
             linetype = get_fieldline_type( &foot_pt, &psr, rL_norm,
-                    NULL, NULL );
+                    NULL, NULL, NULL );
             if (linetype == CLOSED_LINE)
             {
                 continue;

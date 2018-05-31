@@ -143,7 +143,7 @@ int main( int argc, char *argv[] )
 
             // Follow the mag field line to the extreme
             linetype = get_fieldline_type( &obs_foot_pt, &psr, o.rL_norm, f,
-                    &far_pt );
+                    NULL, &far_pt );
             if (linetype == CLOSED_LINE)
             {
                 footpoint( &far_pt, &psr, DIR_OUTWARD, f, o.rL_norm,

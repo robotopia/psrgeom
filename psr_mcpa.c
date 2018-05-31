@@ -165,7 +165,7 @@ int main( int argc, char *argv[] )
 
             // Now check that we're on an open field line
             linetype = get_fieldline_type( &foot_pt, &psr, o.rL_norm, NULL,
-                    NULL );
+                    NULL, NULL );
             if (linetype == CLOSED_LINE)
             {
                 continue;

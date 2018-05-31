@@ -272,7 +272,7 @@ double psr_cost_lofl( point *X, pulsar *psr );
 double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction,
                      int retardation );
 int get_fieldline_type( point *X, pulsar *psr, int rL_norm, FILE *f,
-        point *far_pt );
+        double *dist, point *far_pt );
 
 void find_approx_emission_point( pulsar *psr, psr_angle *phase, int direction,
                                  point *emit_pt );

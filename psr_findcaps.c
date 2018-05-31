@@ -89,7 +89,8 @@ int main( int argc, char* argv[] )
         // Check that the first guess is actually on an open field line
         set_psr_angle_deg( &start_angle, start_s );
         rotate_about_axis( &zenith, &start_pt, &start_angle, 'y', POINT_SET_ALL );
-        if (get_fieldline_type( &start_pt, &psr, rL_norm, NULL, NULL ) == CLOSED_LINE)
+        if (get_fieldline_type( &start_pt, &psr, rL_norm, NULL, NULL, NULL )
+                == CLOSED_LINE)
         {
             fprintf( stderr, "error: main: initial guess was a closed field line: "
                              "α = %.1f°; s = %.2f°\n", alpha_deg, start_s );
@@ -103,8 +104,10 @@ int main( int argc, char* argv[] )
         while(s_step >= 1e-6) // I'm happy with this precision
         {
             set_psr_angle_deg( &step_angle, s_step );
-            rotate_about_axis( &this_pt, &next_pt, &step_angle, 'y', POINT_SET_ALL );
-            linetype = get_fieldline_type( &next_pt, &psr, rL_norm, NULL, NULL );
+            rotate_about_axis( &this_pt, &next_pt, &step_angle, 'y',
+                    POINT_SET_ALL );
+            linetype = get_fieldline_type( &next_pt, &psr, rL_norm, NULL,
+                    NULL, NULL );
             if (linetype == OPEN_LINE)
             {
                 copy_point( &next_pt, &this_pt );
@@ -137,7 +140,8 @@ int main( int argc, char* argv[] )
         {
             set_psr_angle_deg( &step_angle, s_step );
             rotate_about_axis( &this_pt, &next_pt, &step_angle, 'y', POINT_SET_ALL );
-            linetype = get_fieldline_type( &next_pt, &psr, rL_norm, NULL, NULL );
+            linetype = get_fieldline_type( &next_pt, &psr, rL_norm, NULL,
+                    NULL, NULL );
             if (linetype == OPEN_LINE)
             {
                 copy_point( &next_pt, &this_pt );

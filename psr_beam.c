@@ -126,28 +126,31 @@ int main( int argc, char *argv[] )
     print_psrg_header( f, argc, argv );
 
     // Some needed variables
-    int linetype;   // either CLOSED_LINE or OPEN_LINE
-    point foot_pt;  // a randomly chosen foot_point
-    double height;  // a randomly chosen height
+    int linetype;                // either CLOSED_LINE or OPEN_LINE
+    point foot_pt, foot_pt_mag;  // a randomly chosen foot_point
+    double height;               // a randomly chosen height
+    double max_height;
 
     // Write the column headers
     print_col_headers( f, o.nframes, tstep );
 
     for (i = 0; i < o.nphotons; i++)
     {
-        // Obtain a random point on the pulsar surface
-        if (o.nsparks == 0)
-        {
-            random_direction_bounded( &foot_pt_mag, o.s_start*DEG2RAD,
-                    o.s_stop*DEG2RAD, o.p_start*DEG2RAD, o.p_stop*DEG2RAD );
-        }
-        else /* a carousel of sparks! */
-        {
-            random_direction_spark( &foot_pt_mag,
-                    (o.s_start + o.s_stop )/2.0 * DEG2RAD,
-                    (o.s_stop  - o.s_start)/2.0 * DEG2RAD,
-                    o.nsparks );
-        }
+        // Obtain a random point on the pulsar surface, within the region
+        // occupied by the carousel. For Gaussian sparks, choose a 3σ cutoff
+        double inner_limit = (psr.csl.type == GAUSSIAN ?
+                              o.S_deg - 3.0*o.s_deg :
+                              o.S_deg - o.s_deg) * DEG2RAD;
+
+        double outer_limit = (psr.csl.type == GAUSSIAN ?
+                              o.S_deg + 3.0*o.s_deg :
+                              o.S_deg + o.s_deg) * DEG2RAD;
+
+        if (inner_limit < 0.0)  inner_limit == 0.0;
+
+        random_direction_bounded( &foot_pt_mag, inner_limit, outer_limit,
+                0.0, 2.0*PI );
+
         scale_point( &foot_pt_mag, psr.r, &foot_pt_mag );
 
         // Convert the foot_pt into observer coordinates
@@ -158,7 +161,7 @@ int main( int argc, char *argv[] )
         {
             int rL_norm = 0;
             linetype = get_fieldline_type( &foot_pt, &psr, rL_norm,
-                    NULL, NULL );
+                    NULL, *max_height, NULL );
             if (linetype == CLOSED_LINE)
             {
                 continue;

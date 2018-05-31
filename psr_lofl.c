@@ -124,7 +124,7 @@ int main( int argc, char *argv[] )
 
             // Find out if the field line is open or closed
             linetype = get_fieldline_type( &obs_foot_pt, &psr, 0, NULL,
-                    &far_pt );
+                    NULL, &far_pt );
             if (linetype == CLOSED_LINE)
             {
                 // If closed, halve the trial step size and check again
