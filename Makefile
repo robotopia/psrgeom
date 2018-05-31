@@ -31,7 +31,8 @@ TARGETS = psr_fields \
 
 TESTS = calc_fields_test \
 		transform_new_xz_test \
-		bstep_error_test
+		bstep_error_test \
+		spark_test
 
 LIBRARY = psrgeom
 LIBFILE = lib$(LIBRARY).a
