@@ -123,7 +123,7 @@ int main( int argc, char *argv[] )
     fprintf( f, "# LoS = ( %.15e, %.15e, %.15e )\n", LoS.x[0], LoS.x[1], LoS.x[2] );
 
     point far_pt;
-    farpoint( &emit_pt, &psr, NULL, 0, 1.1, &far_pt );
+    farpoint( &emit_pt, &psr, NULL, 0, 1.1, NULL, &far_pt );
 
     fprintf( f, "# extreme point has ρ/r_L = %.15f\n", sqrt( far_pt.rhosq / psr.rL2 ) );
 

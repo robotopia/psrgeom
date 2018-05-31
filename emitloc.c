@@ -67,7 +67,8 @@ double psr_cost_lofl( point *X, pulsar *psr )
     point  far_pt;            // Where to store the final point
 
     // Find the most extreme point (or where it crosses the light cylinder)
-    int stop_type = farpoint( X, psr, no_output, rL_norm, rL_lim, &far_pt );
+    int stop_type = farpoint( X, psr, no_output, rL_norm, rL_lim, NULL,
+            &far_pt );
 
     // Consider the two cases separately:
     //   1) the field line extends beyond the light cylinder
@@ -677,7 +678,7 @@ int get_fieldline_type( point *X, pulsar *psr, int rL_norm, FILE *f,
 
     int stop_type;
 
-    stop_type = farpoint( X, psr, f, rL_norm, rL_lim, far_pt );
+    stop_type = farpoint( X, psr, f, rL_norm, rL_lim, NULL, far_pt );
 
     if (stop_type == STOP_FOUND)
         return CLOSED_LINE;

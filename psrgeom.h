@@ -223,7 +223,7 @@ int cmp_extreme( point *x, pulsar *psr, double precision );
 int footpoint( point *start_pt, pulsar *psr, int direction, FILE *write_xyz,
         int rL_norm, double rL_lim, point *foot_pt );
 int farpoint( point *start_pt, pulsar *psr, FILE *write_xyz, int rL_norm,
-        double rL_lim, point *far_pt );
+        double rL_lim, double *dist, point *far_pt );
 int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
                     point *init_pt, point *emit_pt, psr_angle *psi );
 void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,

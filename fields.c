@@ -958,7 +958,7 @@ int cmp_extreme( point *x, pulsar *psr, double precision )
 
 
 int farpoint( point *start_pt, pulsar *psr, FILE *write_xyz, int rL_norm,
-        double rL_lim, point *far_pt )
+        double rL_lim, double *dist, point *far_pt )
 /* This uses Runge-Kutta (RK4) to follow the magnetic field line outward from
  * an initial starting point "start_pt". It seeks the point (x,y,z) such that
  * x^2+y^2 is maximised.
@@ -972,6 +972,8 @@ int farpoint( point *start_pt, pulsar *psr, FILE *write_xyz, int rL_norm,
  *   rL_lim    : the rho limit, normalised to the light cylinder radius.
  *               If the points go beyond this limit, stop.
  * Outputs:
+ *   dist      : the distance (measured along the field line) from start_pt
+ *               to far_pt
  *   far_pt    : the final point reached during RK algorithm
  * Return values:
  *   STOP_FOUND  : The point was successfully found
@@ -984,6 +986,8 @@ int farpoint( point *start_pt, pulsar *psr, FILE *write_xyz, int rL_norm,
     double tstep = MAX_BSTEP * psr->rL;
 
     copy_point( start_pt, &x );
+
+    *dist = 0.0;
 
     // Trace this line along the magnetic field line with a 4 stage Runge-
     // Kutta in the specified direction.
@@ -1020,6 +1024,8 @@ int farpoint( point *start_pt, pulsar *psr, FILE *write_xyz, int rL_norm,
 
         // Take a single RK4 step along the magnetic field
         Bstep( &old_x, psr, tstep, direction, &x );
+        if (dist != NULL)
+            *dist += (direction == init_direction ? tstep : -tstep);
 
         // When tstep gets too small, the step will be below machine precision
         // so old_x will equal x. If this happens assume we're at the extreme

@@ -40,7 +40,7 @@ struct opts
     double  f_lo;        // minimum value of freq (MHz)
     double  f_hi;        // maximum value of freq (MHz)
     int     open_only;   // only consider open field lines
-    int     num_lines;   // sample this many lines
+    int     nphotons;    // sample this many photons
     int     nsparks;     // number of sparks in carousel
     int     dipole;      // use dipole field?
     double  P4_sec;      // the rotation time of the carousel
@@ -70,7 +70,7 @@ int main( int argc, char *argv[] )
     o.f_lo      = NAN;
     o.f_hi      = NAN;
     o.open_only = 0;
-    o.num_lines = 10000;
+    o.nphotons  = 10000;
     o.nsparks   = 0;
     o.dipole    = 0; // use Deutsch field by default
     o.P4_sec    = NAN;
@@ -133,7 +133,7 @@ int main( int argc, char *argv[] )
     // Write the column headers
     print_col_headers( f, o.nframes, tstep );
 
-    for (i = 0; i < o.num_lines; i++)
+    for (i = 0; i < o.nphotons; i++)
     {
         // Obtain a random point on the pulsar surface
         if (o.nsparks == 0)
@@ -257,7 +257,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 exit(EXIT_SUCCESS);
                 break;
             case 'n':
-                o->num_lines = atoi(optarg);
+                o->nphotons = atoi(optarg);
                 break;
             case 'N':
                 o->nsparks = atoi(optarg);
