@@ -1,16 +1,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 #include "psrgeom.h"
 
 void usage()
 {
-    printf( "spark_test [nsparks] [S_deg] [s_deg] [P4_sec] [time]\n" );
+    printf( "spark_test [nsparks] [S_deg] [s_deg] [P4_sec] [time] [type]\n" );
     printf( "    nsparks = number of sparks (0 = annulus)\n" );
     printf( "    S_deg   = angle between magnetic axis and carousel ring\n" );
     printf( "    s_deg   = angular size of sparks\n" );
     printf( "    P4_sec  = carousel rotation time in sec\n" );
     printf( "    time    = time in seconds\n" );
+    printf( "    type    = profile type, either TOPHAT or GAUSSIAN\n" );
 }
 
 int main( int argc, char *argv[] )
@@ -32,7 +34,7 @@ int main( int argc, char *argv[] )
     set_pulsar( &psr, ra, dec, P, r, &al, &ze );
 
     // Set up its carousel
-    if (argc < 6)
+    if (argc < 7)
     {
         usage();
         exit(EXIT_FAILURE);
@@ -45,6 +47,16 @@ int main( int argc, char *argv[] )
     double P4 = atof(argv[4]);
 
     set_pulsar_carousel( &psr, n, &s, &S, GAUSSIAN, P4 );
+    if (strcmp( argv[6], "TOPHAT" ) == 0)
+        psr.csl.type = TOPHAT;
+    else if (strcmp( argv[6], "GAUSSIAN" ) == 0)
+        psr.csl.type = GAUSSIAN;
+    else
+    {
+        fprintf( stderr, "error: unknown carousel type %s\n", argv[6] );
+        usage();
+        exit(EXIT_FAILURE);
+    }
 
     double t = atof(argv[5]); // The time!
     double h;                 // The height of the profile
