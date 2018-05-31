@@ -46,6 +46,7 @@ struct opts
     double  P4_sec;      // the rotation time of the carousel
     int     csl_type;    // the type of spark profile (TOPHAT or GAUSSIAN)
     int     nframes;     // Create this many time frames
+    double  g_idx;       // The power law index the gamma distribution
 };
 
 void usage();
@@ -76,6 +77,7 @@ int main( int argc, char *argv[] )
     o.P4_sec    = NAN;
     o.csl_type  = GAUSSIAN;
     o.nframes   = 10;
+    o.g_idx     = -6.2;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -206,7 +208,7 @@ int main( int argc, char *argv[] )
         // line and the spark profiles
         pulse_number = 0;
         weight = weight_photon_total( &pn, &psr, &foot_pt, height,
-                pulse_number, 0.0, WEIGHT_SPARK );
+                pulse_number, o.g_idx, WEIGHT_TOTAL );
         //weight *= max_height;
 
         // Calculate which time bin this photon will fall in
@@ -246,7 +248,7 @@ int main( int argc, char *argv[] )
     }
     free( beam );
 
-    if (o.outfile != NULL)
+    if (o.outfile != NULL) // @suppress("Symbol is not resolved")
         fclose( f );
 
     return 0;
@@ -269,6 +271,8 @@ void usage()
                            "or TOPHAT\n" );
     printf( "  -d           Use a dipole field instead of the default "
                            "Deutsch field\n" );
+    printf( "  -g idx       The power law index for the gamma distribution "
+                           "(default = -6.2)\n" );
     printf( "  -h           Display this help and exit\n" );
     printf( "  -n  photons  Sample this many photons (default: 10000)\n" );
     printf( "  -N  nsparks  The number of sparks in the carousel. If nsparks "
@@ -285,7 +289,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:c:df:hn:N:o:OP:s:S:t:4:")) != -1)
+    while ((c = getopt( argc, argv, "a:c:df:g:hn:N:o:OP:s:S:t:4:")) != -1)
     {
         switch (c)
         {
@@ -311,6 +315,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 parse_range( optarg, &(o->f_lo),
                                      &(o->f_hi),
                                      NULL );
+                break;
+            case 'g':
+                o->g_idx = atof(optarg);
                 break;
             case 'h':
                 usage();

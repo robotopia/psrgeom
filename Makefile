@@ -2,7 +2,7 @@ CC      = gcc
 LDLIBS = -lnewuoa -lnmead -lm
 
 ## Uncomment this to turn on compiler optimisation
-OPTIM   = -O2
+OPTIM   = #-O2
 
 ## Uncomment these to turn on fsanitize option
 #LDLIBS = -lasan -lm
