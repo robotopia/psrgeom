@@ -14,7 +14,9 @@
 #define  DEG2RAD         PI/180.0
 #define  RAD2DEG         180.0/PI
 
-#define  NDEP            3     // Number of dimensions
+#define  NDEP            3     /* Number of dimensions */
+
+#define  MAX_BSTEP       0.005 /* fraction of light cylinder radius */
 
 // The ways to set the values in a point
 #define  POINT_SET_NONE   0x0   /* 00000000 */
@@ -218,10 +220,10 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
                 point *x2, int rL_norm, FILE *f );
 double Bdotrxy( point *x, pulsar *psr );
 int cmp_extreme( point *x, pulsar *psr, double precision );
-int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
-               FILE *write_xyz, int rL_norm, double rL_lim, point *foot_pt );
-int farpoint( point *start_pt, pulsar *psr, double tmult,
-              FILE *write_xyz, int rL_norm, double rL_lim, point *far_pt );
+int footpoint( point *start_pt, pulsar *psr, int direction, FILE *write_xyz,
+        int rL_norm, double rL_lim, point *foot_pt );
+int farpoint( point *start_pt, pulsar *psr, FILE *write_xyz, int rL_norm,
+        double rL_lim, point *far_pt );
 int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
                     point *init_pt, point *emit_pt, psr_angle *psi );
 void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,
@@ -269,8 +271,8 @@ void parse_direction( char *str, point *direction );
 double psr_cost_lofl( point *X, pulsar *psr );
 double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction,
                      int retardation );
-int get_fieldline_type( point *X, pulsar *psr, double tmult, int rL_norm,
-        FILE *f, point *far_pt );
+int get_fieldline_type( point *X, pulsar *psr, int rL_norm, FILE *f,
+        point *far_pt );
 
 void find_approx_emission_point( pulsar *psr, psr_angle *phase, int direction,
                                  point *emit_pt );
@@ -282,14 +284,14 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         int direction, point *init_pt, point *emit_pt, FILE *f );
 
 int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
-        double tmult, point *emit_pt, double *dist, FILE *f );
+        point *emit_pt, double *dist, FILE *f );
 
 void psr_cost_deriv( point *X, pulsar *psr, psr_angle *phase, int direction,
                      double dx, point *grad );
 void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
                     int direction, point *end_pt, FILE *f );
 
-void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
+void climb_and_emit( pulsar *psr, point *init_pt, double gamma,
         double freq_lo, double freq_hi, FILE *f );
 
 void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,

@@ -45,7 +45,6 @@ struct opts
     double  P_sec;       // period, in sec
     int     rL_norm;     // bool: normalise to light cylinder radius?
     char   *outfile;     // name of output file (NULL means stdout)
-    double  tmult;       // step size along field lines
     double  s_start;     // starting value of s
     double  s_stop;      // stopping value of s
     int     s_nstep;     // number of s steps
@@ -67,7 +66,6 @@ int main( int argc, char *argv[] )
     o.ze_deg      = NAN;
     o.rL_norm     = 0;
     o.outfile     = NULL;
-    o.tmult       = NAN;
     o.s_start   = NAN;
     o.s_stop    = NAN;
     o.s_nstep   = 0;
@@ -166,8 +164,8 @@ int main( int argc, char *argv[] )
             mag_to_obs_frame( &foot_pt_mag, &psr, NULL, &foot_pt );
 
             // Now check that we're on an open field line
-            linetype = get_fieldline_type( &foot_pt, &psr, o.tmult, o.rL_norm,
-                    NULL, NULL );
+            linetype = get_fieldline_type( &foot_pt, &psr, o.rL_norm, NULL,
+                    NULL );
             if (linetype == CLOSED_LINE)
             {
                 continue;
@@ -187,7 +185,7 @@ int main( int argc, char *argv[] )
             {
                 // Climb up the field line to find the next emit_pt
                 find_emitpt_result = find_next_line_emission_point( &psr,
-                        &init_pt, DIR_OUTWARD, o.tmult, &emit_pt, &dist_tmp,
+                        &init_pt, DIR_OUTWARD, &emit_pt, &dist_tmp,
                         NULL );
                 dist += dist_tmp;
 
@@ -318,7 +316,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:hLo:p:P:s:S:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:hLo:p:P:s:S:z:")) != -1)
     {
         switch (c)
         {
@@ -348,9 +346,6 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                                      &(o->s_stop),
                                      &(o->s_nstep) );
                 break;
-            case 't':
-                o->tmult = atof(optarg);
-                break;
             case 'z':
                 o->ze_deg = atof(optarg);
                 break;
@@ -366,10 +361,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
     }
 
     // Check that all the arguments are valid
-    if (isnan(o->al_deg) || isnan(o->P_sec) || isnan(o->ze_deg) ||
-        isnan(o->tmult))
+    if (isnan(o->al_deg) || isnan(o->P_sec) || isnan(o->ze_deg))
     {
-        fprintf( stderr, "error: -a, -P, -t, and -z options required"
+        fprintf( stderr, "error: -a, -P, and -z options required"
                          "\n" );
         usage();
         exit(EXIT_FAILURE);

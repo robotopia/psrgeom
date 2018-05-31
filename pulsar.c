@@ -283,6 +283,10 @@ double spark_profile( pulsar *psr, double t, point *foot_pt )
  * surface.
  */
 {
+    // Convert the footpoint to magnetic coordinates
+    point mag;
+    obs_to_mag_frame( foot_pt, psr, NULL, &mag );
+
     // Convert the time into a rotation of the carousel
     psr_angle csl_rot;
     set_psr_angle_deg( &csl_rot, 360.0*t/(psr->csl.P4) );
@@ -297,7 +301,7 @@ double spark_profile( pulsar *psr, double t, point *foot_pt )
 
     if (psr->csl.n == 0)
     {
-        dist      = fabs( psr->csl.S.rad - foot_pt->th.rad );
+        dist      = fabs( psr->csl.S.rad - mag.th.rad );
         dist_norm = dist / psr->csl.s.rad;
         
         // Add this spark's contribution
@@ -331,7 +335,7 @@ double spark_profile( pulsar *psr, double t, point *foot_pt )
                                       &(psr->csl.S),
                                       &spark_ph,
                                       POINT_SET_ALL );
-            dist      = acos( norm_dot( &spark_pt, foot_pt ) );
+            dist      = acos( norm_dot( &spark_pt, &mag ) );
             dist_norm = dist / psr->csl.s.rad;
 
             // Add this spark's contribution

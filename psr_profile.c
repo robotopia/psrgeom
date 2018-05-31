@@ -117,8 +117,7 @@ int main( int argc, char *argv[] )
     int centre_bin = o.nbins/2;
 
     // Some default values
-    int    rL_norm = 0;
-    double tmult   = 0.01;
+    int rL_norm = 0;
 
     // Reset profile to zero
     for (i = 0; i < o.nbins; i++)
@@ -159,7 +158,7 @@ int main( int argc, char *argv[] )
         // If requested, check that we're on an open field line
         if (o.open_only)
         {
-            linetype = get_fieldline_type( &foot_pt, &psr, tmult, rL_norm,
+            linetype = get_fieldline_type( &foot_pt, &psr, rL_norm,
                     NULL, NULL );
             if (linetype == CLOSED_LINE)
             {

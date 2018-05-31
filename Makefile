@@ -23,11 +23,11 @@ TARGETS = psr_fields \
 		  psr_visiblepoints \
 		  psr_mcpa \
 		  psr_findcaps \
-		  psr_beam \
 		  psr_jacksonbeam \
 		  psr_lofl \
 		  psr_profile \
 		  psr_jacksonbeamsingle
+		  #psr_beam
 
 TESTS = calc_fields_test \
 		transform_new_xz_test \

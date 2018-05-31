@@ -84,7 +84,6 @@ int main( int argc, char *argv[] )
     print_col_headers( f );
 
     // Draw the requested lines
-    double tmult = 0.001;
     int linetype;  // either CLOSED_LINE or OPEN_LINE
     int p_idx;
     double s_deg, p_deg;
@@ -124,8 +123,8 @@ int main( int argc, char *argv[] )
                     'z', POINT_SET_ALL );
 
             // Find out if the field line is open or closed
-            linetype = get_fieldline_type( &obs_foot_pt, &psr, tmult,
-                    0, NULL, &far_pt );
+            linetype = get_fieldline_type( &obs_foot_pt, &psr, 0, NULL,
+                    &far_pt );
             if (linetype == CLOSED_LINE)
             {
                 // If closed, halve the trial step size and check again

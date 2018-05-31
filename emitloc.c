@@ -61,15 +61,13 @@ double psr_cost_lofl( point *X, pulsar *psr )
     double cost;
 
     // Set up the parameters for the farpoint() function
-    double tmult     = 0.01;  // Hard code the step size
     FILE  *no_output = NULL;  // Don't write out the intermediate points
     int    rL_norm   = 0;     // (Irrelevant, since not writing anything out)
     double rL_lim    = 1.1;   // i.e. Stop at the light cylinder
     point  far_pt;            // Where to store the final point
 
     // Find the most extreme point (or where it crosses the light cylinder)
-    int stop_type = farpoint( X, psr, tmult, no_output, rL_norm, rL_lim,
-                              &far_pt );
+    int stop_type = farpoint( X, psr, no_output, rL_norm, rL_lim, &far_pt );
 
     // Consider the two cases separately:
     //   1) the field line extends beyond the light cylinder
@@ -672,14 +670,14 @@ void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
 }
 
 
-int get_fieldline_type( point *X, pulsar *psr, double tmult, int rL_norm,
-        FILE *f, point *far_pt )
+int get_fieldline_type( point *X, pulsar *psr, int rL_norm, FILE *f,
+        point *far_pt )
 {
     double rL_lim  = 1.0;  // Stop at the light cylinder
 
     int stop_type;
 
-    stop_type = farpoint( X, psr, tmult, f, rL_norm, rL_lim, far_pt );
+    stop_type = farpoint( X, psr, f, rL_norm, rL_lim, far_pt );
 
     if (stop_type == STOP_FOUND)
         return CLOSED_LINE;
@@ -743,9 +741,8 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
     int rhi_type  = -1; //  "
     int temp_type = -1; //  "
 
-    double tmult = 0.01;
     int rL_norm = 0;
-    rlo_type = get_fieldline_type( &rlo_pt, psr, tmult, rL_norm, NULL, NULL );
+    rlo_type = get_fieldline_type( &rlo_pt, psr, rL_norm, NULL, NULL );
 
     // Iterate both inwards and outwards until an opposite-type field line
     // is found
@@ -770,8 +767,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
             return EMIT_PT_TOO_LOW; // Return with error code "too low"
 
         // And the field line type there
-        rlo_type = get_fieldline_type( &rlo_pt, psr, tmult, rL_norm, NULL,
-                NULL );
+        rlo_type = get_fieldline_type( &rlo_pt, psr, rL_norm, NULL, NULL );
 
         // If they differ, then we have a match!
         if (rlo_type != temp_type)
@@ -801,8 +797,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
             return EMIT_PT_TOO_HIGH; // Return with error code "too high"
 
         // And the field line type there
-        rhi_type = get_fieldline_type( &rhi_pt, psr, tmult, rL_norm, NULL,
-                NULL );
+        rhi_type = get_fieldline_type( &rhi_pt, psr, rL_norm, NULL, NULL );
 
         // If they differ, then we have a match!
         if (rhi_type != temp_type)
@@ -838,8 +833,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         find_LoS_at_r( &mid_pt, psr, phase, direction, &temp_pt, NULL );
 
         // And get it's field line type
-        temp_type = get_fieldline_type( &temp_pt, psr, tmult, rL_norm, NULL,
-                NULL );
+        temp_type = get_fieldline_type( &temp_pt, psr, rL_norm, NULL, NULL );
 
         // Have the new point replace whichever of the two straddling points
         // it has the same type as
@@ -865,7 +859,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
 }
 
 
-void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
+void climb_and_emit( pulsar *psr, point *init_pt, double gamma,
         double freq_lo, double freq_hi, FILE *f )
 /* Climb up a field line and emit virtual photons as we go. Stop when either
  * the light cylinder is reached (for an open field line) or when the pulsar
@@ -879,8 +873,6 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
  * Inputs:
  *   pulsar *psr      : the pulsar properties
  *   point  *init_pt  : the starting point
- *   double  tmult    : step size as a fraction of init point radial vector
- *                      length
  *   double  gamma    : the Lorentz factor of the particles
  *   FILE   *f        : the file stream to write results to
  */
@@ -967,7 +959,7 @@ void climb_and_emit( pulsar *psr, point *init_pt, double tmult, double gamma,
         }
 
         // Climb another rung on the field line ladder
-        Bstep( &emit_pt, psr, tmult*emit_pt.r, DIR_OUTWARD, &emit_pt );
+        Bstep( &emit_pt, psr, 0.01*emit_pt.r, DIR_OUTWARD, &emit_pt );
         set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
                 POINT_SET_R | POINT_SET_RHOSQ );
     }
@@ -1150,11 +1142,12 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
 
 
 int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
-        double tmult, point *emit_pt, double *dist, FILE *f )
+        point *emit_pt, double *dist, FILE *f )
 /* Finds the next emission point that occurs on the field line that passes
  * through init_pt. The algorithm climbs along the field line, starting at
- * init_pt, and moving with step sizes specified by tmult, in the specified
- * direction. For each step, we recognise that an emission point has been
+ * init_pt, in the specified * direction.
+ *
+ * For each step, we recognise that an emission point has been
  * passed when the quantity (V̂∙ẑ - ζ) changes sign, where V̂ is the velocity
  * field, ẑ is the rotation axis, and ζ is the angle between the rotation
  * axis and the line of sight. Then we use bisection to home in on the
@@ -1166,8 +1159,6 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
  *   int     direction : which direction to move along the field line
  *                       DIR_OUTWARD = in same direction as B
  *                       DIR_INWARD  = in opposite direction
- *   double  tmult     : step size as a fraction of init point radial vector
- *                       length
  *   int   retardation : (boolean) whether or not to include retardation in
  *                       the calculation of phase
  *
@@ -1203,7 +1194,7 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
     // checking if it has changed sign.
     point prev_pt, next_pt;
     copy_point( init_pt, &prev_pt );
-    double tstep = tmult * init_pt->r;
+    double tstep = 0.01 * init_pt->r;
     while (1)
     {
         // First time through, evaluate (V̂∙ẑ - ζ) at the initial point.

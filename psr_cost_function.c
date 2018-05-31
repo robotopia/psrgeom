@@ -11,7 +11,6 @@ struct opts
     double  ze_deg;    // zeta angle in deg
     double  ph_deg;    // phase angle in deg
     double  P_sec;     // period, in sec
-    double  tmult;     // RK4 step size, as a fraction of lt cyl radius
     int     rL_norm;   // bool: normalise to light cylinder radius?
     int     direction; // either DIR_OUTWARD or DIR_INWARD
     char   *outfile;   // name of output file (NULL means stdout)
@@ -32,7 +31,6 @@ int main( int argc, char *argv[] )
     o.P_sec     = NAN;
     o.ze_deg    = NAN;
     o.ph_deg    = NAN;
-    o.tmult     = 0.01;
     o.rL_norm   = 0;
     o.direction = DIR_OUTWARD;
     o.outfile   = NULL;
@@ -181,8 +179,6 @@ void usage()
     printf( "  -L           Normalise distances to light cylinder radius\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
-    printf( "  -t  tmult    The initial size of the RK4 steps, as a fraction "
-                           "of the light cylinder radius (default: 0.01)\n" );
 }
 
 
@@ -191,7 +187,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
     int l = 0; // For determining the XYZ loop order
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:hiLo:p:P:r:t:X:Y:z:Z:")) != -1)
+    while ((c = getopt( argc, argv, "a:hiLo:p:P:r:X:Y:z:Z:")) != -1)
     {
         switch (c)
         {
@@ -216,9 +212,6 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 break;
             case 'P':
                 o->P_sec = atof(optarg);
-                break;
-            case 't':
-                o->tmult = atof(optarg);
                 break;
             case 'X':
             case 'Y':

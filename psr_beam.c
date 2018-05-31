@@ -3,26 +3,22 @@
  * Sam McSweeney, 2018
  *
  * This program attempts to simulate the emerging beam pattern as
- * observed from a pulsar with given angles α and ζ, period P, and Lorentz
- * factor γ.
+ * observed from a pulsar with given angles α and ζ, period P, within a
+ * frequency range [f₁:f₂].
  *
  * Here, the idea is that emission is allowed to originate on any open field
- * line. No attempt is made to sample the active field lines realistically.
- * To keep things simple, we start at the magnetic pole and work our way
- * outwards in concentric circles on the polar cap until we reach a "radius"
- * where no open field lines are found.
+ * line, and at any height. The photon that would be emitted at said field
+ * line and height is collected in an array where each pixel (in Cartesian
+ * coordinates) represents a particular direction on the (pulsar's) sky.
  *
- * For each open field line, the line is followed outward in incremental
- * steps. At each step, the frequency and direction of an emitted photon is
- * calculated.
+ * Because of the dynamic nature of the spark carousel, the output is not
+ * just a single array, but several. Each array represents the instantaneous
+ * beam sampled at a particular time.
  *
  * The final output includes:
- *   1&2) the polar coordinates of the footpoint of the magnetic field line
- *   3&4) the polar coordinates of the photon direction (with retardation)
- *   5) the polarisation angle
- *   6) the phase retardation due to the emission height
- *   7) the critical frequency (in MHz)
- *   8) the emission height (in km)
+ *   1) the x-coordinate of the beam pixel
+ *   2) the y-coordinate of the beam pixel
+ *   3,4,...) the beam at different times
  *
  ****************************************************************************/
 
@@ -37,22 +33,19 @@
 struct opts
 {
     double  al_deg;      // alpha angle in deg
-    double  ze_deg;      // zeta angle in deg
     double  P_sec;       // period, in sec
-    double  gamma;       // The Lorentz factor
     char   *outfile;     // name of output file (NULL means stdout)
-    double  tmult;       // step size along field lines
-    double  s_start;     // starting value of s
-    double  s_stop;      // stopping value of s
-    double  p_start;     // starting value of p
-    double  p_stop;      // stopping value of p
-    double  f_start;     // starting value of freq (MHz)
-    double  f_stop;      // stopping value of freq (MHz)
+    double  s_deg;       // the spark angular size
+    double  S_deg;       // the carousel angular radius
+    double  f_lo;        // minimum value of freq (MHz)
+    double  f_hi;        // maximum value of freq (MHz)
     int     open_only;   // only consider open field lines
     int     num_lines;   // sample this many lines
-    int     print_los;   // print out the line of sight
     int     nsparks;     // number of sparks in carousel
     int     dipole;      // use dipole field?
+    double  P4_sec;      // the rotation time of the carousel
+    int     csl_type;    // the type of spark profile (TOPHAT or GAUSSIAN)
+    int     nframes;     // Create this many time frames
 };
 
 void usage();
@@ -71,21 +64,18 @@ int main( int argc, char *argv[] )
     struct opts o;
     o.al_deg    = NAN;
     o.P_sec     = NAN;
-    o.ze_deg    = NAN;
-    o.gamma     = NAN;
     o.outfile   = NULL;
-    o.tmult     = 0.01;
-    o.s_start   = NAN;
-    o.s_stop    = NAN;
-    o.p_start   = 0.0;
-    o.p_stop    = 360.0;
-    o.f_start   = NAN;
-    o.f_stop    = NAN;
+    o.s_deg     = NAN;
+    o.S_deg     = NAN;
+    o.f_lo      = NAN;
+    o.f_hi      = NAN;
     o.open_only = 0;
     o.num_lines = 10000;
-    o.print_los = 0;
     o.nsparks   = 0;
     o.dipole    = 0; // use Deutsch field by default
+    o.P4_sec    = NAN;
+    o.csl_type  = GAUSSIAN;
+    o.nframes   = 10;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -121,47 +111,27 @@ int main( int argc, char *argv[] )
     if (o.dipole)
         psr.field_type = DIPOLE;
 
+    // Set up pulsar's carousel
+    psr_angle s, S;
+    set_psr_angle_deg( &s, o.s_deg );
+    set_psr_angle_deg( &S, o.S_deg );
+    set_pulsar_carousel( &psr, o.nsparks, &s, &S, o.csl_type, o.P4_sec );
+
+    // Calculate the time associated with each frame. Instead of making the
+    // frames span one whole carousel rotation, make them span the time
+    // for one spark to cross the distance to the next spark.
+    double tstep = psr.csl.P4 / (double)psr.csl.n / (double)o.nframes;
+
     // Write the file header
     print_psrg_header( f, argc, argv );
 
     // Some needed variables
     int linetype;   // either CLOSED_LINE or OPEN_LINE
-    point foot_pt, foot_pt_mag;
-    point init_pt;
-
-    // If the line of sight is requested, print it out
-    if (o.print_los)
-    {
-        point LoS, LoS_mag;
-        psr_angle LoS_ph;
-
-        // Print out column headers
-        fprintf( f, "# phase_deg  th_deg  ph_deg\n" );
-
-        for (i = 0; i < 360; i++)
-        {
-            // Set up angle
-            set_psr_angle_deg( &LoS_ph, (double)i );
-
-            // Create point in the observer frame, on a unit sphere
-            set_point_sph( &LoS, 1.0, &(psr.ze), &LoS_ph, POINT_SET_ALL );
-
-            // Convert it into the magnetic frame
-            obs_to_mag_frame( &LoS, &psr, NULL, &LoS_mag );
-
-            // Print out the result
-            fprintf( f, "%.15e %.15e %.15e\n",
-                    LoS_ph.deg,
-                    LoS_mag.th.deg,
-                    LoS_mag.ph.deg );
-        }
-
-        // Print out a couple of blank lines to separate it from what follows
-        fprintf( f, "\n\n" );
-    }
+    point foot_pt;  // a randomly chosen foot_point
+    double height;  // a randomly chosen height
 
     // Write the column headers
-    print_col_headers( f );
+    print_col_headers( f, o.nframes, tstep );
 
     for (i = 0; i < o.num_lines; i++)
     {
@@ -187,7 +157,7 @@ int main( int argc, char *argv[] )
         if (o.open_only)
         {
             int rL_norm = 0;
-            linetype = get_fieldline_type( &foot_pt, &psr, o.tmult, rL_norm,
+            linetype = get_fieldline_type( &foot_pt, &psr, rL_norm,
                     NULL, NULL );
             if (linetype == CLOSED_LINE)
             {
@@ -203,7 +173,7 @@ int main( int argc, char *argv[] )
                 init_pt.x[2],
                 POINT_SET_ALL );
 
-        climb_and_emit( &psr, &init_pt, o.tmult, o.gamma, o.f_start*1.0e6,
+        climb_and_emit( &psr, &init_pt, o.gamma, o.f_start*1.0e6,
                 o.f_stop*1.0e6, f ); /* (1.0e6: convert frequencies to Hz) */
     }
 
@@ -222,41 +192,33 @@ int main( int argc, char *argv[] )
     return 0;
 }
 
+    o.scl_type  = GAUSSIAN;
 void usage()
 {
     printf( "usage: psr_visiblepoints [OPTIONS]\n\n" );
     printf( "REQUIRED OPTIONS:\n" );
     printf( "  -a  alpha    The angle between the rotation and magetic axes "
                            "in degrees (required)\n" );
-    printf( "  -f  f1:f2    The emission frequency, in MHz. "
+    printf( "  -f  f1:f2    The observing frequency, in MHz. "
                            "The range is from f1 to f2.\n" );
-    printf( "  -g  gamma    The Lorentz factor\n" );
-    printf( "  -P  period   The rotation period of the pulsar, in seconds "
-                           "(required)\n" );
-    printf( "  -s  s1:s2    The angular distance from the magnetic axis, "
-                           "in degrees. The range is from s1 to s2.\n" );
-    printf( "  -z  zeta     The angle between the rotation axis and the line "
-                           "of sight in degrees (required)\n" );
+    printf( "  -P  period   The rotation period of the pulsar (in sec)\n" );
+    printf( "  -s  s_deg    The angular size of the sparks (in deg)\n" );
+    printf( "  -S  S_deg    The carousel's angular radius (in deg)\n" );
+    printf( "  -4  P4       The carousel's rotation period (in sec)\n" );
     printf( "\nOTHER OPTIONS:\n" );
+    printf( "  -c type      The spark profile type, either GAUSSIAN (default) "
+                           "or TOPHAT\n" );
     printf( "  -d           Use a dipole field instead of the default "
                            "Deutsch field\n" );
     printf( "  -h           Display this help and exit\n" );
-    printf( "  -l           Print out the line of sight first\n" );
-    printf( "  -n  nlines   Sample nlines magnetic field lines "
-                           "(default: 10000)\n" );
+    printf( "  -n  photons  Sample this many photons (default: 10000)\n" );
     printf( "  -N  nsparks  The number of sparks in the carousel. If nsparks "
-                           "= 0 (default), the footpoints are sampled "
-                           "uniformly in the range given by -s. Otherwise, "
-                           "the s-range is used to define the spark size.\n" );
+                           "= 0 (default), the carousel is a \"solid\" "
+                           "annulus.\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
     printf( "  -O           Only consider open field lines (default: off)\n" );
-    printf( "  -p  p1:p2    The azimuth relative to the magnetic axis, "
-                           "in degrees. The range is from p1 to p2. Ensure "
-                           "p1 < p2 [default = 0:360]\n" );
-    printf( "  -t  step     Step size for moving along magnetic field lines, "
-                           "as a fraction of the light cylinder radius "
-                           "(default: 0.01)\n" );
+    printf( "  -t  nframes  Create this many time frames (default = 10)\n" );
 }
 
 
@@ -264,13 +226,24 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:df:g:hln:N:o:Op:P:s:S:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:c:df:hn:N:o:OP:s:S:t:4:")) != -1)
     {
         switch (c)
         {
             case 'a':
                 o->al_deg = atof(optarg);
                 break;
+            case 'c':
+                if (strcmp( optarg, "GAUSSIAN" ) == 0)
+                    o->csl_type = GAUSSIAN;
+                else if (strcmp( optarg, "TOPHAT" ) == 0)
+                    o->csl_type = TOPHAT;
+                else
+                {
+                    fprintf( stderr, "error: -c argument must be either "
+                            "GAUSSIAN or TOPHAT\n" );
+                    exit(EXIT_FAILURE);
+                }
             case 'd':
                 o->dipole = 1;
                 break;
@@ -279,15 +252,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                                      &(o->f_stop),
                                      NULL );
                 break;
-            case 'g':
-                o->gamma = atof(optarg);
-                break;
             case 'h':
                 usage();
                 exit(EXIT_SUCCESS);
-                break;
-            case 'l':
-                o->print_los = 1;
                 break;
             case 'n':
                 o->num_lines = atoi(optarg);
@@ -301,24 +268,20 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
             case 'O':
                 o->open_only = 1;
                 break;
-            case 'p':
-                parse_range( optarg, &(o->p_start),
-                                     &(o->p_stop),
-                                     NULL );
-                break;
             case 'P':
                 o->P_sec = atof(optarg);
                 break;
             case 's':
-                parse_range( optarg, &(o->s_start),
-                                     &(o->s_stop),
-                                     NULL );
+                o->s_deg = atof(optarg);
+                break;
+            case 'S':
+                o->S_deg = atof(optarg);
                 break;
             case 't':
-                o->tmult = atof(optarg);
+                o->nframes = atoi(optarg);
                 break;
-            case 'z':
-                o->ze_deg = atof(optarg);
+            case '4':
+                o->P4_sec = atof(optarg);
                 break;
             case '?':
                 fprintf( stderr, "error: unknown option character '-%c'\n",
@@ -332,18 +295,17 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
     }
 
     // Check that all the arguments are valid
-    if (isnan(o->al_deg) || isnan(o->P_sec) || isnan(o->ze_deg) ||
-        isnan(o->gamma))
+    if (isnan(o->al_deg) || isnan(o->P_sec) || isnan(o->P4_sec))
     {
-        fprintf( stderr, "error: -a, -g, -P and -z options required"
+        fprintf( stderr, "error: -a, -P and -4 options required"
                          "\n" );
         usage();
         exit(EXIT_FAILURE);
     }
 
-    if (isnan(o->s_start) || isnan(o->f_start))
+    if (isnan(o->s_deg) || isnan(o->S_deg) || isnan(o->f_start))
     {
-        fprintf( stderr, "error: -f and -s options required\n" );
+        fprintf( stderr, "error: -f, -s and -S options required\n" );
         usage();
         exit(EXIT_FAILURE);
     }
@@ -356,7 +318,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 }
 
 
-void print_col_headers( FILE *f )
+void print_col_headers( FILE *f, int nframes, double tstep )
 /* The final output includes:
  *   1&2) the polar coordinates of the footpoint of the magnetic field line
  *   3&4) the polar coordinates of the photon direction (with retardation)
@@ -367,8 +329,11 @@ void print_col_headers( FILE *f )
  */
 {
     // Print out a line to file handle f
-    fprintf( f, "#  s_deg  p_deg  th_deg  ph_deg  polangle_deg  retard_deg  "
-                "freqcrit_MHz  height_km  curvature_inv_km  x_km  y_km  z_km\n" );
+    fprintf( f, "#  x_deg  y_deg" );
+    int i;
+    for (i = 0; i < nframes; i++)
+        fprintf( f, "  t=%fs", (double)i*tstep );
+    fprintf( f, "\n" );
 }
 
 

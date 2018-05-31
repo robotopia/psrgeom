@@ -747,15 +747,14 @@ double Bdotrxy( point *x, pulsar *psr )
 
 
 
-int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
-               FILE *write_xyz, int rL_norm, double rL_lim, point *foot_pt )
+int footpoint( point *start_pt, pulsar *psr, int direction, FILE *write_xyz,
+        int rL_norm, double rL_lim, point *foot_pt )
 /* This uses Runge-Kutta (RK4) to follow the magnetic field line outward from
  * an initial starting point "start_pt"
  *
  * Inputs:
  *   start_pt  : the initial starting point
  *   psr       : the pulsar (includes geometric information)
- *   tmult     : the rate at which to progress in RK4 (fraction of psr radius)
  *   direction : progress inwards or outwards along field lines
  *               {DIR_INWARD, DIR_OUTWARD}
  *   write_xyz : file handle where to write x,y,z values
@@ -777,7 +776,7 @@ int footpoint( point *start_pt, pulsar *psr, double tmult, int direction,
     double tstep;
 
     copy_point( start_pt, &x );
-    tstep = tmult * x.r;
+    tstep = (x.r > 2.0*MAX_BSTEP*psr->rL ? MAX_BSTEP*psr->rL : 0.5 * x.r);
 
     // Trace this line outwards with a 4 stage Runge-Kutta
 
@@ -958,8 +957,8 @@ int cmp_extreme( point *x, pulsar *psr, double precision )
 }
 
 
-int farpoint( point *start_pt, pulsar *psr, double tmult,
-              FILE *write_xyz, int rL_norm, double rL_lim, point *far_pt )
+int farpoint( point *start_pt, pulsar *psr, FILE *write_xyz, int rL_norm,
+        double rL_lim, point *far_pt )
 /* This uses Runge-Kutta (RK4) to follow the magnetic field line outward from
  * an initial starting point "start_pt". It seeks the point (x,y,z) such that
  * x^2+y^2 is maximised.
@@ -967,7 +966,6 @@ int farpoint( point *start_pt, pulsar *psr, double tmult,
  * Inputs:
  *   start_pt  : the initial starting point
  *   psr       : the pulsar (includes geometric information)
- *   tmult     : the rate at which to progress in RK4 (fraction of psr radius)
  *   write_xyz : file handle where to write x,y,z values
  *               (if NULL, no output is written)
  *   rL_norm   : (bool) normalise written-out points to lt cyl radius
@@ -983,10 +981,9 @@ int farpoint( point *start_pt, pulsar *psr, double tmult,
     int retval = STOP_FOUND;
     point x, old_x;
 
-    double tstep;
+    double tstep = MAX_BSTEP * psr->rL;
 
     copy_point( start_pt, &x );
-    tstep = tmult * x.r;
 
     // Trace this line along the magnetic field line with a 4 stage Runge-
     // Kutta in the specified direction.
@@ -1145,7 +1142,7 @@ void B_large_step( point *x1, pulsar *psr, double step, int direction,
  * function of step size.
  */
 {
-    int nsteps = (int)ceil( step / (0.005*psr->rL) );
+    int nsteps = (int)ceil( step / (MAX_BSTEP*psr->rL) );
     double tstep = step / (double)nsteps;
     int i;
     copy_point( x1, x2 );

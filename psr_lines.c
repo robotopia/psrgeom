@@ -11,7 +11,7 @@ struct opts
     double  al_deg;    // alpha angle in deg
     double  ze_deg;    // zeta angle in deg
     double  P_sec;     // period, in sec
-    double  tmult;     // RK4 step size, as a fraction of lt cyl radius
+    double  tstep;     // RK4 step size, as a fraction of lt cyl radius
     int     rL_norm;   // bool: normalise output to light cylinder radius?
     double  rho_lim;   // limit to within rho_lim * light cylinder radius?
     char   *outfile;   // name of output file (NULL means stdout)
@@ -40,7 +40,7 @@ int main( int argc, char *argv[] )
     o.al_deg    = NAN;
     o.P_sec     = NAN;
     o.ze_deg    = NAN;
-    o.tmult     = 0.01;
+    o.tstep     = NAN;
     o.rL_norm   = 0;
     o.rho_lim   = 1.2;
     o.outfile   = NULL;
@@ -86,6 +86,9 @@ int main( int argc, char *argv[] )
 
     if (o.dipole)
         psr.field_type = DIPOLE;
+
+    // Scale the tstep size according to light cylinder radius
+    o.tstep *= psr.rL;
 
     // Check if -m was supplied, and set o.ref_axis accordingly
     if (o.mag_axis)
@@ -139,11 +142,11 @@ int main( int argc, char *argv[] )
                     'z', POINT_SET_ALL );
 
             // Follow the mag field line to the extreme
-            linetype = get_fieldline_type( &obs_foot_pt, &psr, o.tmult,
-                    o.rL_norm, f, &far_pt );
+            linetype = get_fieldline_type( &obs_foot_pt, &psr, o.rL_norm, f,
+                    &far_pt );
             if (linetype == CLOSED_LINE)
             {
-                footpoint( &far_pt, &psr, o.tmult, DIR_OUTWARD, f, o.rL_norm,
+                footpoint( &far_pt, &psr, DIR_OUTWARD, f, o.rL_norm,
                         1.0, NULL );
             }
 
@@ -198,8 +201,8 @@ void usage()
                            "set, output will be written to stdout.\n" );
     printf( "  -r  rho_lim  The maximum distance allowed for lines. "
                            "(default = 1.2)\n" );
-    printf( "  -t  tmult    The initial size of the RK4 steps, as a fraction "
-                           "of the light cylinder radius (default: 0.01)\n" );
+    printf( "  -t  tstep    The size of the RK4 steps, as a fraction of the "
+                           "light cylinder radius (default: 0.005)\n" );
     printf( "  -X  col,long The reference axis from which s and p are "
                            "calculated (see -p and -s), in degrees. If -m is "
                            "also given, this option is ignored (default = "
@@ -253,7 +256,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                                      &(o->s_nstep) );
                 break;
             case 't':
-                o->tmult = atof(optarg);
+                o->tstep = atof(optarg);
                 break;
             case 'X':
                 parse_direction( optarg, &(o->ref_axis) );
@@ -286,6 +289,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
         usage();
         exit(EXIT_FAILURE);
     }
+
+    if (isnan(o->tstep))
+        o->tstep = MAX_BSTEP;
 }
 
 
