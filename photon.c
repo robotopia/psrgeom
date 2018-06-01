@@ -40,6 +40,9 @@ void emit_pulsar_photon( pulsar *psr, point *pt, double freq, photon *pn )
     // frequency equals the critical frequency
     pn->gamma = calc_crit_gamma( pn->freq, pn->curvature );
 
+    // Calculate the total photon power
+    pn->power = single_particle_power_total( pn->gamma, pn->A.r );
+
     // Calculate the observed phase (incl. retardation)
     psr_angle dph;
     calc_retardation( pt, psr, &pn->V, &dph, &(pn->retarded_LoS) );

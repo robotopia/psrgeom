@@ -124,9 +124,9 @@ int main( int argc, char *argv[] )
             emit_pulsar_photon( &psr, &emit_pt, freq, &pn );
 
             // Print out the next line
-            fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e\n",
+            fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
                     emit_pt.r, dist, sqrt(emit_pt.rhosq), pn.curvature,
-                    pn.retarded_LoS.th.deg, pn.gamma );
+                    pn.retarded_LoS.th.deg, pn.gamma, pn.power );
 
             // Climb a bit more
             if (emit_pt.r < 2.0*MAX_BSTEP*psr.rL)
@@ -283,7 +283,7 @@ void print_col_headers( FILE *f )
 {
     // Print out a line to file handle f
     fprintf( f, "# radial_height  line_height  perp_height  curvature  "
-            "beam_opening_angle_deg  gamma\n" );
+            "beam_opening_angle_deg  gamma  radiated_power\n" );
 }
 
 

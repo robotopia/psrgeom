@@ -134,6 +134,7 @@ typedef struct photon_t
     double    gamma;        // The Lorentz factor of the particle
     psr_angle phase;        // The phase at which the particle is observed
     psr_angle psi;          // The photon's polarisation angle (kind of...)
+    double    power;        // The photon's power (Jackson Eq (14.46))
 } photon;
 
 
