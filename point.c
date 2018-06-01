@@ -188,31 +188,79 @@ void random_direction_bounded( point *rand_pt, double lo_th_rad,
 }
 
 
-void random_direction_spark( point *rand_pt, double th_rad,
-        double spark_size_rad, int nsparks )
-/* This function produces a random direction within one of "nsparks" circular
- * regions of radius "spark_size_rad", positioned on an annulus with radius
- * "th_rad". The result is written to rand_pt.
+void random_spark_footpoint( point *foot_pt, pulsar *psr, double t )
+/* This function produces a random footpoint FOOT_PT within one of the sparks
+ * in the carousel of pulsar PSR, at time T.
+ * The footpoint is returned in the observer frame (not the magnetic frame).
  */
 {
-    // Generate a random point on a circle centred at the zenith, as if there
-    // were only a single spark located there.
-    point local_pt;
-    random_direction_bounded( &local_pt, 0.0, spark_size_rad, 0.0, 2.0*PI );
+    point pt;
+    psr_angle th, ph;
 
-    // Rotate the point down to the correct annulus
-    psr_angle th;
-    set_psr_angle_rad( &th, th_rad );
+    int    n = psr->csl.n;      // Number of sparks
+    double S = psr->csl.S.rad;  // Angular radius of carousel
+    double s = psr->csl.s.rad;  // Angular size of sparks
+    int type = psr->csl.type;   // Either TOPHAT or GAUSSIAN
 
-    point annulus_pt;
-    rotate_about_axis( &local_pt, &annulus_pt, &th, 'y', POINT_SET_ALL );
+    if (type != TOPHAT && type != GAUSSIAN)
+    {
+        fprintf( stderr, "error: random_spark_footpoint: unrecognised "
+                "carousel type\n" );
+        exit(EXIT_FAILURE);
+    }
 
-    // Choose a random integer 0 <= x < nsparks and rotate the point in
-    // azimuth by the appropriate amount
-    psr_angle ph;
-    set_psr_angle_deg( &ph, (double)(rand()%nsparks)*360.0/(double)nsparks );
+    // How the point is chosen depends on whether the carousel is a ring of
+    // sparks (n > 0) or a "solid" annulus (n = 0)
+    if (n == 0)  /* The annulus case */
+    {
+        // If the annulus has a "tophat" profile, try to ensure that the
+        // resulting footpoint is drawn from a uniform distribution across the
+        // allowed "swath"
+        if (type == TOPHAT)
+        {
+            random_direction_bounded( &pt, S-s, S+s, 0.0, 2.0*PI );
+            scale_point( &pt, psr->r, foot_pt );
+        }
+        // If the annulus has a "gaussian" profile, just draw θ directly from
+        // a gaussian distribution and φ from a uniform distribution.
+        else /* (type == GAUSSIAN) */
+        {
+            set_psr_angle_rad( &th, randn( S, s ) );
+            set_psr_angle_rad( &ph, RAND(2.0*PI) );
+            set_point_sph( foot_pt, psr->r, &th, &ph, POINT_SET_ALL );
+        }
+    }
+    else if (n > 0) /* The discrete spark case */
+    {
+        // Generate a random point on a spark centred at the zenith, as
+        // if there were only a single spark located there.
+        if (type == TOPHAT)
+        {
+            random_direction_bounded( &pt, 0.0, s, 0.0, 2.0*PI );
+        }
+        else /* (type == GAUSSIAN) */
+        {
+            double x = randn( 0.0, s );
+            double y = randn( 0.0, s );
 
-    rotate_about_axis( &annulus_pt, rand_pt, &ph, 'z', POINT_SET_ALL );
+            set_psr_angle_rad( &th, hypot( x, y ) );
+            set_psr_angle_rad( &ph, atan2( y, x ) );
+
+            set_point_sph( &pt, psr->r, &th, &ph, POINT_SET_ALL );
+        }
+
+        // Rotate the point down to the correct annulus and around to a random
+        // spark
+        set_psr_angle_rad( &th, S );
+        set_psr_angle_deg( &ph, 360.0*((double)(rand() % n)/(double)n +
+                    t/psr->csl.P4) );
+
+        rotate_about_axis( &pt, &pt, &th, 'y', POINT_SET_ALL );
+        rotate_about_axis( &pt, foot_pt, &ph, 'z', POINT_SET_ALL );
+    }
+
+    // Convert the footpoint to the observer frame
+    mag_to_obs_frame( foot_pt, psr, NULL, foot_pt );
 }
 
 
@@ -285,4 +333,40 @@ void transform_new_xz( point *v, point *new_z, point *new_x, point *new_v )
     reverse_psr_angle( &(nxpp.ph), &tmp );
 
     rotate_about_axis( &vpp, new_v, &tmp, 'z', POINT_SET_ALL );
+}
+
+double randn( double mu, double sigma )
+/* A function generate a number drawn from a normal distribution.
+ * Obtained from https://phoxis.org/2013/05/04/generating-random-numbers-
+ * from-normal-distribution-in-c/.
+ *
+ * This function assumes that the random number generator has already been
+ * seeded.
+ */
+{
+    double U1, U2, W, mult;
+    static double X1, X2;
+    static int call = 0;
+
+    if (call == 1)
+    {
+        call = !call;
+        return (mu + sigma * (double) X2);
+    }
+
+    do
+    {
+        U1 = -1 + ((double) rand () / RAND_MAX) * 2;
+        U2 = -1 + ((double) rand () / RAND_MAX) * 2;
+        W = pow (U1, 2) + pow (U2, 2);
+    }
+    while (W >= 1 || W == 0);
+
+    mult = sqrt ((-2 * log (W)) / W);
+    X1 = U1 * mult;
+    X2 = U2 * mult;
+
+    call = !call;
+
+    return (mu + sigma * (double) X1);
 }

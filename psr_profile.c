@@ -42,6 +42,8 @@ struct opts
     int     nsparks;     // number of sparks in carousel
     int     dipole;      // use dipole field?
     int     nbins;       // number of profile phase bins
+    double  P4_sec;      // the rotation time of the carousel
+    int     csl_type;    // the type of spark profile (TOPHAT or GAUSSIAN)
 };
 
 void usage();
@@ -73,6 +75,9 @@ int main( int argc, char *argv[] )
     o.nsparks   = 0;
     o.dipole    = 0; // use Deutsch field by default
     o.nbins     = 1024;
+    o.P4_sec    = NAN;
+    o.csl_type  = GAUSSIAN;
+
 
     parse_cmd_line( argc, argv, &o );
 
@@ -108,6 +113,12 @@ int main( int argc, char *argv[] )
     if (o.dipole)
         psr.field_type = DIPOLE;
 
+    // Set up the carousel
+    psr_angle s, S;
+    set_psr_angle_deg( &S, (o.s_stop + o.s_start) / 2.0 );
+    set_psr_angle_deg( &s, (o.s_stop - o.s_start) / 2.0 );
+    set_pulsar_carousel( &psr, o.nsparks, &s, &S, o.csl_type, o.P4_sec );
+
     // Write the file header
     print_psrg_header( f, argc, argv );
 
@@ -134,26 +145,11 @@ int main( int argc, char *argv[] )
     {
         fprintf( stderr, "\r\r\r\r%3d%%", (int)(100.0*(double)i/(double)(o.num_lines-1)) );
         int linetype;   // either CLOSED_LINE or OPEN_LINE
-        point foot_pt, foot_pt_mag;
+        point foot_pt;
         point init_pt;
 
         // Obtain a random point on the pulsar surface
-        if (o.nsparks == 0)
-        {
-            random_direction_bounded( &foot_pt_mag, o.s_start*DEG2RAD,
-                    o.s_stop*DEG2RAD, o.p_start*DEG2RAD, o.p_stop*DEG2RAD );
-        }
-        else /* a carousel of sparks! */
-        {
-            random_direction_spark( &foot_pt_mag,
-                    (o.s_start + o.s_stop )/2.0 * DEG2RAD,
-                    (o.s_stop  - o.s_start)/2.0 * DEG2RAD,
-                    o.nsparks );
-        }
-        scale_point( &foot_pt_mag, psr.r, &foot_pt_mag );
-
-        // Convert the foot_pt into observer coordinates
-        mag_to_obs_frame( &foot_pt_mag, &psr, NULL, &foot_pt );
+        random_spark_footpoint( &foot_pt, &psr, 0.0 );
 
         // If requested, check that we're on an open field line
         if (o.open_only)
@@ -218,8 +214,11 @@ void usage()
                            "in degrees. The range is from s1 to s2.\n" );
     printf( "  -z  zeta     The angle between the rotation axis and the line "
                            "of sight in degrees (required)\n" );
+    printf( "  -4  P4       The carousel's rotation period (in sec)\n" );
     printf( "\nOTHER OPTIONS:\n" );
     printf( "  -b  nbins    The number of bins in the output profile\n" );
+    printf( "  -c type      The spark profile type, either GAUSSIAN (default) "
+            "or TOPHAT\n" );
     printf( "  -d           Use a dipole field instead of the default "
                            "Deutsch field\n" );
     printf( "  -h           Display this help and exit\n" );
@@ -242,7 +241,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:b:df:hn:N:o:Op:P:s:S:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:b:c:df:hn:N:o:Op:P:s:S:z:4:")) != -1)
     {
         switch (c)
         {
@@ -251,6 +250,18 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 break;
             case 'b':
                 o->nbins = atoi(optarg);
+                break;
+            case 'c':
+                if (strcmp( optarg, "GAUSSIAN" ) == 0)
+                    o->csl_type = GAUSSIAN;
+                else if (strcmp( optarg, "TOPHAT" ) == 0)
+                    o->csl_type = TOPHAT;
+                else
+                {
+                    fprintf( stderr, "error: -c argument must be either "
+                            "GAUSSIAN or TOPHAT\n" );
+                    exit(EXIT_FAILURE);
+                }
                 break;
             case 'd':
                 o->dipole = 1;
@@ -292,6 +303,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
             case 'z':
                 o->ze_deg = atof(optarg);
                 break;
+            case '4':
+                o->P4_sec = atof(optarg);
+                break;
             case '?':
                 fprintf( stderr, "error: unknown option character '-%c'\n",
                          optopt );
@@ -304,9 +318,10 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
     }
 
     // Check that all the arguments are valid
-    if (isnan(o->al_deg) || isnan(o->P_sec) || isnan(o->ze_deg))
+    if (isnan(o->al_deg) || isnan(o->P_sec) || isnan(o->ze_deg) ||
+        isnan(o->P4_sec))
     {
-        fprintf( stderr, "error: -a, -P and -z options required"
+        fprintf( stderr, "error: -a, -P, -z and -4 options required"
                          "\n" );
         usage();
         exit(EXIT_FAILURE);

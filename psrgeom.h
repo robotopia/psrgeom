@@ -174,6 +174,8 @@ void scale_point( point *in, double scale, point *out );
 
 void transform_new_xz( point *v, point *new_z, point *new_x, point *new_v );
 
+double randn( double mu, double sigma );
+
 /**** Pulsar functions ****/
 
 void set_pulsar( pulsar *psr, psr_angle *ra, psr_angle *dec, double P, double r,
@@ -195,8 +197,7 @@ void set_pulsar_carousel( pulsar *psr, int n, psr_angle *s, psr_angle *S,
 void random_direction( point *rand_pt );
 void random_direction_bounded( point *rand_pt, double lo_th_rad,
         double hi_th_rad, double lo_ph_rad, double hi_ph_rad );
-void random_direction_spark( point *rand_pt, double th_rad,
-        double spark_size_rad, int nsparks );
+void random_spark_footpoint( point *foot_pt, pulsar *psr, double t );
 void random_point_in_cyl( point *rand_pt, double max_rho, double max_z );
 void random_point_in_lightcyl( point *rand_pt, pulsar *psr, double frac,
         double z_max_frac );

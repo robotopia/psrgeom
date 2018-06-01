@@ -15,6 +15,8 @@ CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG) -march=native
 
 TARGETS = psr_fields \
 		  psr_lines \
+		  psr_lineofsight \
+		  psr_lines_sparks \
 		  psr_emit \
 		  psr_cost_function \
 		  psr_polangle \
@@ -32,7 +34,8 @@ TARGETS = psr_fields \
 TESTS = calc_fields_test \
 		transform_new_xz_test \
 		bstep_error_test \
-		spark_test
+		spark_test \
+		spark_random_test
 
 LIBRARY = psrgeom
 LIBFILE = lib$(LIBRARY).a
