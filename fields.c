@@ -987,7 +987,8 @@ int farpoint( point *start_pt, pulsar *psr, FILE *write_xyz, int rL_norm,
 
     copy_point( start_pt, &x );
 
-    *dist = 0.0;
+    if (dist != NULL)
+        *dist = 0.0;
 
     // Trace this line along the magnetic field line with a 4 stage Runge-
     // Kutta in the specified direction.
@@ -1060,9 +1061,6 @@ int farpoint( point *start_pt, pulsar *psr, FILE *write_xyz, int rL_norm,
         // If we've changed direction, then halve the step size
         if (direction != prev_direction)
             tstep /= 2.0;
-
-        // Adjust tstep proportionally to how far away from the pulsar we are
-        tstep *= x.r / old_x.r;
     }
 
     // Make the final point available to the caller
