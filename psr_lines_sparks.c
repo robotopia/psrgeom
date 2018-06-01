@@ -17,6 +17,7 @@ struct opts
     char   *outfile;   // name of output file (NULL means stdout)
     double  s_deg;     // the spark angular size
     double  S_deg;     // the carousel angular radius
+    int     nsparks;   // number of sparks in carousel
     double  P4_sec;    // the rotation time of the carousel
     int     csl_type;  // the type of spark profile (TOPHAT or GAUSSIAN)
     int     dipole;    // bool: use dipole
@@ -47,6 +48,7 @@ int main( int argc, char *argv[] )
     o.csl_type  = GAUSSIAN;
     o.dipole    = 0;
     o.nlines    = 1000;
+    o.nsparks   = 0;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -85,6 +87,7 @@ int main( int argc, char *argv[] )
     set_psr_angle_deg( &s, o.s_deg );
     set_psr_angle_deg( &S, o.S_deg );
     set_pulsar_carousel( &psr, o.nsparks, &s, &S, o.csl_type, o.P4_sec );
+    double t;
 
     // Convert the observing frequency to Hz
     double freq = o.freq_MHz * 1.0e6;
@@ -92,6 +95,7 @@ int main( int argc, char *argv[] )
     // Scale the tstep size according to light cylinder radius
     o.tstep *= psr.rL;
     double dist; // Keep track of the total distance travelled
+    double step; // Each step size
 
     // Set up needed structs
     point emit_pt;     // The footpoint relative to the ref_axis
@@ -117,16 +121,27 @@ int main( int argc, char *argv[] )
         do
         {
             // Calculate the properties of a photon emitted at this point
-            emit_pulsar_photon( &psr, &pt, freq, &pn );
+            emit_pulsar_photon( &psr, &emit_pt, freq, &pn );
 
             // Print out the next line
-            fprintf( f, "%.15e %.15e %.15e %.15e\n", emit_pt.r, dist,
-                    sqrt(emit_pt.rhosq), pn->curvature );
+            fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e\n",
+                    emit_pt.r, dist, sqrt(emit_pt.rhosq), pn.curvature,
+                    pn.retarded_LoS.th.deg, pn.gamma );
 
-            Bstep( &pt, &psr, o.tstep, DIR_OUTWARD, &pt );
-            dist += o.tstep;
+            // Climb a bit more
+            if (emit_pt.r < 2.0*MAX_BSTEP*psr.rL)
+                step = 0.5*emit_pt.r;
+            else
+                step = o.tstep;
+
+            Bstep( &emit_pt, &psr, step, DIR_OUTWARD, &emit_pt );
+            set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
+                    POINT_SET_ALL );
+            dist += step;
         }
         while ((emit_pt.rhosq < psr.rL2) && (emit_pt.r > psr.r));
+
+        fprintf( f, "\n" );
     }
 
     // Clean up
@@ -160,6 +175,9 @@ void usage()
     printf( "  -h           Display this help and exit\n" );
     printf( "  -L           Normalise distances to light cylinder radius\n" );
     printf( "  -n  lines    Sample this many field lines (default: 10000)\n" );
+    printf( "  -N  nsparks  The number of sparks in the carousel. If nsparks "
+                           "= 0 (default), the carousel is a \"solid\" "
+                           "annulus.\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
     printf( "  -t  tstep    The size of the RK4 steps, as a fraction of the "
@@ -173,7 +191,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:c:df:hLn:o:P:s:S:t:z:4:")) != -1)
+    while ((c = getopt( argc, argv, "a:c:df:hLn:N:o:P:s:S:t:z:4:")) != -1)
     {
         switch (c)
         {
@@ -207,6 +225,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 break;
             case 'n':
                 o->nlines = atoi(optarg);
+                break;
+            case 'N':
+                o->nsparks = atoi(optarg);
                 break;
             case 'o':
                 o->outfile = strdup(optarg);
@@ -262,7 +283,7 @@ void print_col_headers( FILE *f )
 {
     // Print out a line to file handle f
     fprintf( f, "# radial_height  line_height  perp_height  curvature  "
-            "beam_opening_angle_deg  \n" );
+            "beam_opening_angle_deg  gamma\n" );
 }
 
 

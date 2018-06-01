@@ -301,7 +301,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
 
 /**** Photon functions ****/
 
-void emit_photon( pulsar *psr, point *pt, double freq, photon *pn );
+void emit_pulsar_photon( pulsar *psr, point *pt, double freq, photon *pn );
 double weight_photon_by_particle_density( photon *pn );
 double weight_photon_by_line_density( point *init_pt, pulsar *psr );
 double weight_photon_by_power( photon *pn );

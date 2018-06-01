@@ -237,6 +237,7 @@ void random_spark_footpoint( point *foot_pt, pulsar *psr, double t )
         if (type == TOPHAT)
         {
             random_direction_bounded( &pt, 0.0, s, 0.0, 2.0*PI );
+            scale_point( &pt, psr->r, &pt );
         }
         else /* (type == GAUSSIAN) */
         {
