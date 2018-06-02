@@ -149,7 +149,7 @@ int main( int argc, char *argv[] )
         point init_pt;
 
         // Obtain a random point on the pulsar surface
-        random_spark_footpoint( &foot_pt, &psr, 0.0 );
+        random_spark_footpoint( &foot_pt, NULL, &psr, 0.0 );
 
         // If requested, check that we're on an open field line
         if (o.open_only)

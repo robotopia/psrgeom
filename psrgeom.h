@@ -198,7 +198,8 @@ void set_pulsar_carousel( pulsar *psr, int n, psr_angle *s, psr_angle *S,
 void random_direction( point *rand_pt );
 void random_direction_bounded( point *rand_pt, double lo_th_rad,
         double hi_th_rad, double lo_ph_rad, double hi_ph_rad );
-void random_spark_footpoint( point *foot_pt, pulsar *psr, double t );
+void random_spark_footpoint( point *foot_pt_obs, point *foot_pt_mag,
+                pulsar *psr, double t );
 void random_point_in_cyl( point *rand_pt, double max_rho, double max_z );
 void random_point_in_lightcyl( point *rand_pt, pulsar *psr, double frac,
         double z_max_frac );

@@ -98,7 +98,9 @@ int main( int argc, char *argv[] )
     double step; // Each step size
 
     // Set up needed structs
-    point emit_pt;     // The footpoint relative to the ref_axis
+    point foot_pt;     // The footpoint
+    point foot_pt_mag; // The same, but in magnetic frame coordinates
+    point emit_pt;     // The emission point
     photon pn;         // An emitted photon
 
     // Print header and column header to file
@@ -112,10 +114,11 @@ int main( int argc, char *argv[] )
         // Choose a foot point from among the sparks
         t = 0.0; // Just use time = 0 exclusively for now -- i.e.
                  // ignore carousel rotation
-        random_spark_footpoint( &emit_pt, &psr, t );
+        random_spark_footpoint( &foot_pt, &foot_pt_mag, &psr, t );
 
         // Reset the distance counter
         dist = 0.0;
+        copy_point( &foot_pt, &emit_pt );
 
         // Climb the line at regular intervals
         do
@@ -124,9 +127,11 @@ int main( int argc, char *argv[] )
             emit_pulsar_photon( &psr, &emit_pt, freq, &pn );
 
             // Print out the next line
-            fprintf( f, "%.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
+            fprintf( f, "%.15e %.15e %.15e %.15e %.15e "
+                        "%.15e %.15e %.15e %.15e\n",
                     emit_pt.r, dist, sqrt(emit_pt.rhosq), pn.curvature,
-                    pn.retarded_LoS.th.deg, pn.gamma, pn.power );
+                    pn.retarded_LoS.th.deg, pn.gamma, pn.power,
+                    foot_pt_mag.th.deg, foot_pt_mag.ph.deg );
 
             // Climb a bit more
             if (emit_pt.r < 2.0*MAX_BSTEP*psr.rL)
@@ -283,7 +288,8 @@ void print_col_headers( FILE *f )
 {
     // Print out a line to file handle f
     fprintf( f, "# radial_height  line_height  perp_height  curvature  "
-            "beam_opening_angle_deg  gamma  radiated_power\n" );
+            "beam_opening_angle_deg  gamma  radiated_power  foot_pt_th_deg  "
+            "foot_pt_ph_deg\n" );
 }
 
 

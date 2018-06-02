@@ -188,7 +188,8 @@ void random_direction_bounded( point *rand_pt, double lo_th_rad,
 }
 
 
-void random_spark_footpoint( point *foot_pt, pulsar *psr, double t )
+void random_spark_footpoint( point *foot_pt_obs, point *foot_pt_mag,
+        pulsar *psr, double t )
 /* This function produces a random footpoint FOOT_PT within one of the sparks
  * in the carousel of pulsar PSR, at time T.
  * The footpoint is returned in the observer frame (not the magnetic frame).
@@ -219,7 +220,7 @@ void random_spark_footpoint( point *foot_pt, pulsar *psr, double t )
         if (type == TOPHAT)
         {
             random_direction_bounded( &pt, S-s, S+s, 0.0, 2.0*PI );
-            scale_point( &pt, psr->r, foot_pt );
+            scale_point( &pt, psr->r, &pt );
         }
         // If the annulus has a "gaussian" profile, just draw θ directly from
         // a gaussian distribution and φ from a uniform distribution.
@@ -227,7 +228,7 @@ void random_spark_footpoint( point *foot_pt, pulsar *psr, double t )
         {
             set_psr_angle_rad( &th, randn( S, s ) );
             set_psr_angle_rad( &ph, RAND(2.0*PI) );
-            set_point_sph( foot_pt, psr->r, &th, &ph, POINT_SET_ALL );
+            set_point_sph( &pt, psr->r, &th, &ph, POINT_SET_ALL );
         }
     }
     else if (n > 0) /* The discrete spark case */
@@ -257,11 +258,14 @@ void random_spark_footpoint( point *foot_pt, pulsar *psr, double t )
                     t/psr->csl.P4) );
 
         rotate_about_axis( &pt, &pt, &th, 'y', POINT_SET_ALL );
-        rotate_about_axis( &pt, foot_pt, &ph, 'z', POINT_SET_ALL );
+        rotate_about_axis( &pt, &pt, &ph, 'z', POINT_SET_ALL );
     }
 
     // Convert the footpoint to the observer frame
-    mag_to_obs_frame( foot_pt, psr, NULL, foot_pt );
+    if (foot_pt_mag != NULL)
+        copy_point( &pt, foot_pt_mag );
+    if (foot_pt_obs != NULL)
+        mag_to_obs_frame( &pt, psr, NULL, foot_pt_obs );
 }
 
 

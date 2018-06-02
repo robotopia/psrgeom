@@ -73,7 +73,7 @@ int main( int argc, char *argv[] )
     int i;
     for (i = 0; i < N; i++)
     {
-        random_spark_footpoint( &foot_pt, &psr, t );
+        random_spark_footpoint( NULL, &foot_pt, &psr, t );
         x = foot_pt.th.deg * foot_pt.ph.cos;
         y = foot_pt.th.deg * foot_pt.ph.sin;
         printf( "%.15e %.15e\n", x, y );
