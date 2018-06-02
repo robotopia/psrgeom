@@ -2,11 +2,14 @@
 #include <GL/glu.h>
 #include <GL/glut.h>
 #include <stdlib.h>
+#include <time.h>
 #include "psrgeom.h"
 
 static point psr_cam;
 
-static point *line_pts;
+//static point *line_pts;
+#define NLINES 100
+static point foot_pts[NLINES];
 static pulsar psr;
 
 // Mouse-related variables
@@ -25,6 +28,17 @@ enum
 
 static double W, H;
 
+void regenerate_footpoints( int redraw )
+{
+    int i;
+    for (i = 0; i < NLINES; i++)
+        random_spark_footpoint( &foot_pts[i], NULL, &psr, 0.0 );
+
+    // Redraw, if requested
+    if (redraw)
+        glutPostRedisplay();
+}
+
 void init(void) 
 {
     // Set a white background
@@ -35,27 +49,53 @@ void init(void)
     psr_angle z; // "zero" angle
     psr_angle al;
     set_psr_angle_deg( &z, 0.0 );
-    set_psr_angle_deg( &al, 45.0 );
+    set_psr_angle_deg( &al, 10.0 );
     set_pulsar( &psr, NULL, NULL, 1.0, 1.0, &al, &z );
+
+    // Set up default carousel
+    int nsparks = 7;
+    psr_angle s, S;
+    set_psr_angle_deg( &S, 1.0 );
+    set_psr_angle_deg( &s, 0.1 );
+    double P4_sec = 10.0;
+    set_pulsar_carousel( &psr, nsparks, &s, &S, GAUSSIAN, P4_sec );
 
     // Set the initial view direction as looking straight down on the
     // rotation/magnetic axis
-    set_point_sph( &psr_cam, 5.0*psr.r, &al, &z, POINT_SET_ALL );
+    set_point_sph( &psr_cam, (1.0 + S.deg)*psr.r, &al, &z, POINT_SET_ALL );
+
+    // Generate some footpoints
+    regenerate_footpoints( 0 );
 }
 
 void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT);
-    glColor3f(0.65, 0.65, 0.65);
 
     // Clip the back half of the pulsar sphere
     GLdouble clip_plane[4] = { psr_cam.x[0], psr_cam.x[1], psr_cam.x[2], 0.0 };
 
     glPushMatrix();
+
+    // Draw pulsar sphere
+    glColor3f(0.65, 0.65, 0.65);
     glClipPlane( GL_CLIP_PLANE0, clip_plane );
     glEnable( GL_CLIP_PLANE0 );
     glRotatef( psr.al.deg, 0.0, 1.0, 0.0 );
-    glutWireSphere(psr.r, 80/(int)(1+floor(psr_cam.r - psr.r)), 64/(1+(int)floor(psr_cam.r - psr.r)));   /* draw pulsar */
+    glutWireSphere(psr.r, 24,
+                          64/(1+(int)floor(psr_cam.r - psr.r)));
+
+    // Draw footpoints
+    glColor3f(1.0, 0.0, 0.0);
+    glRotatef( -psr.al.deg, 0.0, 1.0, 0.0 );
+    glPointSize(3.0);
+    glBegin( GL_POINTS );
+    int i;
+    for (i = 0; i < NLINES; i++)
+    {
+        glVertex3d( foot_pts[i].x[0], foot_pts[i].x[1], foot_pts[i].x[2] );
+    }
+    glEnd();
     glPopMatrix();
 
     glutSwapBuffers();
@@ -148,18 +188,30 @@ void mousemove( int x, int y )
 }
 
 
+void keyboard( unsigned char key, int x, int y )
+{
+    switch (key)
+    {
+        case 'a':
+            regenerate_footpoints( 1 );
+            break;
+    }
+}
+
 int main(int argc, char** argv)
 {
+    srand( time( NULL ) );
     glutInit(&argc, argv);
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize (800, 500); 
     glutInitWindowPosition (500, (glutGet(GLUT_SCREEN_HEIGHT)-500)/2);
     glutCreateWindow (argv[0]);
     init ();
-    glutDisplayFunc(display); 
-    glutReshapeFunc(reshape); 
-    glutMouseFunc(mouseclick);
-    glutMotionFunc(mousemove);
+    glutDisplayFunc( display ); 
+    glutReshapeFunc( reshape ); 
+    glutMouseFunc( mouseclick );
+    glutMotionFunc( mousemove );
+    glutKeyboardFunc( keyboard );
     glutMainLoop();
     return 0;
 }
