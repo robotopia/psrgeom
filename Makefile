@@ -1,5 +1,5 @@
 CC      = gcc
-LDLIBS = -lnewuoa -lnmead -lm
+LDLIBS = -lnewuoa -lnmead -lGL -lGLU -lglut -lm
 
 ## Uncomment this to turn on compiler optimisation
 OPTIM   = #-O2
@@ -29,7 +29,8 @@ TARGETS = psr_fields \
 		  psr_lofl \
 		  psr_profile \
 		  psr_jacksonbeamsingle \
-		  psr_beam
+		  psr_beam \
+		  psrgeom
 
 TESTS = calc_fields_test \
 		transform_new_xz_test \
