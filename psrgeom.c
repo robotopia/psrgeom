@@ -16,6 +16,17 @@ static int mouse_old_x;
 static int mouse_old_y;
 static int button_down;
 
+// Determine which feature is nearer
+static int nearest_feature;
+static int selected_feature;
+
+enum
+{
+    NO_FEATURE,
+    ALPHA_LINE,
+    ZETA_LINE
+};
+
 typedef struct window_t
 {
     int x, y, w, h;
@@ -25,6 +36,7 @@ typedef struct window_t
     double aspect_ratio;
     double near_clip;
     double far_clip;
+    double left, right, bottom, top;
 } window;
 
 #define NWINDOWS  6
@@ -82,6 +94,20 @@ void regenerate_footpoints( int redraw )
         glutPostRedisplay();
 }
 
+void draw_2D_circle( double radius, double xc, double yc )
+{
+   glBegin(GL_LINE_LOOP);
+
+   int i;
+   for (i = 0; i < 360; i++)
+   {
+      double rad = i*DEG2RAD;
+      glVertex2f( xc + cos(rad)*radius, yc + sin(rad)*radius );
+   }
+
+   glEnd();
+}
+
 void set_window_properties()
 {
     window *f;
@@ -108,11 +134,25 @@ void set_window_properties()
     f->h = frames[FRAME_FOOTPTS].h;
     f->w = W/4;
 
-    f->dim = 3;
-    f->FoV = 60.0;
-    f->aspect_ratio = (GLfloat) f->w/(GLfloat) f->h;
-    f->near_clip = f->camera.r - psr.r;
-    f->far_clip  = f->camera.r + psr.r;
+    f->dim = 2;
+    f->left = -0.1;
+    f->right = 1.5;
+    f->bottom = 0.0;
+    f->top = (f->right - f->left)*(double)f->h/(double)f->w;
+}
+
+void apply_2D_camera( int frame_num )
+{
+    window *f = &frames[frame_num];
+
+    glMatrixMode (GL_PROJECTION);
+
+    glLoadIdentity ();
+    gluOrtho2D( f->left, f->right, f->bottom, f->top );
+    glMatrixMode(GL_MODELVIEW);
+
+    glLoadIdentity();
+
 }
 
 void apply_3D_camera( int frame_num )
@@ -133,6 +173,19 @@ void apply_3D_camera( int frame_num )
 
 }
 
+void screen2world( int x, int y, double *xw, double *yw, int frame_num )
+{
+    if (frame_num == FRAME_ERROR)
+    {
+        fprintf( stderr, "error: pixel2world: invalid frame number\n" );
+        exit(EXIT_FAILURE);
+    }
+
+    window *f = &frames[frame_num];
+    *xw = (double)(  x - f->x)/(double)f->w*(f->right - f->left) + f->left;
+    *yw = (double)(H-y - f->y)/(double)f->h*(f->top - f->bottom) + f->bottom;
+}
+
 void init(void) 
 {
     // Set a white background
@@ -142,7 +195,7 @@ void init(void)
     // Set up a default pulsar
     psr_angle ze;
     psr_angle al;
-    set_psr_angle_deg( &ze, 0.0 );
+    set_psr_angle_deg( &ze, 5.0 );
     set_psr_angle_deg( &al, 10.0 );
     set_pulsar( &psr, NULL, NULL, 1.0, 1.0, &al, &ze );
 
@@ -171,17 +224,15 @@ void init(void)
             &z_angle,
             POINT_SET_ALL );
 
-    /* WINDOW: FRAME_ANGLES */
-    f = &frames[FRAME_ANGLES];
-    //set_point_xyz( &f->camera, 0.0, 0.0, -1.0, POINT_SET_ALL );
-    set_point_sph( &f->camera,
-            (2.0 + S.deg/10.0)*psr.r,
-            &r_angle,
-            &z_angle,
-            POINT_SET_ALL );
-
     // Generate some footpoints
     regenerate_footpoints( 0 );
+
+    // Unset nearest_feature
+    nearest_feature = NO_FEATURE;
+    selected_feature = NO_FEATURE;
+
+    // Unset active_frame
+    active_frame = FRAME_ERROR;
 }
 
 void display_frame(int frame_num)
@@ -199,7 +250,6 @@ void display_frame(int frame_num)
     switch (frame_num)
     {
         case FRAME_FOOTPTS:
-        case FRAME_ANGLES:
 
             apply_3D_camera( frame_num );
             glPushMatrix();
@@ -227,6 +277,39 @@ void display_frame(int frame_num)
             glPopMatrix();
 
             break;
+
+        case FRAME_ANGLES:
+
+            apply_2D_camera( frame_num );
+            glPushMatrix();
+
+            // Draw a unit circle at the origin
+            glColor3f( 0.0, 0.0, 0.0 );
+            draw_2D_circle( 1.0, 0.0, 0.0 );
+
+            // Draw lines for the various angles
+            glColor3f( 0.0, 0.0, 0.0 );
+            glBegin( GL_LINES );
+            glVertex2d( 0.0, 0.0 );
+            glVertex2d( 0.0, 1.5 );
+            glEnd();
+
+            if (nearest_feature == ALPHA_LINE)
+                glColor3f( 1.0, 0.0, 0.0 );
+            glBegin( GL_LINES );
+            glVertex2d( 0.0, 0.0 );
+            glVertex2d( 1.5*sin(psr.al.rad), 1.5*cos(psr.al.rad) );
+            glEnd();
+            glColor3f( 0.0, 0.0, 0.0 );
+
+            if (nearest_feature == ZETA_LINE)
+                glColor3f( 1.0, 0.0, 0.0 );
+            glBegin( GL_LINES );
+            glVertex2d( 0.0, 0.0 );
+            glVertex2d( 1.5*sin(psr.ze.rad), 1.5*cos(psr.ze.rad) );
+            glEnd();
+
+            glPopMatrix();
     }
 
 }
@@ -299,6 +382,7 @@ void mouseclick( int button, int state, int x, int y)
         case MOUSE_LEFT_BUTTON:
             if (state == GLUT_DOWN)
                 button_down = MOUSE_LEFT_BUTTON;
+            selected_feature = nearest_feature;
             break;
         case MOUSE_SCROLL_UP:
             dr = -(cam->r - psr.r)/4.0;
@@ -316,14 +400,62 @@ void mousemove( int x, int y )
 {
     if (active_frame == FRAME_ERROR) return;
 
-    point *cam = &frames[active_frame].camera;
-    double angle_x = -(x-mouse_old_x)*PI/180.0*7.6*(cam->r - psr.r);
-    double angle_y = -(y-mouse_old_y)*PI/180.0*7.6*(cam->r - psr.r);
+    double xw, yw;
+    double th;
 
-    reposition_3D_camera( active_frame, 0.0, angle_y, angle_x, 1 );
+    point *cam;
+    double angle_x, angle_y;
 
-    mouse_old_x = x;
-    mouse_old_y = y;
+    switch (active_frame)
+    {
+        case FRAME_FOOTPTS:
+            cam = &frames[active_frame].camera;
+            angle_x = -(x-mouse_old_x)*PI/180.0*7.6*(cam->r - psr.r);
+            angle_y = -(y-mouse_old_y)*PI/180.0*7.6*(cam->r - psr.r);
+
+            reposition_3D_camera( active_frame, 0.0, angle_y, angle_x, 1 );
+
+            mouse_old_x = x;
+            mouse_old_y = y;
+            break;
+        case FRAME_ANGLES:
+            screen2world( x, y, &xw, &yw, active_frame );
+            th = atan2( xw, yw );
+            if (th < 0.0)  th = 0.0;
+
+            if (selected_feature == ALPHA_LINE)
+                set_psr_angle_rad( &psr.al, th );
+            else if (selected_feature == ZETA_LINE)
+                set_psr_angle_rad( &psr.ze, th );
+            glutPostRedisplay();
+            break;
+    }
+}
+
+
+void mousepassivemove( int x, int y )
+{
+    int frame_num = which_window( x, y );
+    if (frame_num == FRAME_ERROR) return;
+
+    double xw, yw; // world coordinates
+    double th, dal, dze;
+
+    switch (frame_num)
+    {
+        case FRAME_ANGLES:
+            screen2world( x, y, &xw, &yw, frame_num );
+            th = atan2( xw, yw );
+            dal = fabs(th - psr.al.rad);
+            dze = fabs(th - psr.ze.rad);
+            nearest_feature = (dal <= dze ?  ALPHA_LINE : ZETA_LINE);
+            if (nearest_feature == ALPHA_LINE && dal > 5.0*PI/180.0)
+                nearest_feature = NO_FEATURE;
+            else if (nearest_feature == ZETA_LINE && dze > 5.0*PI/180.0)
+                nearest_feature = NO_FEATURE;
+            glutPostRedisplay();
+            break;
+    }
 }
 
 
@@ -355,6 +487,7 @@ int main(int argc, char** argv)
     glutReshapeFunc( reshape ); 
     glutMouseFunc( mouseclick );
     glutMotionFunc( mousemove );
+    glutPassiveMotionFunc( mousepassivemove );
     glutKeyboardFunc( keyboard );
     glutMainLoop();
     return 0;
