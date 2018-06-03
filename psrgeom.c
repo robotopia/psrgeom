@@ -219,13 +219,6 @@ void init_scenes()
     set_psr_angle_deg( &r_angle,  90.0 );
     set_psr_angle_deg( &n_angle, -90.0 );
 
-    // SCENE_FOOTPTS
-    set_point_sph( &scenes[SCENE_FOOTPTS].camera,
-            (1.0 + psr.csl.S.deg/10.0)*psr.r,
-            &r_angle,
-            &z_angle,
-            POINT_SET_ALL );
-
     // SCENE_FIELDLINES
     set_point_sph( &scenes[SCENE_FIELDLINES].camera,
             2.0*psr.rL,
@@ -254,9 +247,7 @@ void set_scene_properties()
     scene *scn;
 
     scn = &scenes[SCENE_FOOTPTS];
-    scn->dim = 3;
-    scn->near_clip = scn->camera.r - psr.r;
-    scn->far_clip  = scn->camera.r + psr.r;
+    scn->dim = 2;
 
     scn = &scenes[SCENE_FIELDLINES];
     scn->dim = 3;
@@ -278,8 +269,10 @@ void set_view_properties()
         switch (vw->scene_num)
         {
             case SCENE_FOOTPTS:
-                vw->FoV = 60.0;
-                vw->aspect_ratio = (GLfloat) vw->w/(GLfloat) vw->h;
+                vw->bottom = -psr.csl.S.deg*1.5;
+                vw->top    =  psr.csl.S.deg*1.5;
+                vw->left   =  vw->bottom*(double)vw->w/(double)vw->h;
+                vw->right  = -vw->left;
                 break;
             case SCENE_FIELDLINES:
                 vw->FoV = 60.0;
@@ -389,6 +382,45 @@ void init(void)
     active_view = SCENE_NONE;
 }
 
+
+void display_footpts( int view_num )
+{
+    apply_2D_camera( view_num );
+    glPushMatrix();
+
+    // Draw lines of colatitude
+    glColor3f( 0.65, 0.65, 0.65 );
+    double dr = 0.5;
+    int r;
+    for (r = 1; r <= 5; r++)
+        draw_2D_circle( r*dr, 0.0, 0.0 );
+
+    // Draw lines of longitude
+    int nl = 12;
+    double max_r = 10.0;
+    int l;
+    glBegin( GL_LINES );
+    for( l = 0; l < nl; l++)
+    {
+        glVertex2d( 0.0, 0.0 );
+        glVertex2d( max_r*cos(l*2.0*PI/nl),
+                    max_r*sin(l*2.0*PI/nl) );
+    }
+    glEnd();
+
+    // Draw footpoints
+    glColor3f( 1.0, 0.0, 0.0 );
+    glPointSize( 3.0 );
+    glBegin( GL_POINTS );
+    for( l = 0; l < nlines; l++)
+        glVertex2d( foot_pts[l].th.deg*foot_pts[l].ph.cos,
+                    foot_pts[l].th.deg*foot_pts[l].ph.sin );
+    glEnd();
+
+    glPopMatrix();
+}
+
+
 void display_fieldlines( int view_num )
 {
     apply_3D_camera( view_num );
@@ -458,6 +490,9 @@ void display_view(int view_num)
 
     switch (vw->scene_num)
     {
+        case SCENE_FOOTPTS:
+            display_footpts( view_num );
+            break;
         case SCENE_FIELDLINES:
             display_fieldlines( view_num );
             break;
