@@ -31,32 +31,53 @@ enum
     ZETA_LINE
 };
 
-typedef struct window_t
+typedef struct scene_t
 {
-    int x, y, w, h;
     point camera;
     int dim;
-    double FoV;
-    double aspect_ratio;
     double near_clip;
     double far_clip;
+} scene;
+
+typedef struct view_t
+{
+    int x, y, w, h;
+    double FoV;
+    double aspect_ratio;
+    int scene_num;
     double left, right, bottom, top;
-} window;
+} view;
 
-#define NWINDOWS  6
-static window frames[NWINDOWS];
+#define NVIEWS   8
+#define NSCENES  7
+static view  views[NVIEWS];
+static scene scenes[NSCENES];
 
-static int active_frame;
+static int active_view;
 
 enum
 {
-    FRAME_ERROR      = -1,
-    FRAME_ANGLES     = 0,
-    FRAME_FOOTPTS    = 1,
-    FRAME_BEAM       = 2,
-    FRAME_PROFILE    = 3,
-    FRAME_GAMMA      = 4,
-    FRAME_FIELDLINES = 5
+    SCENE_NONE      = -1,
+    SCENE_ANGLES     = 0,
+    SCENE_FOOTPTS    = 1,
+    SCENE_BEAM       = 2,
+    SCENE_PROFILE    = 3,
+    SCENE_RANGES     = 4,
+    SCENE_FIELDLINES = 5,
+    SCENE_STATUS     = 6
+};
+
+enum
+{
+    VIEW_NONE         = -1,
+    VIEW_THUMBNAIL_1  = 0,
+    VIEW_THUMBNAIL_2  = 1,
+    VIEW_THUMBNAIL_3  = 2,
+    VIEW_THUMBNAIL_4  = 3,
+    VIEW_LEFT_MAIN    = 4,
+    VIEW_RIGHT_TOP    = 5,
+    VIEW_RIGHT_BOTTOM = 6,
+    VIEW_STATUS       = 7
 };
 
 enum
@@ -70,21 +91,21 @@ enum
 
 static int W, H;
 
-int which_window( int x, int y )
+int which_view( int x, int y )
 {
-    window *f;
-    int i;
-    for (i = 0; i < NWINDOWS; i++)
+    view *vw;
+    int v;
+    for (v = 0; v < NVIEWS; v++)
     {
-        f = &frames[i];
-        if ((  x >= f->x) && (  x < f->x + f->w) &&
-            (H-y >= f->y) && (H-y < f->y + f->h))
+        vw = &views[v];
+        if ((  x >= vw->x) && (  x < vw->x + vw->w) &&
+            (H-y >= vw->y) && (H-y < vw->y + vw->h))
         {
-            return i;
+            return v;
         }
     }
 
-    return FRAME_ERROR;
+    return SCENE_NONE;
 }
 
 void calculate_fieldlines( int redraw )
@@ -141,98 +162,181 @@ void draw_2D_circle( double radius, double xc, double yc )
    glEnd();
 }
 
-void set_window_properties()
+void reshape_views()
 {
-    window *f;
+    int status_bar_height = 20;
 
-    /* WINDOW: FRAME_FOOTPTS */
-    f = &frames[FRAME_FOOTPTS];
+    views[VIEW_THUMBNAIL_1].x = 0;
+    views[VIEW_THUMBNAIL_1].y = H-W/8;
+    views[VIEW_THUMBNAIL_1].h = W/8;
+    views[VIEW_THUMBNAIL_1].w = W/8;
 
-    f->x = 0;
-    f->y = (H*2)/3;
-    f->h = H/3;
-    f->w = W/4;
+    views[VIEW_THUMBNAIL_2].x = W/8;
+    views[VIEW_THUMBNAIL_2].y = H-W/8;
+    views[VIEW_THUMBNAIL_2].h = W/8;
+    views[VIEW_THUMBNAIL_2].w = W/8;
 
-    f->dim = 3;
-    f->FoV = 60.0;
-    f->aspect_ratio = (GLfloat) f->w/(GLfloat) f->h;
-    f->near_clip = f->camera.r - psr.r;
-    f->far_clip  = f->camera.r + psr.r;
+    views[VIEW_THUMBNAIL_3].x = (2*W)/8;
+    views[VIEW_THUMBNAIL_3].y = H-W/8;
+    views[VIEW_THUMBNAIL_3].h = W/8;
+    views[VIEW_THUMBNAIL_3].w = W/8;
 
-    /* WINDOW: FRAME_FIELDLINES */
-    f = &frames[FRAME_FIELDLINES];
+    views[VIEW_THUMBNAIL_4].x = (3*W)/8;
+    views[VIEW_THUMBNAIL_4].y = H-W/8;
+    views[VIEW_THUMBNAIL_4].h = W/8;
+    views[VIEW_THUMBNAIL_4].w = W/8;
 
-    f->x = 0;
-    f->y = 0;
-    f->h = (2*H)/3;
-    f->w = W/2;
+    views[VIEW_LEFT_MAIN].x = 0;
+    views[VIEW_LEFT_MAIN].y = status_bar_height;
+    views[VIEW_LEFT_MAIN].h = H-W/8 - status_bar_height;
+    views[VIEW_LEFT_MAIN].w = W/2;
 
-    f->dim = 3;
-    f->FoV = 60.0;
-    f->aspect_ratio = (GLfloat) f->w/(GLfloat) f->h;
-    //f->near_clip = f->camera.r - psr.r;
-    //f->far_clip  = f->camera.r + psr.r;
-    f->near_clip =  0.0;
-    f->far_clip  =  2.0*psr.rL;
+    views[VIEW_RIGHT_TOP].x = W/2;
+    views[VIEW_RIGHT_TOP].y = (H + status_bar_height)/2;
+    views[VIEW_RIGHT_TOP].h = (H - status_bar_height)/2;
+    views[VIEW_RIGHT_TOP].w = W/2;
 
-    /* WINDOW: FRAME_ANGLES */
-    f = &frames[FRAME_ANGLES];
+    views[VIEW_RIGHT_BOTTOM].x = W/2;
+    views[VIEW_RIGHT_BOTTOM].y = status_bar_height;
+    views[VIEW_RIGHT_BOTTOM].h = (H - status_bar_height)/2;
+    views[VIEW_RIGHT_BOTTOM].w = W/2;
 
-    f->x = frames[FRAME_FOOTPTS].x + frames[FRAME_FOOTPTS].w;
-    f->y = frames[FRAME_FOOTPTS].y;
-    f->h = frames[FRAME_FOOTPTS].h;
-    f->w = W/4;
+    views[VIEW_STATUS].x = 0;
+    views[VIEW_STATUS].y = 0;
+    views[VIEW_STATUS].h = status_bar_height;
+    views[VIEW_STATUS].w = W;
 
-    f->dim = 2;
-    f->left = -0.1;
-    f->right = 1.5;
-    f->bottom = 0.0;
-    f->top = (f->right - f->left)*(double)f->h/(double)f->w;
 }
 
-void apply_2D_camera( int frame_num )
+void init_scenes()
 {
-    window *f = &frames[frame_num];
+    /* Set up initial cameras */
+    // (Some useful angles for initialisation)
+    psr_angle z_angle; // "zero" angle
+    psr_angle r_angle; // right angle
+    psr_angle n_angle; // negative right angle
+    set_psr_angle_deg( &z_angle,   0.0 );
+    set_psr_angle_deg( &r_angle,  90.0 );
+    set_psr_angle_deg( &n_angle, -90.0 );
+
+    // SCENE_FOOTPTS
+    set_point_sph( &scenes[SCENE_FOOTPTS].camera,
+            (1.0 + psr.csl.S.deg/10.0)*psr.r,
+            &r_angle,
+            &z_angle,
+            POINT_SET_ALL );
+
+    // SCENE_FIELDLINES
+    set_point_sph( &scenes[SCENE_FIELDLINES].camera,
+            2.0*psr.rL,
+            &r_angle,
+            &n_angle,
+            POINT_SET_ALL );
+
+}
+
+void init_views()
+{
+    views[VIEW_THUMBNAIL_1 ].scene_num = SCENE_FOOTPTS;
+    views[VIEW_THUMBNAIL_2 ].scene_num = SCENE_FIELDLINES;
+    views[VIEW_THUMBNAIL_3 ].scene_num = SCENE_ANGLES;
+    views[VIEW_THUMBNAIL_4 ].scene_num = SCENE_RANGES;
+    views[VIEW_LEFT_MAIN   ].scene_num = SCENE_FIELDLINES;
+    views[VIEW_RIGHT_TOP   ].scene_num = SCENE_BEAM;
+    views[VIEW_RIGHT_BOTTOM].scene_num = SCENE_PROFILE;
+    views[VIEW_STATUS      ].scene_num = SCENE_STATUS;
+
+    reshape_views();
+}
+
+void set_scene_properties()
+{
+    scene *scn;
+
+    scn = &scenes[SCENE_FOOTPTS];
+    scn->dim = 3;
+    scn->near_clip = scn->camera.r - psr.r;
+    scn->far_clip  = scn->camera.r + psr.r;
+
+    scn = &scenes[SCENE_FIELDLINES];
+    scn->dim = 3;
+    scn->near_clip = 0.0;
+    scn->far_clip  = 2.0*psr.rL;
+
+    scn = &scenes[SCENE_ANGLES];
+    scn->dim = 2;
+}
+
+void set_view_properties()
+{
+    view *vw;
+
+    int v;
+    for (v = 0; v < NVIEWS; v++)
+    {
+        vw = &views[v];
+        switch (vw->scene_num)
+        {
+            case SCENE_FOOTPTS:
+                vw->FoV = 60.0;
+                vw->aspect_ratio = (GLfloat) vw->w/(GLfloat) vw->h;
+                break;
+            case SCENE_FIELDLINES:
+                vw->FoV = 60.0;
+                vw->aspect_ratio = (GLfloat) vw->w/(GLfloat) vw->h;
+                break;
+            case SCENE_ANGLES:
+                vw->left = -0.1;
+                vw->right = 1.5;
+                vw->bottom = 0.0;
+                vw->top = (vw->right - vw->left)*(double)vw->h/(double)vw->w;
+                break;
+        }
+    }
+}
+
+void apply_2D_camera( int view_num )
+{
+    view *vw = &views[view_num];
 
     glMatrixMode (GL_PROJECTION);
 
     glLoadIdentity ();
-    gluOrtho2D( f->left, f->right, f->bottom, f->top );
+    gluOrtho2D( vw->left, vw->right, vw->bottom, vw->top );
     glMatrixMode(GL_MODELVIEW);
 
     glLoadIdentity();
-
 }
 
-void apply_3D_camera( int frame_num )
+void apply_3D_camera( int view_num )
 {
-    window *f = &frames[frame_num];
-    point *cam = &f->camera;
+    view *vw = &views[view_num];
+    scene *scn = &scenes[vw->scene_num];
+    point *cam = &scn->camera;
 
     glMatrixMode (GL_PROJECTION);
 
     glLoadIdentity ();
-    gluPerspective( f->FoV, f->aspect_ratio, f->near_clip, f->far_clip );
+    gluPerspective( vw->FoV, vw->aspect_ratio, scn->near_clip, scn->far_clip );
     glMatrixMode(GL_MODELVIEW);
 
     glLoadIdentity();
     gluLookAt (cam->x[0], cam->x[1], cam->x[2],
                0.0, 0.0, 0.0,
                0.0, 0.0, 1.0);
-
 }
 
-void screen2world( int x, int y, double *xw, double *yw, int frame_num )
+void screen2world( int x, int y, double *xw, double *yw, int view_num )
 {
-    if (frame_num == FRAME_ERROR)
+    if (view_num == VIEW_NONE)
     {
-        fprintf( stderr, "error: pixel2world: invalid frame number\n" );
+        fprintf( stderr, "error: pixel2world: invalid view number\n" );
         exit(EXIT_FAILURE);
     }
 
-    window *f = &frames[frame_num];
-    *xw = (double)(  x - f->x)/(double)f->w*(f->right - f->left) + f->left;
-    *yw = (double)(H-y - f->y)/(double)f->h*(f->top - f->bottom) + f->bottom;
+    view *vw = &views[view_num];
+    *xw = (double)(  x - vw->x)/(double)vw->w*(vw->right - vw->left) + vw->left;
+    *yw = (double)(H-y - vw->y)/(double)vw->h*(vw->top - vw->bottom) + vw->bottom;
 }
 
 void init(void) 
@@ -256,35 +360,11 @@ void init(void)
     double P4_sec = 10.0;
     set_pulsar_carousel( &psr, nsparks, &s, &S, GAUSSIAN, P4_sec );
 
-    /* Set up initial cameras */
-    // (Some useful angles for initialisation)
-    psr_angle z_angle; // "zero" angle
-    psr_angle r_angle; // right angle
-    psr_angle n_angle; // negative right angle
-    set_psr_angle_deg( &z_angle,   0.0 );
-    set_psr_angle_deg( &r_angle,  90.0 );
-    set_psr_angle_deg( &n_angle, -90.0 );
-
-    window *f;
-
-    /* WINDOW: FRAME_FOOTPTS */
-    f = &frames[FRAME_FOOTPTS];
-    set_point_sph( &f->camera,
-            (1.0 + psr.csl.S.deg/10.0)*psr.r,
-            &r_angle,
-            &z_angle,
-            POINT_SET_ALL );
-
-    /* WINDOW: FRAME_FIELDLINES */
-    f = &frames[FRAME_FIELDLINES];
-    set_point_sph( &f->camera,
-            2.0*psr.rL,
-            &r_angle,
-            &n_angle,
-            POINT_SET_ALL );
-
-    // Set the rest of the frame properties based on the cameras
-    set_window_properties();
+    // Set the rest of the scene properties based on the cameras
+    init_views();
+    init_scenes();
+    set_scene_properties();
+    set_view_properties();
 
     // Generate some footpoints
     nlines = 100;
@@ -305,15 +385,13 @@ void init(void)
     nearest_feature = NO_FEATURE;
     selected_feature = NO_FEATURE;
 
-    // Unset active_frame
-    active_frame = FRAME_ERROR;
+    // Unset active_view
+    active_view = SCENE_NONE;
 }
 
-void display_fieldlines()
+void display_fieldlines( int view_num )
 {
-    int frame_num = FRAME_FIELDLINES;
-
-    apply_3D_camera( frame_num );
+    apply_3D_camera( view_num );
     glPushMatrix();
 
     glColor3f(0.65, 0.65, 0.65);
@@ -329,20 +407,17 @@ void display_fieldlines()
         for (p = 0; p < npoints[l]; p++)
         {
             glVertex3d( line_pts[l][p].x[0],
-                        line_pts[l][p].x[1],
-                        line_pts[l][p].x[2] );
+                    line_pts[l][p].x[1],
+                    line_pts[l][p].x[2] );
         }
         glEnd();
     }
     glPopMatrix();
-
 }
 
-void display_angles()
+void display_angles( int view_num )
 {
-    int frame_num = FRAME_ANGLES;
-
-    apply_2D_camera( frame_num );
+    apply_2D_camera( view_num );
     glPushMatrix();
 
     // Draw a unit circle at the origin
@@ -374,23 +449,22 @@ void display_angles()
     glPopMatrix();
 }
 
-void display_frame(int frame_num)
+void display_view(int view_num)
 {
-    window *f = &frames[frame_num];
+    view *vw = &views[view_num];
 
-    glViewport ((GLsizei)f->x, (GLsizei)f->y,
-                (GLsizei)f->w, (GLsizei)f->h); 
+    glViewport ((GLsizei)vw->x, (GLsizei)vw->y,
+                (GLsizei)vw->w, (GLsizei)vw->h); 
 
-    switch (frame_num)
+    switch (vw->scene_num)
     {
-        case FRAME_FIELDLINES:
-            display_fieldlines();
+        case SCENE_FIELDLINES:
+            display_fieldlines( view_num );
             break;
-        case FRAME_ANGLES:
-            display_angles();
+        case SCENE_ANGLES:
+            display_angles( view_num );
             break;
     }
-
 }
 
 
@@ -398,41 +472,36 @@ void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    display_frame(FRAME_FIELDLINES);
-    display_frame(FRAME_ANGLES);
+    int v;
+    for (v = 0; v < NVIEWS; v++)
+        display_view(v);
 
     glutSwapBuffers();
 }
 
 
-void reposition_3D_camera( int frame_num, double dr, double dth_deg, double dph_deg,
-        int redraw )
+void reposition_3D_camera( int view_num, double dr, double dth_deg,
+        double dph_deg )
 {
-    window *f = &frames[frame_num];
-    point *cam = &f->camera;
+    view *vw = &views[view_num];
+    scene *scn = &scenes[vw->scene_num];
+    point *cam = &scn->camera;
 
     // Calculate the new camera position
     double new_th_deg = cam->th.deg + dth_deg;
     double new_ph_deg = cam->ph.deg + dph_deg;
 
-    if (new_th_deg <    0.0)  new_th_deg =   0.0;
-    if (new_th_deg >= 180.0)  new_th_deg = 180.0;
-    if (new_ph_deg <  -90.0)  new_ph_deg = -90.0;
-    if (new_ph_deg >=  90.0)  new_ph_deg =  90.0;
+    if (new_th_deg <    0.0)  new_th_deg =    0.0;
+    if (new_th_deg >= 180.0)  new_th_deg =  180.0;
+    if (new_ph_deg <    0.0)  new_ph_deg += 360.0;
+    if (new_ph_deg >= 360.0)  new_ph_deg -= 360.0;
 
     psr_angle new_th, new_ph;
     set_psr_angle_deg( &new_ph, new_ph_deg );
     set_psr_angle_deg( &new_th, new_th_deg );
 
     set_point_sph( cam, cam->r + dr, &new_th, &new_ph, POINT_SET_ALL );
-    set_window_properties();
-
-    // Set up the camera projection
-    apply_3D_camera( frame_num );
-
-    // Redraw, if requested
-    if (redraw)
-        glutPostRedisplay();
+    set_view_properties();
 }
 
 
@@ -441,18 +510,22 @@ void reshape(int w, int h)
     W = w;
     H = h;
 
-    set_window_properties();
-    apply_3D_camera( FRAME_FIELDLINES );
-    apply_3D_camera( FRAME_ANGLES );
+    reshape_views();
+    set_view_properties();
+
+    apply_3D_camera( SCENE_FIELDLINES );
+    apply_3D_camera( SCENE_ANGLES );
 
     glutPostRedisplay();
 }
 
 void mouseclick( int button, int state, int x, int y)
 {
-    active_frame = which_window( x, y );
-    if (active_frame == FRAME_ERROR) return;
-    point *cam = &frames[active_frame].camera;
+    active_view = which_view( x, y );
+    if (active_view == SCENE_NONE) return;
+    view  *vw  = &views[active_view];
+    scene *scn = &scenes[vw->scene_num];
+    point *cam = &scn->camera;
     mouse_old_x = x;
     mouse_old_y = y;
     double dr;
@@ -465,38 +538,41 @@ void mouseclick( int button, int state, int x, int y)
             break;
         case MOUSE_SCROLL_UP:
             dr = -(cam->r - psr.r)/4.0;
-            reposition_3D_camera( active_frame, dr, 0.0, 0.0, 1 );
+            reposition_3D_camera( active_view, dr, 0.0, 0.0 );
             break;
         case MOUSE_SCROLL_DOWN:
             dr = (cam->r - psr.r)/3.0;
-            reposition_3D_camera( active_frame, dr, 0.0, 0.0, 1 );
+            reposition_3D_camera( active_view, dr, 0.0, 0.0 );
             break;
     }
+
+    glutPostRedisplay();
 }
 
 
 void mousemove( int x, int y )
+/* This happens when the mouse is moved while a button is being pressed */
 {
-    if (active_frame == FRAME_ERROR) return;
+    if (active_view == SCENE_NONE) return;
 
     double xw, yw;
     double th;
 
     double angle_x, angle_y;
 
-    switch (active_frame)
+    switch (views[active_view].scene_num)
     {
-        case FRAME_FIELDLINES:
+        case SCENE_FIELDLINES:
             angle_x = -(x-mouse_old_x)*PI/180.0*7.6;
             angle_y = -(y-mouse_old_y)*PI/180.0*7.6;
 
-            reposition_3D_camera( active_frame, 0.0, angle_y, angle_x, 1 );
+            reposition_3D_camera( active_view, 0.0, angle_y, angle_x );
 
             mouse_old_x = x;
             mouse_old_y = y;
             break;
-        case FRAME_ANGLES:
-            screen2world( x, y, &xw, &yw, active_frame );
+        case SCENE_ANGLES:
+            screen2world( x, y, &xw, &yw, active_view );
             th = atan2( xw, yw );
             if (th < 0.0)  th = 0.0;
 
@@ -504,39 +580,54 @@ void mousemove( int x, int y )
                 set_psr_angle_rad( &psr.al, th );
             else if (selected_feature == ZETA_LINE)
                 set_psr_angle_rad( &psr.ze, th );
-            glutPostRedisplay();
             break;
     }
+    glutPostRedisplay();
 }
 
 
 void mousepassivemove( int x, int y )
+/* This happens when the mouse is moved while NO button is being pressed */
 {
-    int frame_num = which_window( x, y );
-    if (frame_num == FRAME_ERROR)
+    int view_num = which_view( x, y );
+    if (view_num == VIEW_NONE)
     {
         nearest_feature = NO_FEATURE;
         glutPostRedisplay();
         return;
     }
 
+    // Some possibly needed variables
     double xw, yw; // world coordinates
     double th, dal, dze;
 
-    switch (frame_num)
+    // Behaviour is different depending on whether the mouse is over a
+    // thumbnail, or over one of the larger panes
+
+    if (view_num == VIEW_THUMBNAIL_1 ||
+        view_num == VIEW_THUMBNAIL_2 ||
+        view_num == VIEW_THUMBNAIL_3 ||
+        view_num == VIEW_THUMBNAIL_4 )
     {
-        case FRAME_ANGLES:
-            screen2world( x, y, &xw, &yw, frame_num );
-            th = atan2( xw, yw );
-            dal = fabs(th - psr.al.rad);
-            dze = fabs(th - psr.ze.rad);
-            nearest_feature = (dal <= dze ?  ALPHA_LINE : ZETA_LINE);
-            if (nearest_feature == ALPHA_LINE && dal > 5.0*PI/180.0)
-                nearest_feature = NO_FEATURE;
-            else if (nearest_feature == ZETA_LINE && dze > 5.0*PI/180.0)
-                nearest_feature = NO_FEATURE;
-            glutPostRedisplay();
-            break;
+    }
+    else /* mouse if not over a thumbnail */
+    {
+        int scene_num = views[view_num].scene_num;
+        switch (scene_num)
+        {
+            case SCENE_ANGLES:
+                screen2world( x, y, &xw, &yw, view_num );
+                th = atan2( xw, yw );
+                dal = fabs(th - psr.al.rad);
+                dze = fabs(th - psr.ze.rad);
+                nearest_feature = (dal <= dze ?  ALPHA_LINE : ZETA_LINE);
+                if (nearest_feature == ALPHA_LINE && dal > 5.0*PI/180.0)
+                    nearest_feature = NO_FEATURE;
+                else if (nearest_feature == ZETA_LINE && dze > 5.0*PI/180.0)
+                    nearest_feature = NO_FEATURE;
+                glutPostRedisplay();
+                break;
+        }
     }
 }
 
