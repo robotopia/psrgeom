@@ -5,11 +5,15 @@
 #include <time.h>
 #include "psrgeom.h"
 
-//static point *line_pts;
-#define NLINES 100
-static point foot_pts[NLINES];
-static point foot_pts_mag[NLINES];
+#define MAX_NLINES  1000
+#define MAX_NPOINTS 1000
+static int nlines;
+static int npoints[MAX_NLINES];
+static point foot_pts[MAX_NLINES];
+static point foot_pts_mag[MAX_NLINES];
 static pulsar psr;
+static point *line_pts[MAX_NLINES];
+static double step_size;
 
 // Mouse-related variables
 static int mouse_old_x;
@@ -83,10 +87,39 @@ int which_window( int x, int y )
     return FRAME_ERROR;
 }
 
+void calculate_fieldlines( int redraw )
+{
+    int l;
+    for (l = 0; l < nlines; l++)
+    {
+        copy_point( &foot_pts[l], &line_pts[l][0] );
+        npoints[l] = 1;
+        do
+        {
+            Bstep(  &(line_pts[l][npoints[l]-1]),
+                    &psr, step_size, DIR_OUTWARD,
+                    &(line_pts[l][npoints[l]]) );
+            set_point_xyz( &(line_pts[l][npoints[l]]),
+                    line_pts[l][npoints[l]].x[0],
+                    line_pts[l][npoints[l]].x[1],
+                    line_pts[l][npoints[l]].x[2],
+                    POINT_SET_ALL );
+            npoints[l]++;
+        }
+        while ( (npoints[l] < MAX_NPOINTS) &&
+                (line_pts[l][npoints[l]-1].r     > psr.r) &&
+                (line_pts[l][npoints[l]-1].rhosq < psr.rL2) );
+    }
+
+    // Redraw, if requested
+    if (redraw)
+        glutPostRedisplay();
+}
+
 void regenerate_footpoints( int redraw )
 {
     int i;
-    for (i = 0; i < NLINES; i++)
+    for (i = 0; i < nlines; i++)
         random_spark_footpoint( &foot_pts[i], &foot_pts_mag[i], &psr, 0.0 );
 
     // Redraw, if requested
@@ -227,8 +260,10 @@ void init(void)
     // (Some useful angles for initialisation)
     psr_angle z_angle; // "zero" angle
     psr_angle r_angle; // right angle
-    set_psr_angle_deg( &z_angle,  0.0 );
-    set_psr_angle_deg( &r_angle, 90.0 );
+    psr_angle n_angle; // negative right angle
+    set_psr_angle_deg( &z_angle,   0.0 );
+    set_psr_angle_deg( &r_angle,  90.0 );
+    set_psr_angle_deg( &n_angle, -90.0 );
 
     window *f;
 
@@ -243,16 +278,28 @@ void init(void)
     /* WINDOW: FRAME_FIELDLINES */
     f = &frames[FRAME_FIELDLINES];
     set_point_sph( &f->camera,
-            5.0*psr.r,
+            2.0*psr.rL,
             &r_angle,
-            &z_angle,
+            &n_angle,
             POINT_SET_ALL );
 
     // Set the rest of the frame properties based on the cameras
     set_window_properties();
 
     // Generate some footpoints
+    nlines = 100;
     regenerate_footpoints( 0 );
+
+    // Allocate memory for the line points arrays,
+    // and calculate line points
+    int l;
+    for(l = 0; l < nlines; l++)
+    {
+        line_pts[l] = (point *)malloc( MAX_NPOINTS * sizeof(point) );
+        npoints[l] = 0;
+    }
+    step_size = MAX_BSTEP*psr.rL;
+    calculate_fieldlines( 0 );
 
     // Unset nearest_feature
     nearest_feature = NO_FEATURE;
@@ -266,35 +313,27 @@ void display_fieldlines()
 {
     int frame_num = FRAME_FIELDLINES;
 
-    window *f = &frames[frame_num];
-    point *cam = &f->camera;
-
     apply_3D_camera( frame_num );
     glPushMatrix();
 
-    // Draw pulsar sphere
-    GLdouble clip_plane[4] = { cam->x[0], cam->x[1], cam->x[2],
-        -psr.r*psr.r/cam->r }; // Clip the back half of the pulsar sphere
-
     glColor3f(0.65, 0.65, 0.65);
-    glClipPlane( GL_CLIP_PLANE0, clip_plane );
-    glEnable( GL_CLIP_PLANE0 );
-    glRotatef( 90.0, 0.0, 1.0, 0.0 );
-    glutWireSphere(psr.r, 24,
-            80/(1+(int)floor(cam->r - psr.r)));
+    glutSolidSphere(psr.r, 100, 100);
 
-    // Draw footpoints
+    // Draw field lines
     glColor3f(1.0, 0.0, 0.0);
-    glPointSize(3.0);
-    glBegin( GL_POINTS );
-    int i;
-    for (i = 0; i < NLINES; i++)
+    glRotatef( psr.al.deg, 0.0, 1.0, 0.0 );
+    int l, p;
+    for (l = 0; l < nlines; l++)
     {
-        glVertex3d( foot_pts_mag[i].x[0],
-                foot_pts_mag[i].x[1],
-                foot_pts_mag[i].x[2] );
+        glBegin( GL_LINE_STRIP );
+        for (p = 0; p < npoints[l]; p++)
+        {
+            glVertex3d( line_pts[l][p].x[0],
+                        line_pts[l][p].x[1],
+                        line_pts[l][p].x[2] );
+        }
+        glEnd();
     }
-    glEnd();
     glPopMatrix();
 
 }
@@ -443,15 +482,13 @@ void mousemove( int x, int y )
     double xw, yw;
     double th;
 
-    point *cam;
     double angle_x, angle_y;
 
     switch (active_frame)
     {
         case FRAME_FIELDLINES:
-            cam = &frames[active_frame].camera;
-            angle_x = -(x-mouse_old_x)*PI/180.0*7.6*(cam->r - psr.r);
-            angle_y = -(y-mouse_old_y)*PI/180.0*7.6*(cam->r - psr.r);
+            angle_x = -(x-mouse_old_x)*PI/180.0*7.6;
+            angle_y = -(y-mouse_old_y)*PI/180.0*7.6;
 
             reposition_3D_camera( active_frame, 0.0, angle_y, angle_x, 1 );
 
@@ -535,5 +572,11 @@ int main(int argc, char** argv)
     glutPassiveMotionFunc( mousepassivemove );
     glutKeyboardFunc( keyboard );
     glutMainLoop();
+
+    /* Free memory */
+    int l;
+    for (l = 0; l < MAX_NLINES; l++)
+        free( line_pts[l] );
+
     return 0;
 }
