@@ -24,6 +24,8 @@ static int button_down;
 static int nearest_feature;
 static int selected_feature;
 
+static int highlight;
+
 enum
 {
     NO_FEATURE,
@@ -34,6 +36,8 @@ enum
 typedef struct scene_t
 {
     point camera;
+    point lookat;
+    point up;
     int dim;
     double near_clip;
     double far_clip;
@@ -228,11 +232,10 @@ void init_scenes()
     set_psr_angle_deg( &n_angle, -90.0 );
 
     // SCENE_FIELDLINES
-    set_point_sph( &scenes[SCENE_FIELDLINES].camera,
-            2.0*psr.rL,
-            &r_angle,
-            &n_angle,
-            POINT_SET_ALL );
+    scene *scn = &scenes[SCENE_FIELDLINES];
+    set_point_xyz( &scn->camera, 0.0, -2.0*psr.rL, 0.0, POINT_SET_ALL );
+    set_point_xyz( &scn->lookat, 0.0, 0.0,         0.0, POINT_SET_ALL );
+    set_point_xyz( &scn->up,     0.0, 0.0,         1.0, POINT_SET_ALL );
 
 }
 
@@ -385,6 +388,7 @@ void init(void)
     // Unset nearest_feature
     nearest_feature = NO_FEATURE;
     selected_feature = NO_FEATURE;
+    highlight = VIEW_NONE;
 
     // Unset active_view
     active_view = SCENE_NONE;
@@ -418,6 +422,7 @@ void display_footpts( int view_num )
 
     // Draw footpoints
     glColor3f( 1.0, 0.0, 0.0 );
+    glRotatef( 90.0, 0.0, 0.0, 1.0 );
     glPointSize( 3.0 );
     glBegin( GL_POINTS );
     for( l = 0; l < nlines; l++)
@@ -441,7 +446,7 @@ void display_fieldlines( int view_num )
 
     // Draw field lines
     glColor3f(1.0, 0.0, 0.0);
-    glRotatef( psr.al.deg, 0.0, 1.0, 0.0 );
+    //glRotatef( psr.al.deg, 0.0, 1.0, 0.0 );
     int l, p;
     for (l = 0; l < nlines; l++)
     {
@@ -544,7 +549,9 @@ void display(void)
 
     int v;
     for (v = 0; v < NVIEWS; v++)
+    {
         display_view(v);
+    }
 
     glutSwapBuffers();
 }
@@ -713,6 +720,7 @@ void mousepassivemove( int x, int y )
         view_num == VIEW_THUMBNAIL_3 ||
         view_num == VIEW_THUMBNAIL_4 )
     {
+        highlight = view_num;
     }
     else /* mouse if not over a thumbnail */
     {
