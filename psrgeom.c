@@ -523,27 +523,46 @@ void mouseclick( int button, int state, int x, int y)
 {
     active_view = which_view( x, y );
     if (active_view == SCENE_NONE) return;
+
     view  *vw  = &views[active_view];
     scene *scn = &scenes[vw->scene_num];
     point *cam = &scn->camera;
+
     mouse_old_x = x;
     mouse_old_y = y;
+
     double dr;
-    switch (button)
+
+    if (active_view == VIEW_THUMBNAIL_1 ||
+        active_view == VIEW_THUMBNAIL_2 ||
+        active_view == VIEW_THUMBNAIL_3 ||
+        active_view == VIEW_THUMBNAIL_4)
     {
-        case MOUSE_LEFT_BUTTON:
-            if (state == GLUT_DOWN)
-                button_down = MOUSE_LEFT_BUTTON;
-            selected_feature = nearest_feature;
-            break;
-        case MOUSE_SCROLL_UP:
-            dr = -(cam->r - psr.r)/4.0;
-            reposition_3D_camera( active_view, dr, 0.0, 0.0 );
-            break;
-        case MOUSE_SCROLL_DOWN:
-            dr = (cam->r - psr.r)/3.0;
-            reposition_3D_camera( active_view, dr, 0.0, 0.0 );
-            break;
+        if (button == MOUSE_LEFT_BUTTON &&
+            state  == GLUT_DOWN)
+        {
+            views[VIEW_LEFT_MAIN].scene_num = views[active_view].scene_num;
+            set_view_properties();
+        }
+    }
+    else
+    {
+        switch (button)
+        {
+            case MOUSE_LEFT_BUTTON:
+                if (state == GLUT_DOWN)
+                    button_down = MOUSE_LEFT_BUTTON;
+                selected_feature = nearest_feature;
+                break;
+            case MOUSE_SCROLL_UP:
+                dr = -(cam->r - psr.r)/4.0;
+                reposition_3D_camera( active_view, dr, 0.0, 0.0 );
+                break;
+            case MOUSE_SCROLL_DOWN:
+                dr = (cam->r - psr.r)/3.0;
+                reposition_3D_camera( active_view, dr, 0.0, 0.0 );
+                break;
+        }
     }
 
     glutPostRedisplay();
