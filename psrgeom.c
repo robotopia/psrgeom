@@ -126,6 +126,22 @@ void set_window_properties()
     f->near_clip = f->camera.r - psr.r;
     f->far_clip  = f->camera.r + psr.r;
 
+    /* WINDOW: FRAME_FIELDLINES */
+    f = &frames[FRAME_FIELDLINES];
+
+    f->x = 0;
+    f->y = 0;
+    f->h = (2*H)/3;
+    f->w = W/2;
+
+    f->dim = 3;
+    f->FoV = 60.0;
+    f->aspect_ratio = (GLfloat) f->w/(GLfloat) f->h;
+    //f->near_clip = f->camera.r - psr.r;
+    //f->far_clip  = f->camera.r + psr.r;
+    f->near_clip =  0.0;
+    f->far_clip  =  2.0*psr.rL;
+
     /* WINDOW: FRAME_ANGLES */
     f = &frames[FRAME_ANGLES];
 
@@ -207,22 +223,33 @@ void init(void)
     double P4_sec = 10.0;
     set_pulsar_carousel( &psr, nsparks, &s, &S, GAUSSIAN, P4_sec );
 
-    window *f;
-    set_window_properties();
-
-    /* WINDOW: FRAME_FOOTPTS */
-    // Set the initial view direction as looking straight down on the
-    // rotation/magnetic axis
-    f = &frames[FRAME_FOOTPTS];
+    /* Set up initial cameras */
+    // (Some useful angles for initialisation)
     psr_angle z_angle; // "zero" angle
     psr_angle r_angle; // right angle
     set_psr_angle_deg( &z_angle,  0.0 );
     set_psr_angle_deg( &r_angle, 90.0 );
+
+    window *f;
+
+    /* WINDOW: FRAME_FOOTPTS */
+    f = &frames[FRAME_FOOTPTS];
     set_point_sph( &f->camera,
-            (1.0 + S.deg/10.0)*psr.r,
+            (1.0 + psr.csl.S.deg/10.0)*psr.r,
             &r_angle,
             &z_angle,
             POINT_SET_ALL );
+
+    /* WINDOW: FRAME_FIELDLINES */
+    f = &frames[FRAME_FIELDLINES];
+    set_point_sph( &f->camera,
+            5.0*psr.r,
+            &r_angle,
+            &z_angle,
+            POINT_SET_ALL );
+
+    // Set the rest of the frame properties based on the cameras
+    set_window_properties();
 
     // Generate some footpoints
     regenerate_footpoints( 0 );
@@ -235,81 +262,94 @@ void init(void)
     active_frame = FRAME_ERROR;
 }
 
+void display_fieldlines()
+{
+    int frame_num = FRAME_FIELDLINES;
+
+    window *f = &frames[frame_num];
+    point *cam = &f->camera;
+
+    apply_3D_camera( frame_num );
+    glPushMatrix();
+
+    // Draw pulsar sphere
+    GLdouble clip_plane[4] = { cam->x[0], cam->x[1], cam->x[2],
+        -psr.r*psr.r/cam->r }; // Clip the back half of the pulsar sphere
+
+    glColor3f(0.65, 0.65, 0.65);
+    glClipPlane( GL_CLIP_PLANE0, clip_plane );
+    glEnable( GL_CLIP_PLANE0 );
+    glRotatef( 90.0, 0.0, 1.0, 0.0 );
+    glutWireSphere(psr.r, 24,
+            80/(1+(int)floor(cam->r - psr.r)));
+
+    // Draw footpoints
+    glColor3f(1.0, 0.0, 0.0);
+    glPointSize(3.0);
+    glBegin( GL_POINTS );
+    int i;
+    for (i = 0; i < NLINES; i++)
+    {
+        glVertex3d( foot_pts_mag[i].x[0],
+                foot_pts_mag[i].x[1],
+                foot_pts_mag[i].x[2] );
+    }
+    glEnd();
+    glPopMatrix();
+
+}
+
+void display_angles()
+{
+    int frame_num = FRAME_ANGLES;
+
+    apply_2D_camera( frame_num );
+    glPushMatrix();
+
+    // Draw a unit circle at the origin
+    glColor3f( 0.0, 0.0, 0.0 );
+    draw_2D_circle( 1.0, 0.0, 0.0 );
+
+    // Draw lines for the various angles
+    glColor3f( 0.0, 0.0, 0.0 );
+    glBegin( GL_LINES );
+    glVertex2d( 0.0, 0.0 );
+    glVertex2d( 0.0, 1.5 );
+    glEnd();
+
+    if (nearest_feature == ALPHA_LINE)
+        glColor3f( 1.0, 0.0, 0.0 );
+    glBegin( GL_LINES );
+    glVertex2d( 0.0, 0.0 );
+    glVertex2d( 1.5*sin(psr.al.rad), 1.5*cos(psr.al.rad) );
+    glEnd();
+    glColor3f( 0.0, 0.0, 0.0 );
+
+    if (nearest_feature == ZETA_LINE)
+        glColor3f( 1.0, 0.0, 0.0 );
+    glBegin( GL_LINES );
+    glVertex2d( 0.0, 0.0 );
+    glVertex2d( 1.5*sin(psr.ze.rad), 1.5*cos(psr.ze.rad) );
+    glEnd();
+
+    glPopMatrix();
+}
+
 void display_frame(int frame_num)
 {
     window *f = &frames[frame_num];
-    point *cam = &f->camera;
 
     glViewport ((GLsizei)f->x, (GLsizei)f->y,
                 (GLsizei)f->w, (GLsizei)f->h); 
 
-    // Clip the back half of the pulsar sphere
-    GLdouble clip_plane[4] = { cam->x[0], cam->x[1], cam->x[2],
-        -psr.r*psr.r/cam->r };
-
     switch (frame_num)
     {
-        case FRAME_FOOTPTS:
-
-            apply_3D_camera( frame_num );
-            glPushMatrix();
-
-            // Draw pulsar sphere
-            glColor3f(0.65, 0.65, 0.65);
-            glClipPlane( GL_CLIP_PLANE0, clip_plane );
-            glEnable( GL_CLIP_PLANE0 );
-            glRotatef( 90.0, 0.0, 1.0, 0.0 );
-            glutWireSphere(psr.r, 24,
-                    80/(1+(int)floor(cam->r - psr.r)));
-
-            // Draw footpoints
-            glColor3f(1.0, 0.0, 0.0);
-            glPointSize(3.0);
-            glBegin( GL_POINTS );
-            int i;
-            for (i = 0; i < NLINES; i++)
-            {
-                glVertex3d( foot_pts_mag[i].x[0],
-                            foot_pts_mag[i].x[1],
-                            foot_pts_mag[i].x[2] );
-            }
-            glEnd();
-            glPopMatrix();
-
+        case FRAME_FIELDLINES:
+            display_fieldlines();
             break;
-
         case FRAME_ANGLES:
-
-            apply_2D_camera( frame_num );
-            glPushMatrix();
-
-            // Draw a unit circle at the origin
-            glColor3f( 0.0, 0.0, 0.0 );
-            draw_2D_circle( 1.0, 0.0, 0.0 );
-
-            // Draw lines for the various angles
-            glColor3f( 0.0, 0.0, 0.0 );
-            glBegin( GL_LINES );
-            glVertex2d( 0.0, 0.0 );
-            glVertex2d( 0.0, 1.5 );
-            glEnd();
-
-            if (nearest_feature == ALPHA_LINE)
-                glColor3f( 1.0, 0.0, 0.0 );
-            glBegin( GL_LINES );
-            glVertex2d( 0.0, 0.0 );
-            glVertex2d( 1.5*sin(psr.al.rad), 1.5*cos(psr.al.rad) );
-            glEnd();
-            glColor3f( 0.0, 0.0, 0.0 );
-
-            if (nearest_feature == ZETA_LINE)
-                glColor3f( 1.0, 0.0, 0.0 );
-            glBegin( GL_LINES );
-            glVertex2d( 0.0, 0.0 );
-            glVertex2d( 1.5*sin(psr.ze.rad), 1.5*cos(psr.ze.rad) );
-            glEnd();
-
-            glPopMatrix();
+            display_angles();
+            break;
     }
 
 }
@@ -319,7 +359,7 @@ void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    display_frame(FRAME_FOOTPTS);
+    display_frame(FRAME_FIELDLINES);
     display_frame(FRAME_ANGLES);
 
     glutSwapBuffers();
@@ -363,7 +403,7 @@ void reshape(int w, int h)
     H = h;
 
     set_window_properties();
-    apply_3D_camera( FRAME_FOOTPTS );
+    apply_3D_camera( FRAME_FIELDLINES );
     apply_3D_camera( FRAME_ANGLES );
 
     glutPostRedisplay();
@@ -408,7 +448,7 @@ void mousemove( int x, int y )
 
     switch (active_frame)
     {
-        case FRAME_FOOTPTS:
+        case FRAME_FIELDLINES:
             cam = &frames[active_frame].camera;
             angle_x = -(x-mouse_old_x)*PI/180.0*7.6*(cam->r - psr.r);
             angle_y = -(y-mouse_old_y)*PI/180.0*7.6*(cam->r - psr.r);
@@ -436,7 +476,12 @@ void mousemove( int x, int y )
 void mousepassivemove( int x, int y )
 {
     int frame_num = which_window( x, y );
-    if (frame_num == FRAME_ERROR) return;
+    if (frame_num == FRAME_ERROR)
+    {
+        nearest_feature = NO_FEATURE;
+        glutPostRedisplay();
+        return;
+    }
 
     double xw, yw; // world coordinates
     double th, dal, dze;
