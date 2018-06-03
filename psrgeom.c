@@ -108,11 +108,12 @@ int which_view( int x, int y )
     return SCENE_NONE;
 }
 
-void calculate_fieldlines( int redraw )
+void calculate_fieldlines()
 {
     int l;
     for (l = 0; l < nlines; l++)
     {
+        mag_to_obs_frame( &foot_pts_mag[l], &psr, NULL, &foot_pts[l] );
         copy_point( &foot_pts[l], &line_pts[l][0] );
         npoints[l] = 1;
         do
@@ -131,21 +132,13 @@ void calculate_fieldlines( int redraw )
                 (line_pts[l][npoints[l]-1].r     > psr.r) &&
                 (line_pts[l][npoints[l]-1].rhosq < psr.rL2) );
     }
-
-    // Redraw, if requested
-    if (redraw)
-        glutPostRedisplay();
 }
 
-void regenerate_footpoints( int redraw )
+void regenerate_footpoints()
 {
     int i;
     for (i = 0; i < nlines; i++)
-        random_spark_footpoint( &foot_pts[i], &foot_pts_mag[i], &psr, 0.0 );
-
-    // Redraw, if requested
-    if (redraw)
-        glutPostRedisplay();
+        random_spark_footpoint( NULL, &foot_pts_mag[i], &psr, 0.0 );
 }
 
 void draw_2D_circle( double radius, double xc, double yc )
@@ -156,7 +149,22 @@ void draw_2D_circle( double radius, double xc, double yc )
    for (i = 0; i < 360; i++)
    {
       double rad = i*DEG2RAD;
-      glVertex2f( xc + cos(rad)*radius, yc + sin(rad)*radius );
+      glVertex2d( xc + cos(rad)*radius, yc + sin(rad)*radius );
+   }
+
+   glEnd();
+}
+
+void draw_3D_circle( double radius, double xc, double yc, double z )
+/* Draws a circle parallel to the z-plane */
+{
+   glBegin(GL_LINE_LOOP);
+
+   int i;
+   for (i = 0; i < 360; i++)
+   {
+      double rad = i*DEG2RAD;
+      glVertex3d( xc + cos(rad)*radius, yc + sin(rad)*radius, z );
    }
 
    glEnd();
@@ -361,7 +369,7 @@ void init(void)
 
     // Generate some footpoints
     nlines = 100;
-    regenerate_footpoints( 0 );
+    regenerate_footpoints();
 
     // Allocate memory for the line points arrays,
     // and calculate line points
@@ -372,7 +380,7 @@ void init(void)
         npoints[l] = 0;
     }
     step_size = MAX_BSTEP*psr.rL;
-    calculate_fieldlines( 0 );
+    calculate_fieldlines();
 
     // Unset nearest_feature
     nearest_feature = NO_FEATURE;
@@ -413,8 +421,10 @@ void display_footpts( int view_num )
     glPointSize( 3.0 );
     glBegin( GL_POINTS );
     for( l = 0; l < nlines; l++)
-        glVertex2d( foot_pts[l].th.deg*foot_pts[l].ph.cos,
-                    foot_pts[l].th.deg*foot_pts[l].ph.sin );
+    {
+        glVertex2d( foot_pts_mag[l].th.deg*foot_pts_mag[l].ph.cos,
+                    foot_pts_mag[l].th.deg*foot_pts_mag[l].ph.sin );
+    }
     glEnd();
 
     glPopMatrix();
@@ -426,7 +436,7 @@ void display_fieldlines( int view_num )
     apply_3D_camera( view_num );
     glPushMatrix();
 
-    glColor3f(0.65, 0.65, 0.65);
+    glColor3f( 0.65, 0.65, 0.65 );
     glutSolidSphere(psr.r, 100, 100);
 
     // Draw field lines
@@ -444,6 +454,31 @@ void display_fieldlines( int view_num )
         }
         glEnd();
     }
+
+    // Draw the light cylinder
+    glColor3f( 0.65, 0.65, 0.65 );
+    double z;
+    int zi;
+    for (zi = -10; zi <= 10; zi++)
+    {
+        z = 0.5*zi*psr.rL;
+        draw_3D_circle( psr.rL, 0.0, 0.0, z );
+    }
+    int nl = 12;
+    glBegin( GL_LINES );
+    double minz = -5.0*psr.rL;
+    double maxz =  5.0*psr.rL;
+    for( l = 0; l < nl; l++)
+    {
+        glVertex3d( psr.rL*cos(l*2.0*PI/nl),
+                    psr.rL*sin(l*2.0*PI/nl),
+                    minz );
+        glVertex3d( psr.rL*cos(l*2.0*PI/nl),
+                    psr.rL*sin(l*2.0*PI/nl),
+                    maxz );
+    }
+    glEnd();
+
     glPopMatrix();
 }
 
@@ -586,8 +621,15 @@ void mouseclick( int button, int state, int x, int y)
         {
             case MOUSE_LEFT_BUTTON:
                 if (state == GLUT_DOWN)
+                {
                     button_down = MOUSE_LEFT_BUTTON;
-                selected_feature = nearest_feature;
+                    selected_feature = nearest_feature;
+                }
+                if (state == GLUT_UP)
+                {
+                    if (selected_feature == ALPHA_LINE)
+                        calculate_fieldlines();
+                }
                 break;
             case MOUSE_SCROLL_UP:
                 dr = -(cam->r - psr.r)/4.0;
@@ -701,7 +743,9 @@ void keyboard( unsigned char key, int x, int y )
     switch (key)
     {
         case 'a':
-            regenerate_footpoints( 1 );
+            regenerate_footpoints();
+            calculate_fieldlines();
+            glutPostRedisplay();
             break;
     }
 }
