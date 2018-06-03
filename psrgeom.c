@@ -574,6 +574,14 @@ void mousemove( int x, int y )
 {
     if (active_view == SCENE_NONE) return;
 
+    if (active_view == VIEW_THUMBNAIL_1 ||
+        active_view == VIEW_THUMBNAIL_2 ||
+        active_view == VIEW_THUMBNAIL_3 ||
+        active_view == VIEW_THUMBNAIL_4)
+    {
+        return;
+    }
+
     double xw, yw;
     double th;
 
