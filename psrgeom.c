@@ -26,11 +26,15 @@ static int selected_feature;
 
 static int highlight;
 
+static double t;
+
 enum
 {
     NO_FEATURE,
     ALPHA_LINE,
-    ZETA_LINE
+    ZETA_LINE,
+    CSL_CIRCLE,
+    SPARK_CIRCLE
 };
 
 typedef struct scene_t
@@ -330,17 +334,87 @@ void apply_3D_camera( int view_num )
                0.0, 0.0, 1.0);
 }
 
-void screen2world( int x, int y, double *xw, double *yw, int view_num )
+void screen2world( int x, int y, double *xw, double *yw,
+        psr_angle *th, psr_angle *ph, int view_num )
+/* Convert from screen coordinates to world coordinates. The polar coordinates
+ * th and ph assume that the x and y coordinates are in units of degrees, and
+ * that the reference axis for rotation is the positive y axis, with positive
+ * angles on the clockwise side of it.
+ */
 {
     if (view_num == VIEW_NONE)
     {
-        fprintf( stderr, "error: pixel2world: invalid view number\n" );
+        fprintf( stderr, "error: screen2world: invalid view number\n" );
         exit(EXIT_FAILURE);
     }
 
+    double x_tmp, y_tmp;
+
     view *vw = &views[view_num];
-    *xw = (double)(  x - vw->x)/(double)vw->w*(vw->right - vw->left) + vw->left;
-    *yw = (double)(H-y - vw->y)/(double)vw->h*(vw->top - vw->bottom) + vw->bottom;
+
+    x_tmp = (double)(  x - vw->x)/(double)vw->w*(vw->right - vw->left)
+        + vw->left;
+    y_tmp = (double)(H-y - vw->y)/(double)vw->h*(vw->top - vw->bottom)
+        + vw->bottom;
+
+    if (xw)
+        *xw = x_tmp;
+    if (yw)
+        *yw = y_tmp;
+    if (ph)
+        set_psr_angle_rad( ph, atan2( x_tmp, y_tmp ) );
+    if (th)
+        set_psr_angle_deg( th, hypot( x_tmp, y_tmp ) );
+}
+
+void screen2csl( int x, int y, psr_angle *S, psr_angle *s, int *n,
+        int view_num )
+/* Convert from screen coordinates to "carousel" polar coordinates, which
+ * means the angle S from the magnetic axis (assumed to be at the origin of
+ * the world coordinates); the angle s from the centre of the nearest spark;
+ * and the spark number n.
+ * It is assumed that at time t=0, spark number 0 is on the negative y-axis.
+ */
+{
+    int n_tmp; // Doing it this way allows the caller to pass in n = NULL
+    double xw, yw;
+    psr_angle th, ph;
+    screen2world( x, y, &xw, &yw, &th, &ph, view_num );
+
+    // Taking carousel rotation and the 90° shift into account
+    double P4 = psr.csl.P4;
+    double ph_t = 360.0*t/P4; // The amount of rotation since t=0, in deg
+    psr_angle ph0;
+    set_psr_angle_deg( &ph0, (180.0 - ph.deg) - ph_t );
+
+    // Calculate which spark we're "in"
+    int N = psr.csl.n;
+    n_tmp = (int)floor((double)N * ph0.deg / 360.0 + 0.5);
+    while (n_tmp <  0)  n_tmp += N;
+    while (n_tmp >= N)  n_tmp -= N;
+
+    if (S)
+        copy_psr_angle( &th, S );
+    if (n)
+        *n = n_tmp;
+    if (s)
+    {
+        // Calculate how far away from the nearest spark we are
+        double xs, ys; // The coordinates of the spark centre
+        double dx, dy;
+
+        psr_angle ph_s;
+        set_psr_angle_deg( &ph_s, (double)n_tmp*360.0/(double)N +
+                                  ph_t - 90.0 );
+
+        xs = psr.csl.S.deg * ph_s.cos;
+        ys = psr.csl.S.deg * ph_s.sin;
+
+        dx = xw - xs;
+        dy = yw - ys;
+
+        set_psr_angle_deg( s, hypot( dx, dy ) );
+    }
 }
 
 void init(void) 
@@ -385,6 +459,9 @@ void init(void)
     step_size = MAX_BSTEP*psr.rL;
     calculate_fieldlines();
 
+    // Set time to zero
+    t = 0;
+
     // Unset nearest_feature
     nearest_feature = NO_FEATURE;
     selected_feature = NO_FEATURE;
@@ -398,9 +475,9 @@ void init(void)
 void display_footpts( int view_num )
 {
     apply_2D_camera( view_num );
-    glPushMatrix();
 
     // Draw lines of colatitude
+    glPushMatrix();
     glColor3f( 0.65, 0.65, 0.65 );
     double dr = 0.5;
     int r;
@@ -419,10 +496,12 @@ void display_footpts( int view_num )
                     max_r*sin(l*2.0*PI/nl) );
     }
     glEnd();
+    glPopMatrix();
 
     // Draw footpoints
+    glPushMatrix();
     glColor3f( 1.0, 0.0, 0.0 );
-    glRotatef( 90.0, 0.0, 0.0, 1.0 );
+    glRotatef( 360.0*t/psr.csl.P4 - 90.0, 0.0, 0.0, 1.0 );
     glPointSize( 3.0 );
     glBegin( GL_POINTS );
     for( l = 0; l < nlines; l++)
@@ -431,8 +510,30 @@ void display_footpts( int view_num )
                     foot_pts_mag[l].th.deg*foot_pts_mag[l].ph.sin );
     }
     glEnd();
-
     glPopMatrix();
+
+    // Draw circle of selected feature, if any
+    glColor3f( 0.0, 0.0, 1.0 );
+    if (nearest_feature == CSL_CIRCLE)
+    {
+        glPushMatrix();
+        draw_2D_circle( psr.csl.S.deg, 0.0, 0.0 );
+        glPopMatrix();
+    }
+    else if (nearest_feature == SPARK_CIRCLE)
+    {
+        int n;
+        for (n = 0; n < psr.csl.n; n++)
+        {
+            glPushMatrix();
+            glRotated( 360.0*t/psr.csl.P4, 0.0, 0.0, 1.0 );
+            glRotated( (double)n * 360.0 / (double)psr.csl.n, 0.0, 0.0, 1.0 );
+            glTranslated( 0.0, -psr.csl.S.deg, 0.0 );
+            draw_2D_circle( psr.csl.s.deg, 0.0, 0.0 );
+            glPopMatrix();
+        }
+    }
+
 }
 
 
@@ -636,6 +737,13 @@ void mouseclick( int button, int state, int x, int y)
                 {
                     if (selected_feature == ALPHA_LINE)
                         calculate_fieldlines();
+                    if (selected_feature == CSL_CIRCLE ||
+                        selected_feature == SPARK_CIRCLE)
+                    {
+                        regenerate_footpoints();
+                        calculate_fieldlines();
+                    }
+                    selected_feature = NO_FEATURE;
                 }
                 break;
             case MOUSE_SCROLL_UP:
@@ -666,8 +774,8 @@ void mousemove( int x, int y )
         return;
     }
 
-    double xw, yw;
-    double th;
+    psr_angle th;
+    psr_angle S, s;
 
     double angle_x, angle_y;
 
@@ -683,14 +791,21 @@ void mousemove( int x, int y )
             mouse_old_y = y;
             break;
         case SCENE_ANGLES:
-            screen2world( x, y, &xw, &yw, active_view );
-            th = atan2( xw, yw );
-            if (th < 0.0)  th = 0.0;
+            screen2world( x, y, NULL, NULL, NULL, &th, active_view );
+            if (th.deg <   0.0)  set_psr_angle_deg( &th,  0.0 );
+            if (th.deg >= 90.0)  set_psr_angle_deg( &th, 90.0 );
 
             if (selected_feature == ALPHA_LINE)
-                set_psr_angle_rad( &psr.al, th );
+                copy_psr_angle( &th, &psr.al );
             else if (selected_feature == ZETA_LINE)
-                set_psr_angle_rad( &psr.ze, th );
+                copy_psr_angle( &th, &psr.ze );
+            break;
+        case SCENE_FOOTPTS:
+            screen2csl( x, y, &S, &s, NULL, active_view );
+            if (selected_feature == CSL_CIRCLE)
+                copy_psr_angle( &S, &psr.csl.S );
+            else if (selected_feature == SPARK_CIRCLE)
+                copy_psr_angle( &s, &psr.csl.s );
             break;
     }
     glutPostRedisplay();
@@ -709,8 +824,10 @@ void mousepassivemove( int x, int y )
     }
 
     // Some possibly needed variables
-    double xw, yw; // world coordinates
-    double th, dal, dze;
+    double dal, dze, dS, ds;
+    psr_angle th;
+    psr_angle S, s;
+    int n;
 
     // Behaviour is different depending on whether the mouse is over a
     // thumbnail, or over one of the larger panes
@@ -728,10 +845,9 @@ void mousepassivemove( int x, int y )
         switch (scene_num)
         {
             case SCENE_ANGLES:
-                screen2world( x, y, &xw, &yw, view_num );
-                th = atan2( xw, yw );
-                dal = fabs(th - psr.al.rad);
-                dze = fabs(th - psr.ze.rad);
+                screen2world( x, y, NULL, NULL, NULL, &th, view_num );
+                dal = fabs( th.rad - psr.al.rad );
+                dze = fabs( th.rad - psr.ze.rad );
                 nearest_feature = (dal <= dze ?  ALPHA_LINE : ZETA_LINE);
                 if (nearest_feature == ALPHA_LINE && dal > 5.0*PI/180.0)
                     nearest_feature = NO_FEATURE;
@@ -739,6 +855,22 @@ void mousepassivemove( int x, int y )
                     nearest_feature = NO_FEATURE;
                 glutPostRedisplay();
                 break;
+            case SCENE_FOOTPTS:
+                screen2csl( x, y, &S, &s, &n, view_num );
+                dS = fabs( psr.csl.S.deg - S.deg );
+                ds = fabs( psr.csl.s.deg - s.deg );
+                nearest_feature = (dS <= ds ? CSL_CIRCLE : SPARK_CIRCLE);
+                if ((nearest_feature == CSL_CIRCLE) &&
+                    (dS/psr.csl.S.deg > 0.05))
+                {
+                    nearest_feature = NO_FEATURE;
+                }
+                else if ((nearest_feature == SPARK_CIRCLE) &&
+                         (ds/psr.csl.S.deg > 0.05))
+                {
+                    nearest_feature = NO_FEATURE;
+                }
+                glutPostRedisplay();
         }
     }
 }

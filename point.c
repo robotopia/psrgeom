@@ -226,7 +226,7 @@ void random_spark_footpoint( point *foot_pt_obs, point *foot_pt_mag,
         // a gaussian distribution and φ from a uniform distribution.
         else /* (type == GAUSSIAN) */
         {
-            set_psr_angle_rad( &th, randn( S, s ) );
+            set_psr_angle_rad( &th, randn( S, s/3.0 ) );
             set_psr_angle_rad( &ph, RAND(2.0*PI) );
             set_point_sph( &pt, psr->r, &th, &ph, POINT_SET_ALL );
         }
@@ -242,8 +242,8 @@ void random_spark_footpoint( point *foot_pt_obs, point *foot_pt_mag,
         }
         else /* (type == GAUSSIAN) */
         {
-            double x = randn( 0.0, s );
-            double y = randn( 0.0, s );
+            double x = randn( 0.0, s/3.0 );
+            double y = randn( 0.0, s/3.0 );
 
             set_psr_angle_rad( &th, hypot( x, y ) );
             set_psr_angle_rad( &ph, atan2( y, x ) );

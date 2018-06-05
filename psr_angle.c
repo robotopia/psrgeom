@@ -129,6 +129,28 @@ void reverse_psr_angle( psr_angle *in, psr_angle *out )
     out->cos =  in->cos;
 }
 
+void add_right_angle( psr_angle *in, psr_angle *out )
+/* Adds a right angle to the given angle */
+{
+    double tmp = out->sin;
+
+    out->rad = in->rad + PI/2.0;
+    out->deg = in->deg + 90.0;
+    out->sin = out->cos;
+    out->cos = -tmp;
+}
+
+void subtract_right_angle( psr_angle *in, psr_angle *out )
+/* Adds a right angle to the given angle */
+{
+    double tmp = out->sin;
+
+    out->rad = in->rad - PI/2.0;
+    out->deg = in->deg - 90.0;
+    out->sin = -out->cos;
+    out->cos = tmp;
+}
+
 void rotate_about_axis( point *in, point *out, psr_angle *rot, char axis,
                         int flags )
 /* Rotate a point about the specified "axis" by amount "rot".
