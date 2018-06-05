@@ -117,6 +117,22 @@ enum
 
 static int W, H;
 
+void print_str( char *s, double x, double y, void *font )
+{
+    if (s == NULL)
+    {
+        fprintf( stderr, "error: print_str: char *s is NULL\n" );
+        exit(EXIT_FAILURE);
+    }
+
+    glRasterPos2d( x - strlen(s)*2.0, y );
+    while (*s)
+    {
+        glutBitmapCharacter(font, *s);
+        s++;
+    }
+}
+
 int which_view( int x, int y )
 {
     view *vw;
@@ -552,7 +568,7 @@ void init(void)
 }
 
 
-void draw_graph_frame( graph *gr )
+void draw_graph_frame( graph *gr, int draw_text )
 {
     glPushMatrix();
 
@@ -572,13 +588,16 @@ void draw_graph_frame( graph *gr )
     glTranslated( -gr->xmin, -gr->ymin, 0.0 );
 
     glBegin( GL_LINES );
+    char ticlabel[32];
 
     // Calculate the tics
+    double xtic_min, ytic_min;
+    double xtic_max, ytic_max;
+    double xtic, ytic;
     if (gr->xtics > 0.0)
     {
-        double xtic_min =  ceil( gr->xmin / gr->xtics ) * gr->xtics;
-        double xtic_max = floor( gr->xmax / gr->xtics ) * gr->xtics;
-        double xtic;
+        xtic_min =  ceil( gr->xmin / gr->xtics ) * gr->xtics;
+        xtic_max = floor( gr->xmax / gr->xtics ) * gr->xtics;
         for (xtic = xtic_min; xtic <= xtic_max; xtic += gr->xtics)
         {
             glVertex2d( xtic, gr->ymin );
@@ -587,9 +606,8 @@ void draw_graph_frame( graph *gr )
     }
     if (gr->ytics > 0.0)
     {
-        double ytic_min =  ceil( gr->ymin / gr->ytics ) * gr->ytics;
-        double ytic_max = floor( gr->ymax / gr->ytics ) * gr->ytics;
-        double ytic;
+        ytic_min =  ceil( gr->ymin / gr->ytics ) * gr->ytics;
+        ytic_max = floor( gr->ymax / gr->ytics ) * gr->ytics;
         for (ytic = ytic_min; ytic <= ytic_max; ytic += gr->ytics)
         {
             glVertex2d( 0.0,  ytic );
@@ -598,6 +616,15 @@ void draw_graph_frame( graph *gr )
     }
 
     glEnd();
+
+    if (draw_text)
+    {
+        for (xtic = xtic_min; xtic <= xtic_max; xtic += gr->xtics)
+        {
+            sprintf( ticlabel, "%d", (int)xtic );
+            print_str( ticlabel, xtic, -0.20, GLUT_BITMAP_HELVETICA_12 );
+        }
+    }
 
     glPopMatrix();
 }
@@ -762,10 +789,13 @@ void display_gamma( int view_num )
     glPushMatrix();
 
     // Translate to "graph coords"
-    glTranslated( 0.1, 0.5, 0.0 );
+    glTranslated( 0.1, 0.6, 0.0 );
     glScaled( 0.85, 0.20, 1.0 );
 
-    draw_graph_frame( &gamma_graph );
+    int draw_text = 0;
+    if (view_num == VIEW_LEFT_MAIN)
+        draw_text = 1;
+    draw_graph_frame( &gamma_graph, draw_text );
 
     // Now go to the graph's world coordinates
     glScaled( 1.0/(gamma_graph.xmax - gamma_graph.xmin), 1.0/(gamma_graph.ymax - gamma_graph.ymin), 1.0 );
@@ -926,7 +956,8 @@ void mouseclick( int button, int state, int x, int y)
     if (active_view == VIEW_THUMBNAIL_1 ||
         active_view == VIEW_THUMBNAIL_2 ||
         active_view == VIEW_THUMBNAIL_3 ||
-        active_view == VIEW_THUMBNAIL_4)
+        active_view == VIEW_THUMBNAIL_4 ||
+        active_view == VIEW_THUMBNAIL_5)
     {
         if (button == MOUSE_LEFT_BUTTON &&
             state  == GLUT_DOWN)
