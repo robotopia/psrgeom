@@ -26,6 +26,8 @@ static int selected_feature;
 
 static int highlight;
 
+static double P4_scale; // Degrees (of circular P4 arrow) per second
+
 static double t;
 
 enum
@@ -34,7 +36,8 @@ enum
     ALPHA_LINE,
     ZETA_LINE,
     CSL_CIRCLE,
-    SPARK_CIRCLE
+    SPARK_CIRCLE,
+    P4_ARROW
 };
 
 typedef struct scene_t
@@ -151,16 +154,39 @@ void regenerate_footpoints()
 
 void draw_2D_circle( double radius, double xc, double yc )
 {
-   glBegin(GL_LINE_LOOP);
+    glBegin(GL_LINE_LOOP);
 
-   int i;
-   for (i = 0; i < 360; i++)
-   {
-      double rad = i*DEG2RAD;
-      glVertex2d( xc + cos(rad)*radius, yc + sin(rad)*radius );
-   }
+    int i;
+    for (i = 0; i < 360; i++)
+    {
+        double rad = i*DEG2RAD;
+        glVertex2d( xc + cos(rad)*radius, yc + sin(rad)*radius );
+    }
 
-   glEnd();
+    glEnd();
+}
+
+void draw_2D_arc( double radius, double xc, double yc, double start_deg,
+        double end_deg )
+/* Draws a circle arc, counterclockwise from START_DEG to END_DEG */
+{
+    while (end_deg < start_deg)  end_deg += 360.0;
+
+    // Calculate the biggest interval smaller than a degree
+    double L = end_deg - start_deg;
+    int nintervals = (int)ceil(L);
+    double dl = L / (double)nintervals;
+
+    glBegin(GL_LINE_STRIP);
+
+    int i;
+    for (i = 0; i < nintervals; i++)
+    {
+        double rad = ((double)i * dl + start_deg)*DEG2RAD;
+        glVertex2d( xc + cos(rad)*radius, yc + sin(rad)*radius );
+    }
+
+    glEnd();
 }
 
 void draw_3D_circle( double radius, double xc, double yc, double z )
@@ -180,31 +206,35 @@ void draw_3D_circle( double radius, double xc, double yc, double z )
 
 void reshape_views()
 {
-    int status_bar_height = 20;
+    int status_bar_height = 30;
+
+    // Thumbnails
+    int ntn = 4;
+    int tn_s = W/(2*ntn);
 
     views[VIEW_THUMBNAIL_1].x = 0;
-    views[VIEW_THUMBNAIL_1].y = H-W/8;
-    views[VIEW_THUMBNAIL_1].h = W/8;
-    views[VIEW_THUMBNAIL_1].w = W/8;
+    views[VIEW_THUMBNAIL_1].y = H-tn_s;
+    views[VIEW_THUMBNAIL_1].h = tn_s;
+    views[VIEW_THUMBNAIL_1].w = tn_s;
 
-    views[VIEW_THUMBNAIL_2].x = W/8;
-    views[VIEW_THUMBNAIL_2].y = H-W/8;
-    views[VIEW_THUMBNAIL_2].h = W/8;
-    views[VIEW_THUMBNAIL_2].w = W/8;
+    views[VIEW_THUMBNAIL_2].x = tn_s;
+    views[VIEW_THUMBNAIL_2].y = H-tn_s;
+    views[VIEW_THUMBNAIL_2].h = tn_s;
+    views[VIEW_THUMBNAIL_2].w = tn_s;
 
-    views[VIEW_THUMBNAIL_3].x = (2*W)/8;
-    views[VIEW_THUMBNAIL_3].y = H-W/8;
-    views[VIEW_THUMBNAIL_3].h = W/8;
-    views[VIEW_THUMBNAIL_3].w = W/8;
+    views[VIEW_THUMBNAIL_3].x = 2*tn_s;
+    views[VIEW_THUMBNAIL_3].y = H-tn_s;
+    views[VIEW_THUMBNAIL_3].h = tn_s;
+    views[VIEW_THUMBNAIL_3].w = tn_s;
 
-    views[VIEW_THUMBNAIL_4].x = (3*W)/8;
-    views[VIEW_THUMBNAIL_4].y = H-W/8;
-    views[VIEW_THUMBNAIL_4].h = W/8;
-    views[VIEW_THUMBNAIL_4].w = W/8;
+    views[VIEW_THUMBNAIL_4].x = 3*tn_s;
+    views[VIEW_THUMBNAIL_4].y = H-tn_s;
+    views[VIEW_THUMBNAIL_4].h = tn_s;
+    views[VIEW_THUMBNAIL_4].w = tn_s;
 
     views[VIEW_LEFT_MAIN].x = 0;
     views[VIEW_LEFT_MAIN].y = status_bar_height;
-    views[VIEW_LEFT_MAIN].h = H-W/8 - status_bar_height;
+    views[VIEW_LEFT_MAIN].h = H-tn_s - status_bar_height;
     views[VIEW_LEFT_MAIN].w = W/2;
 
     views[VIEW_RIGHT_TOP].x = W/2;
@@ -284,8 +314,8 @@ void set_view_properties()
         switch (vw->scene_num)
         {
             case SCENE_FOOTPTS:
-                vw->bottom = -psr.csl.S.deg*1.5;
-                vw->top    =  psr.csl.S.deg*1.5;
+                vw->bottom = -(psr.csl.S.deg + psr.csl.s.deg)*1.4;
+                vw->top    = -vw->bottom;
                 vw->left   =  vw->bottom*(double)vw->w/(double)vw->h;
                 vw->right  = -vw->left;
                 break;
@@ -435,8 +465,9 @@ void init(void)
     psr_angle s, S;
     set_psr_angle_deg( &S, 1.0 );
     set_psr_angle_deg( &s, 0.1 );
-    double P4_sec = 10.0;
+    double P4_sec = -10.0;
     set_pulsar_carousel( &psr, nsparks, &s, &S, GAUSSIAN, P4_sec );
+    P4_scale = 2.0;
 
     // Set the rest of the scene properties based on the cameras
     init_views();
@@ -534,6 +565,41 @@ void display_footpts( int view_num )
         }
     }
 
+    // Draw P4 arrow
+    glPushMatrix();
+    glColor3f( 0.0, 0.75, 0.0 );
+    double R = (psr.csl.S.deg + psr.csl.s.deg)*1.3;
+    double P4_L = psr.csl.P4*P4_scale;
+    if (psr.csl.P4 > 0.0)
+        draw_2D_arc( R, 0.0, 0.0, -90.0, P4_L - 90.0 );
+    else
+    {
+        draw_2D_arc( R, 0.0, 0.0, P4_L - 90.0, -90.0 );
+    }
+    glPopMatrix();
+
+    // The P4 arrow head
+    glPushMatrix();
+    glRotated( P4_L, 0.0, 0.0, 1.0 );
+    glTranslated( 0.0, -R, 0.0 );
+    if (psr.csl.P4 < 0.0)
+        glRotated( 180.0, 0.0, 0.0, 1.0 );
+    glBegin( GL_LINES );
+        glVertex2d( 0.0, 0.0 );
+        glVertex2d( -0.1*R, -0.05*R );
+        glVertex2d( 0.0, 0.0 );
+        glVertex2d( -0.1*R, 0.05*R );
+    glEnd();
+    glPointSize( 3.0 );
+    if (nearest_feature == P4_ARROW)
+        glColor3f( 1.0, 0.0, 0.0 );
+    else
+        glColor3f( 0.0, 0.65, 0.0 );
+    glBegin( GL_POINTS );
+        glVertex2d( 0.0, 0.0 );
+    glEnd();
+
+    glPopMatrix();
 }
 
 
@@ -742,6 +808,7 @@ void mouseclick( int button, int state, int x, int y)
                     {
                         regenerate_footpoints();
                         calculate_fieldlines();
+                        set_view_properties();
                     }
                     selected_feature = NO_FEATURE;
                 }
@@ -774,10 +841,13 @@ void mousemove( int x, int y )
         return;
     }
 
-    psr_angle th;
+    double xw, yw;
+    psr_angle th, ph;
     psr_angle S, s;
 
     double angle_x, angle_y;
+
+    screen2world( x, y, &xw, &yw, &th, &ph, active_view );
 
     switch (views[active_view].scene_num)
     {
@@ -791,14 +861,13 @@ void mousemove( int x, int y )
             mouse_old_y = y;
             break;
         case SCENE_ANGLES:
-            screen2world( x, y, NULL, NULL, NULL, &th, active_view );
-            if (th.deg <   0.0)  set_psr_angle_deg( &th,  0.0 );
-            if (th.deg >= 90.0)  set_psr_angle_deg( &th, 90.0 );
+            if (ph.deg <   0.0)  set_psr_angle_deg( &ph,  0.0 );
+            if (ph.deg >= 90.0)  set_psr_angle_deg( &ph, 90.0 );
 
             if (selected_feature == ALPHA_LINE)
-                copy_psr_angle( &th, &psr.al );
+                copy_psr_angle( &ph, &psr.al );
             else if (selected_feature == ZETA_LINE)
-                copy_psr_angle( &th, &psr.ze );
+                copy_psr_angle( &ph, &psr.ze );
             break;
         case SCENE_FOOTPTS:
             screen2csl( x, y, &S, &s, NULL, active_view );
@@ -806,6 +875,14 @@ void mousemove( int x, int y )
                 copy_psr_angle( &S, &psr.csl.S );
             else if (selected_feature == SPARK_CIRCLE)
                 copy_psr_angle( &s, &psr.csl.s );
+            else if (selected_feature == P4_ARROW)
+            {
+                if (ph.deg > 0.0)
+                    psr.csl.P4 = ( 180.0 - ph.deg) / P4_scale;
+                else
+                    psr.csl.P4 = (-180.0 - ph.deg) / P4_scale;
+            }
+
             break;
     }
     glutPostRedisplay();
@@ -824,8 +901,10 @@ void mousepassivemove( int x, int y )
     }
 
     // Some possibly needed variables
-    double dal, dze, dS, ds;
-    psr_angle th;
+    double xw, yw;
+    double dal, dze, dS, ds, dP4;
+    double P4x, P4y, P4r;
+    psr_angle th, ph;
     psr_angle S, s;
     int n;
 
@@ -842,12 +921,12 @@ void mousepassivemove( int x, int y )
     else /* mouse if not over a thumbnail */
     {
         int scene_num = views[view_num].scene_num;
+        screen2world( x, y, &xw, &yw, &th, &ph, view_num );
         switch (scene_num)
         {
             case SCENE_ANGLES:
-                screen2world( x, y, NULL, NULL, NULL, &th, view_num );
-                dal = fabs( th.rad - psr.al.rad );
-                dze = fabs( th.rad - psr.ze.rad );
+                dal = fabs( ph.rad - psr.al.rad );
+                dze = fabs( ph.rad - psr.ze.rad );
                 nearest_feature = (dal <= dze ?  ALPHA_LINE : ZETA_LINE);
                 if (nearest_feature == ALPHA_LINE && dal > 5.0*PI/180.0)
                     nearest_feature = NO_FEATURE;
@@ -857,19 +936,24 @@ void mousepassivemove( int x, int y )
                 break;
             case SCENE_FOOTPTS:
                 screen2csl( x, y, &S, &s, &n, view_num );
+
                 dS = fabs( psr.csl.S.deg - S.deg );
                 ds = fabs( psr.csl.s.deg - s.deg );
-                nearest_feature = (dS <= ds ? CSL_CIRCLE : SPARK_CIRCLE);
-                if ((nearest_feature == CSL_CIRCLE) &&
-                    (dS/psr.csl.S.deg > 0.05))
-                {
+
+                P4r = (psr.csl.S.deg + psr.csl.s.deg)*1.3;
+                P4x = P4r *  sin(psr.csl.P4*P4_scale*DEG2RAD);
+                P4y = P4r * -cos(psr.csl.P4*P4_scale*DEG2RAD);
+                dP4 = hypot( P4x - xw, P4y - yw );
+
+                if ((dS <= ds) && (dS <= dP4) && (dS/psr.csl.S.deg < 0.05))
+                    nearest_feature = CSL_CIRCLE;
+                else if ((ds <= dP4) && (ds/psr.csl.S.deg < 0.05))
+                    nearest_feature = SPARK_CIRCLE;
+                else if (dP4/psr.csl.S.deg < 0.05)
+                    nearest_feature = P4_ARROW;
+                else
                     nearest_feature = NO_FEATURE;
-                }
-                else if ((nearest_feature == SPARK_CIRCLE) &&
-                         (ds/psr.csl.S.deg > 0.05))
-                {
-                    nearest_feature = NO_FEATURE;
-                }
+
                 glutPostRedisplay();
         }
     }
