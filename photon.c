@@ -57,6 +57,49 @@ void emit_pulsar_photon( pulsar *psr, point *pt, double freq, photon *pn )
 }
 
 
+void emit_avg_pulsar_photon( pulsar *psr, point *pt, double freq_lo,
+        double freq_hi, gamma_distr *gd, photon *pn )
+/* Sets the properties of PN suitable for a photon emitted with frequency FREQ
+ * at point PT around pulsar PSR. Unlike emit_pulsar_photon(), this calculates
+ * the average power from a given gamma distribution, and does not assign a
+ * unique frequency nor Lorentz factor to this photon.
+ */
+{
+    // Set the photon's source location
+    copy_point( pt, &pn->source );
+
+    // Calculate the B, V, and A fields at the source location
+    calc_fields( pt, psr, SPEED_OF_LIGHT,
+            &pn->B, &pn->V, NULL, &pn->A, NULL, NULL );
+    set_point_xyz( &pn->V, pn->V.x[0], pn->V.x[1], pn->V.x[2],
+            POINT_SET_TH | POINT_SET_PH );
+
+    // Calculate the particle's trajectory curvature
+    pn->curvature = calc_curvature( &pn->V, &pn->A );
+
+    // Calculate the average photon power
+    if (freq_hi < freq_lo) {} // A dummy expression to avoid compiler warnings
+    pn->power = avg_power_single( gd, pn->A.r );
+    /* ^-- This isn't the correct method, because this power is integrated
+     * over ALL frequencies, not just the given frequency range. However,
+     * I'm leaving it here as a placeholder until I can find the correct
+     * expression.
+     */
+
+    // Calculate the observed phase (incl. retardation)
+    psr_angle dph;
+    calc_retardation( pt, psr, &pn->V, &dph, &(pn->retarded_LoS) );
+
+    if (psr->spin == SPIN_POS)
+        reverse_psr_angle( &(pn->retarded_LoS.ph), &pn->phase );
+    else
+        copy_psr_angle( &(pn->retarded_LoS.ph), &pn->phase );
+
+    // Calculate the polarisation angle
+    accel_to_pol_angle( psr, &pn->A, &pn->phase, &pn->psi );
+}
+
+
 double weight_photon_by_particle_density( photon *pn )
 /* This function produces a "weight" that is proportional to the relative
  * density of particles at the point of emission.

@@ -3,6 +3,7 @@
 #include <GL/glut.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 #include "psrgeom.h"
 
 #define MAX_NLINES  1000
@@ -14,6 +15,7 @@ static point foot_pts_mag[MAX_NLINES];
 static pulsar psr;
 static point *line_pts[MAX_NLINES];
 static double step_size;
+static gamma_distr gd;
 
 // Mouse-related variables
 static int mouse_old_x;
@@ -59,23 +61,35 @@ typedef struct view_t
     double left, right, bottom, top;
 } view;
 
+typedef struct graph_t
+{
+    double xmin, xmax;
+    double ymin, ymax;
+    int logx, logy;
+    double xtics, ytics;
+    double xmtics, ymtics;
+    char xlabel[256], ylabel[256];
+} graph;
+
 #define NVIEWS   8
 #define NSCENES  7
 static view  views[NVIEWS];
 static scene scenes[NSCENES];
+static graph gamma_graph;
 
 static int active_view;
 
 enum
 {
-    SCENE_NONE      = -1,
+    SCENE_NONE       = -1,
     SCENE_ANGLES     = 0,
     SCENE_FOOTPTS    = 1,
     SCENE_BEAM       = 2,
     SCENE_PROFILE    = 3,
-    SCENE_RANGES     = 4,
+    SCENE_GAMMA      = 4,
     SCENE_FIELDLINES = 5,
-    SCENE_STATUS     = 6
+    SCENE_STATUS     = 6,
+    SCENE_TELESCOPE  = 7
 };
 
 enum
@@ -85,10 +99,11 @@ enum
     VIEW_THUMBNAIL_2  = 1,
     VIEW_THUMBNAIL_3  = 2,
     VIEW_THUMBNAIL_4  = 3,
-    VIEW_LEFT_MAIN    = 4,
-    VIEW_RIGHT_TOP    = 5,
-    VIEW_RIGHT_BOTTOM = 6,
-    VIEW_STATUS       = 7
+    VIEW_THUMBNAIL_5  = 4,
+    VIEW_LEFT_MAIN    = 5,
+    VIEW_RIGHT_TOP    = 6,
+    VIEW_RIGHT_BOTTOM = 7,
+    VIEW_STATUS       = 8
 };
 
 enum
@@ -209,8 +224,8 @@ void reshape_views()
     int status_bar_height = 30;
 
     // Thumbnails
-    int ntn = 4;
-    int tn_s = W/(2*ntn);
+    int ntn = 5;          // Number of thumnails
+    int tn_s = W/(2*ntn); // Size of thumbnails
 
     views[VIEW_THUMBNAIL_1].x = 0;
     views[VIEW_THUMBNAIL_1].y = H-tn_s;
@@ -231,6 +246,11 @@ void reshape_views()
     views[VIEW_THUMBNAIL_4].y = H-tn_s;
     views[VIEW_THUMBNAIL_4].h = tn_s;
     views[VIEW_THUMBNAIL_4].w = tn_s;
+
+    views[VIEW_THUMBNAIL_5].x = 4*tn_s;
+    views[VIEW_THUMBNAIL_5].y = H-tn_s;
+    views[VIEW_THUMBNAIL_5].h = tn_s;
+    views[VIEW_THUMBNAIL_5].w = tn_s;
 
     views[VIEW_LEFT_MAIN].x = 0;
     views[VIEW_LEFT_MAIN].y = status_bar_height;
@@ -278,7 +298,8 @@ void init_views()
     views[VIEW_THUMBNAIL_1 ].scene_num = SCENE_FOOTPTS;
     views[VIEW_THUMBNAIL_2 ].scene_num = SCENE_FIELDLINES;
     views[VIEW_THUMBNAIL_3 ].scene_num = SCENE_ANGLES;
-    views[VIEW_THUMBNAIL_4 ].scene_num = SCENE_RANGES;
+    views[VIEW_THUMBNAIL_4 ].scene_num = SCENE_GAMMA;
+    views[VIEW_THUMBNAIL_5 ].scene_num = SCENE_TELESCOPE;
     views[VIEW_LEFT_MAIN   ].scene_num = SCENE_FIELDLINES;
     views[VIEW_RIGHT_TOP   ].scene_num = SCENE_BEAM;
     views[VIEW_RIGHT_BOTTOM].scene_num = SCENE_PROFILE;
@@ -328,6 +349,12 @@ void set_view_properties()
                 vw->right = 1.5;
                 vw->bottom = 0.0;
                 vw->top = (vw->right - vw->left)*(double)vw->h/(double)vw->w;
+                break;
+            case SCENE_GAMMA:
+                vw->left = 0.0;
+                vw->right = 1.0;
+                vw->bottom = 0.0;
+                vw->top = 1.0;
                 break;
         }
     }
@@ -469,6 +496,28 @@ void init(void)
     set_pulsar_carousel( &psr, nsparks, &s, &S, GAUSSIAN, P4_sec );
     P4_scale = 2.0;
 
+    // Set up the default gamma distribution
+    gd.type  = NORMAL;
+    gd.mean  = 500.0;
+    gd.std   = 10.0;
+    gd.idx   = -6.2;
+    gd.g_min = 450.0;
+    gd.g_max = 550.0;
+
+    // Set up the default gamma distribution graph
+    gamma_graph.xmin   = 400.0;
+    gamma_graph.xmax   = 600.0;
+    gamma_graph.ymin   = 0.0;
+    gamma_graph.ymax   = 1.0;
+    gamma_graph.logx   = 0;
+    gamma_graph.logy   = 0;
+    gamma_graph.xtics  = 50.0;
+    gamma_graph.ytics  = 0.0;
+    gamma_graph.xmtics = 10.0;
+    gamma_graph.ymtics = 0.0;;
+    strcpy( gamma_graph.xlabel, "γ" );
+    strcpy( gamma_graph.ylabel, "" );
+
     // Set the rest of the scene properties based on the cameras
     init_views();
     init_scenes();
@@ -500,6 +549,57 @@ void init(void)
 
     // Unset active_view
     active_view = SCENE_NONE;
+}
+
+
+void draw_graph_frame( graph *gr )
+{
+    glPushMatrix();
+
+    // Draw the axes (graph coords assumed)
+    glColor3f( 0.0, 0.0, 0.0 );
+    glBegin( GL_LINES );
+
+    glVertex2d( 0.0, 0.0 );
+    glVertex2d( 0.0, 1.0 );
+    glVertex2d( 0.0, 0.0 );
+    glVertex2d( 1.0, 0.0 );
+
+    glEnd();
+
+    // Now go to the graph's world coordinates
+    glScaled( 1.0/(gr->xmax - gr->xmin), 1.0/(gr->ymax - gr->ymin), 1.0 );
+    glTranslated( -gr->xmin, -gr->ymin, 0.0 );
+
+    glBegin( GL_LINES );
+
+    // Calculate the tics
+    if (gr->xtics > 0.0)
+    {
+        double xtic_min =  ceil( gr->xmin / gr->xtics ) * gr->xtics;
+        double xtic_max = floor( gr->xmax / gr->xtics ) * gr->xtics;
+        double xtic;
+        for (xtic = xtic_min; xtic <= xtic_max; xtic += gr->xtics)
+        {
+            glVertex2d( xtic, gr->ymin );
+            glVertex2d( xtic, 0.05*(gr->ymax - gr->ymin) + gr->ymin );
+        }
+    }
+    if (gr->ytics > 0.0)
+    {
+        double ytic_min =  ceil( gr->ymin / gr->ytics ) * gr->ytics;
+        double ytic_max = floor( gr->ymax / gr->ytics ) * gr->ytics;
+        double ytic;
+        for (ytic = ytic_min; ytic <= ytic_max; ytic += gr->ytics)
+        {
+            glVertex2d( 0.0,  ytic );
+            glVertex2d( 0.05, ytic );
+        }
+    }
+
+    glEnd();
+
+    glPopMatrix();
 }
 
 
@@ -654,6 +754,49 @@ void display_fieldlines( int view_num )
     glPopMatrix();
 }
 
+
+void display_gamma( int view_num )
+{
+    apply_2D_camera( view_num );
+
+    glPushMatrix();
+
+    // Translate to "graph coords"
+    glTranslated( 0.1, 0.5, 0.0 );
+    glScaled( 0.85, 0.20, 1.0 );
+
+    draw_graph_frame( &gamma_graph );
+
+    // Now go to the graph's world coordinates
+    glScaled( 1.0/(gamma_graph.xmax - gamma_graph.xmin), 1.0/(gamma_graph.ymax - gamma_graph.ymin), 1.0 );
+    glTranslated( -gamma_graph.xmin, -gamma_graph.ymin, 0.0 );
+
+    // Plot the gamma curve
+    int nsamples = 1000;
+    int n;
+    double x, y;
+    glColor3f( 0.0, 0.0, 1.0 );
+    glBegin( GL_LINE_STRIP );
+    for (n = 0; n < nsamples; n++)
+    {
+        x = (double)n / (double)nsamples * (gamma_graph.xmax - gamma_graph.xmin) + gamma_graph.xmin;
+        if (gd.type == NORMAL)
+            y = exp(-(x-gd.mean)*(x-gd.mean)/(2.0*gd.std*gd.std));
+        else if (gd.type == POWER_LAW)
+        {
+            if (x < gd.g_min || x > gd.g_max)
+                y = 0.0;
+            else
+                y = pow( x, gd.idx );
+        }
+        glVertex2d( x, y );
+    }
+    glEnd();
+
+    glPopMatrix();
+}
+
+
 void display_angles( int view_num )
 {
     apply_2D_camera( view_num );
@@ -705,6 +848,9 @@ void display_view(int view_num)
             break;
         case SCENE_ANGLES:
             display_angles( view_num );
+            break;
+        case SCENE_GAMMA:
+            display_gamma( view_num );
             break;
     }
 }
