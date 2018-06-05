@@ -17,8 +17,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <nmead.h>
-#include <newuoa.h>
+//#include <nmead.h>
+//#include <newuoa.h>
 #include <time.h>
 #include "psrgeom.h"
 
@@ -390,9 +390,10 @@ void find_approx_emission_point( pulsar *psr, psr_angle *phase, int direction,
 }
 
 
+/*
 void find_emission_point_nmead( pulsar *psr, psr_angle *phase, int direction, 
                                 point *emit_pt, FILE *f )
-/* This function finds the point which satisfies the dual contraints of
+ * This function finds the point which satisfies the dual contraints of
  *   1) sitting on a last open field line, and
  *   2) producing emission that is beamed along the line of sight.
  * It uses Nelder-Mead optimisation, as implemented in the nmead library.
@@ -411,7 +412,7 @@ void find_emission_point_nmead( pulsar *psr, psr_angle *phase, int direction,
  * Outputs:
  *   point *emit_pt   : the emission point that the Nelder-Mead algorithm
  *                      converged upon
- */
+ *
 {
     // Assume that the random number generator has been already seeded
 
@@ -456,11 +457,13 @@ void find_emission_point_nmead( pulsar *psr, psr_angle *phase, int direction,
                             solution.x[2],
                             POINT_SET_ALL );
 }
+*/
 
 
+/*
 void find_emission_point_newuoa( pulsar *psr, psr_angle *phase, int direction, 
                                  point *emit_pt, FILE *f )
-/* This function finds the point which satisfies the dual contraints of
+ * This function finds the point which satisfies the dual contraints of
  *   1) sitting on a last open field line, and
  *   2) producing emission that is beamed along the line of sight.
  * It uses Powell's NEWUOA optimisation, as implemented in the newuoa library.
@@ -479,7 +482,7 @@ void find_emission_point_newuoa( pulsar *psr, psr_angle *phase, int direction,
  * Outputs:
  *   point *emit_pt   : the emission point that the Nelder-Mead algorithm
  *                      converged upon
- */
+ *
 {
     // Set up the arguments for the call to the NEWUOA function
     int n   = 3;     // Three parameters to fit (x,y,z)
@@ -542,6 +545,7 @@ void find_emission_point_newuoa( pulsar *psr, psr_angle *phase, int direction,
     // Pass the solution out of this function
     set_point_xyz( emit_pt, x[0], x[1], x[2], POINT_SET_ALL );
 }
+*/
 
 
 /* BIBLOGRAPHY
@@ -589,9 +593,10 @@ void psr_cost_deriv( point *X, pulsar *psr, psr_angle *phase, int direction,
 }
 
 
+/*
 void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
                     int direction, point *end_pt, FILE *f )
-/* This function finds the point nearest* the initial point which satisfies
+ * This function finds the point nearest* the initial point which satisfies
  * the criterion that the velocity field there is parallel to the line of
  * sight.
  *
@@ -605,7 +610,7 @@ void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
  * Outputs:
  *   point *emit_pt   : the emission point that the Nelder-Mead algorithm
  *                      converged upon
- */
+ * 
 {
     // Set up the arguments for the call to the NEWUOA function
     int n   = 2;     // Two parameters to fit (θ,φ)
@@ -669,6 +674,7 @@ void find_LoS_at_r( point *init_pt, pulsar *psr, psr_angle *phase,
     set_psr_angle_rad( &ph, x[1] );
     set_point_sph( end_pt, init_pt->r, &th, &ph, POINT_SET_ALL );
 }
+*/
 
 
 int get_fieldline_type( point *X, pulsar *psr, int rL_norm, FILE *f,
@@ -694,9 +700,10 @@ int get_fieldline_type( point *X, pulsar *psr, int rL_norm, FILE *f,
 }
 
 
+/*
 int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         int direction, point *init_pt, point *emit_pt, FILE *f )
-/* This function attempts to find the emission point by using the "elevator"
+ * This function attempts to find the emission point by using the "elevator"
  * method. I call it the "elevator" method, because it searches for solutions
  * up and down the set of points that satisfy the "line of sight" criterion,
  * which set forms a (non-straight) line stretching from the pulsar outwards.
@@ -724,7 +731,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
  * This function returns 0 if it thinks it has successfully found the correct
  * point, and -1 if it couldn't find anything within the bounds [rp,rL-rp],
  * where rp is the pulsar radius, and rL is the light cylinder radius.
- */
+ *
 {
     // Make a few temporary points
     point half_down_pt, half_up_pt;
@@ -749,7 +756,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
     // is found
     while (1)
     {
-        /* Go down the elevator, a half radius at a time */
+        // Go down the elevator, a half radius at a time
 
         // Save off the previous lowest point to "temp_pt"
         copy_point( &rlo_pt, &temp_pt );
@@ -779,7 +786,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
             break;
         }
 
-        /* Otherwise, repeat the above, but for successively larger radii */
+        // Otherwise, repeat the above, but for successively larger radii
 
         // Save off the previous highest point to "temp_pt"
         copy_point( &rhi_pt, &temp_pt );
@@ -811,10 +818,9 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         }
     }
 
-    /* At this point, we should have an upper and lower bound for radii,
-       between which we expect the solution to be found. We now do an
-       elaborate kind of bisection iteration, to zone in on the correct point.
-    */
+    // At this point, we should have an upper and lower bound for radii,
+    // between which we expect the solution to be found. We now do an
+    // elaborate kind of bisection iteration, to zone in on the correct point.
 
     double mid_r;
     point mid_pt;
@@ -843,7 +849,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
         // it has the same type as
         if (temp_type == rlo_type)
             copy_point( &temp_pt, &rlo_pt );
-        else /* if (temp_type == rhi_type) */
+        else // if (temp_type == rhi_type)
             copy_point( &temp_pt, &rhi_pt );
 
         // Print out the temp point, if requested
@@ -861,6 +867,7 @@ int find_emission_point_elevator( pulsar *psr, psr_angle *phase,
 
     return EMIT_PT_FOUND; // = successful
 }
+*/
 
 
 void climb_and_emit( pulsar *psr, point *init_pt, double gamma,

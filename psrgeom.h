@@ -137,6 +137,18 @@ typedef struct photon_t
     double    power;        // The photon's power (Jackson Eq (14.46))
 } photon;
 
+// Types of gamma distributions
+#define  POWER_LAW  1
+#define  NORMAL     2
+
+typedef struct gamma_distr_t
+{
+    int type;             // Can be POWER_LAW or NORMAL
+    double idx;           // Index of power law
+    double g_min, g_max;  // Allowed gamma range (power law distr)
+    double mean;          // Mean normal distribution
+    double std;           // Standard deviation of normal distribution
+} gamma_distr;
 
 /**** Angle functions ****/
 

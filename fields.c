@@ -1227,9 +1227,10 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
 }
 
 
+/*
 int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
                     point *init_pt, point *emit_pt, psr_angle *psi )
-/* This function calculates the polarisation angle, Ψ, for a pulsar at a
+ * This function calculates the polarisation angle, Ψ, for a pulsar at a
  * given phase, φ.
  *
  * Inputs:
@@ -1243,7 +1244,7 @@ int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
  *   point *emit_pt   : the point of emission
  *   psr_angle *psi   : the polsarisation angle. Guaranteed to be in the range
  *                      0° ≤ Ψ < 180°
- */
+ *
 {
     // First order of business: find the emission point corresponding to this
     // geometry and rotation phase
@@ -1272,6 +1273,7 @@ int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
 
     return 1; // = success
 }
+*/
 
 
 void accel_to_pol_angle( pulsar *psr, point *A, psr_angle *phase,

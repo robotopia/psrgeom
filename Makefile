@@ -1,5 +1,5 @@
 CC      = gcc
-LDLIBS = -lnewuoa -lnmead -lGL -lGLU -lglut -lm
+LDLIBS = -lGL -lGLU -lglut -lm #-lnewuoa -lnmead
 
 ## Uncomment this to turn on compiler optimisation
 OPTIM   = #-O2
@@ -13,24 +13,25 @@ OPTIM   = #-O2
 
 CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG) -march=native
 
-TARGETS = psr_fields \
-		  psr_lines \
-		  psr_lineofsight \
-		  psr_lines_sparks \
-		  psr_emit \
-		  psr_cost_function \
-		  psr_polangle \
-		  psr_fitwidth \
-		  psr_trajectory \
-		  psr_visiblepoints \
-		  psr_mcpa \
-		  psr_findcaps \
-		  psr_jacksonbeam \
-		  psr_lofl \
-		  psr_profile \
-		  psr_jacksonbeamsingle \
-		  psr_beam \
-		  psrgeom
+SMALL_TARGETS = psr_fields \
+				psr_lines \
+				psr_lineofsight \
+				psr_lines_sparks \
+				psr_emit \
+				psr_cost_function \
+				psr_polangle \
+				psr_fitwidth \
+				psr_trajectory \
+				psr_visiblepoints \
+				psr_mcpa \
+				psr_findcaps \
+				psr_jacksonbeam \
+				psr_lofl \
+				psr_profile \
+				psr_jacksonbeamsingle \
+				psr_beam
+
+TARGETS = psrgeom
 
 TESTS = calc_fields_test \
 		transform_new_xz_test \
@@ -49,12 +50,13 @@ OBJS = psr_angle.o \
 	   dipole.o \
 	   emitloc.o \
 	   psrio.o \
-	   fitwidth.o \
 	   numrec.o \
 	   jackson.o \
-	   photon.o
+	   photon.o \
+	   gamma.o
+	   #fitwidth.o
 
-all: $(TARGETS) $(TESTS) $(LIBFILE) man-pages
+all: $(TARGETS) $(LIBFILE) man-pages #$(SMALL_TARGETS) $(TESTS)
 
 $(LIBFILE): $(OBJS)
 	ar rcs $@ $^
