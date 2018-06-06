@@ -52,7 +52,8 @@ enum
     GAMMA_MEAN,
     GAMMA_STD,
     GAMMA_LO,
-    GAMMA_HI
+    GAMMA_HI,
+    PERIOD_SLIDER
 };
 
 typedef struct scene_t
@@ -186,6 +187,17 @@ int which_view( int x, int y )
 void respawn_particle( photon *pn )
 {
     random_spark_footpoint( &(pn->source), NULL, &psr, t );
+}
+
+
+void update_powers()
+{
+    int n;
+    for (n = 0; n < npoints; n++)
+    {
+        pns[n].power = binary_power_single( &gd, freq_lo, freq_hi,
+                pns[n].curvature );
+    }
 }
 
 int advance_particles_once()
@@ -1118,6 +1130,36 @@ void display_angles( int view_num )
         glPopMatrix();
     }
 
+    glLineWidth( 1.0 );
+
+    // Draw a circle at the origin to represent the pulsar
+    glColor3f( 0.0, 0.0, 0.0 );
+    draw_2D_circle( 0.5, 0.0, 0.0 );
+
+    // Draw lines for the various angles
+    glColor3f( 0.0, 0.0, 0.0 );
+    glBegin( GL_LINES );
+    glVertex2d( 0.0, 0.0 );
+    glVertex2d( 0.0, 1.5 );
+    glEnd();
+
+    if (nearest_feature == ALPHA_LINE)
+        glColor3f( 1.0, 0.0, 0.0 );
+    glBegin( GL_LINES );
+    glVertex2d( 0.0, 0.0 );
+    glVertex2d( 1.5*sin(psr.al.rad), 1.5*cos(psr.al.rad) );
+    glEnd();
+    glColor3f( 0.0, 0.0, 0.0 );
+
+    if (nearest_feature == ZETA_LINE)
+        glColor3f( 1.0, 0.0, 0.0 );
+    glBegin( GL_LINES );
+    glVertex2d( 0.0, 0.0 );
+    glVertex2d( 1.5*sin(psr.ze.rad), 1.5*cos(psr.ze.rad) );
+    glEnd();
+
+    glPopMatrix();
+
     // Draw the period graph
     glPushMatrix();
     glTranslated( period_graph.lv, period_graph.bv, 0.0 );
@@ -1147,7 +1189,10 @@ void display_angles( int view_num )
         print_str( "Period", 0.0,  3.0, GLUT_BITMAP_TIMES_ROMAN_10 );
     }
     glPointSize( 7.0 );
-    glColor3f( 0.0, 0.65, 0.0 );
+    if (nearest_feature == PERIOD_SLIDER)
+        glColor3f( 1.0, 0.0, 0.0 );
+    else
+        glColor3f( 0.0, 0.65, 0.0 );
     glBegin( GL_POINTS );
     glVertex2d( log( psr.P             / period_graph.xmin ) /
                 log( period_graph.xmax / period_graph.xmin ), 0.0 );
@@ -1156,41 +1201,14 @@ void display_angles( int view_num )
 
     glPushMatrix();
 
-    glLineWidth( 1.0 );
-
-    // Draw a unit circle at the origin
-    glColor3f( 0.0, 0.0, 0.0 );
-    draw_2D_circle( 1.0, 0.0, 0.0 );
-
-    // Draw lines for the various angles
-    glColor3f( 0.0, 0.0, 0.0 );
-    glBegin( GL_LINES );
-    glVertex2d( 0.0, 0.0 );
-    glVertex2d( 0.0, 1.5 );
-    glEnd();
-
-    if (nearest_feature == ALPHA_LINE)
-        glColor3f( 1.0, 0.0, 0.0 );
-    glBegin( GL_LINES );
-    glVertex2d( 0.0, 0.0 );
-    glVertex2d( 1.5*sin(psr.al.rad), 1.5*cos(psr.al.rad) );
-    glEnd();
-    glColor3f( 0.0, 0.0, 0.0 );
-
-    if (nearest_feature == ZETA_LINE)
-        glColor3f( 1.0, 0.0, 0.0 );
-    glBegin( GL_LINES );
-    glVertex2d( 0.0, 0.0 );
-    glVertex2d( 1.5*sin(psr.ze.rad), 1.5*cos(psr.ze.rad) );
-    glEnd();
-
-    glPopMatrix();
 }
 
 
 void display_beam( int view_num )
 {
     apply_2D_camera( view_num );
+
+    glLineWidth( 1.0 );
 
     // Draw a border around the perimeter of the view
     view *vw = &views[view_num];
@@ -1415,9 +1433,7 @@ void mouseclick( int button, int state, int x, int y)
                              selected_feature == GAMMA_LO   ||
                              selected_feature == GAMMA_HI)
                     {
-                        // Decide how things change when the gamma
-                        // distribution is changed
-                        // ...
+                        update_powers();
                     }
                     selected_feature = NO_FEATURE;
                 }
@@ -1525,6 +1541,13 @@ void mousemove( int x, int y )
             if (ph.deg <   0.0)  set_psr_angle_deg( &ph,  0.0 );
             if (ph.deg >= 90.0)  set_psr_angle_deg( &ph, 90.0 );
 
+            // See if the period control is nearest
+            if (selected_feature == PERIOD_SLIDER)
+            {
+                screen2graph( x, y, &xw, &yw, &period_graph, active_view );
+                psr.P = xw;
+                sprintf( status_str, "period = %.3f sec", psr.P );
+            }
             if (selected_feature == ALPHA_LINE)
             {
                 copy_psr_angle( &ph, &psr.al );
@@ -1627,21 +1650,32 @@ void mousepassivemove( int x, int y )
         switch (scene_num)
         {
             case SCENE_ANGLES:
-                dal = fabs( ph.rad - psr.al.rad );
-                dze = fabs( ph.rad - psr.ze.rad );
-                nearest_feature = (dal <= dze ?  ALPHA_LINE : ZETA_LINE);
-                if (nearest_feature == ALPHA_LINE && dal < 5.0*PI/180.0)
+                // See if the period control is nearest
+                screen2graph( x, y, &xw, &yw, &period_graph, view_num );
+                if (psr.P*4.0/5.0 <= xw && xw <= psr.P*5.0/4.0 &&
+                    period_graph.ymin <= yw && yw <= period_graph.ymax)
                 {
-                    sprintf( status_str, "alpha = %.3f deg", psr.al.deg );
+                    nearest_feature = PERIOD_SLIDER;
+                    sprintf( status_str, "period = %.3f sec", psr.P );
                 }
-                else if (nearest_feature == ZETA_LINE && dze < 5.0*PI/180.0)
+                else // check for the other possibilties, alpha and zeta
                 {
-                    sprintf( status_str, "zeta = %.3f deg", psr.ze.deg );
-                }
-                else
-                {
-                    nearest_feature = NO_FEATURE;
-                    strcpy( status_str, "" );
+                    dal = fabs( ph.rad - psr.al.rad );
+                    dze = fabs( ph.rad - psr.ze.rad );
+                    nearest_feature = (dal <= dze ?  ALPHA_LINE : ZETA_LINE);
+                    if (nearest_feature == ALPHA_LINE && dal < 5.0*PI/180.0)
+                    {
+                        sprintf( status_str, "alpha = %.3f deg", psr.al.deg );
+                    }
+                    else if (nearest_feature == ZETA_LINE && dze < 5.0*PI/180.0)
+                    {
+                        sprintf( status_str, "zeta = %.3f deg", psr.ze.deg );
+                    }
+                    else
+                    {
+                        nearest_feature = NO_FEATURE;
+                        strcpy( status_str, "" );
+                    }
                 }
                 glutPostRedisplay();
                 break;
