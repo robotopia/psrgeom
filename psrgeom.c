@@ -6,15 +6,13 @@
 #include <string.h>
 #include "psrgeom.h"
 
-#define MAX_NLINES  1000
-#define MAX_NPOINTS 1000
-static int nlines;
-static int npoints[MAX_NLINES];
-static point foot_pts[MAX_NLINES];
-static point foot_pts_mag[MAX_NLINES];
+#define MAX_NPOINTS 1000000
+
+static double creation_rate; // particles per second (avg)
+static int npoints;
+static photon pns[MAX_NPOINTS];
+
 static pulsar psr;
-static point *line_pts[MAX_NLINES];
-static double step_size;
 static gamma_distr gd;
 
 // Mouse-related variables
@@ -31,6 +29,7 @@ static int highlight;
 static double P4_scale; // Degrees (of circular P4 arrow) per second
 
 static double t;
+static double tstep;
 
 enum
 {
@@ -63,6 +62,7 @@ typedef struct view_t
 
 typedef struct graph_t
 {
+    double lv, rv, bv, tv; // The graph's origin in view coords
     double xmin, xmax;
     double ymin, ymax;
     int logx, logy;
@@ -150,6 +150,7 @@ int which_view( int x, int y )
     return SCENE_NONE;
 }
 
+/*
 void calculate_fieldlines()
 {
     int l;
@@ -175,12 +176,24 @@ void calculate_fieldlines()
                 (line_pts[l][npoints[l]-1].rhosq < psr.rL2) );
     }
 }
+*/
 
-void regenerate_footpoints()
+void advance_particles_once( int use_known_fields )
 {
-    int i;
-    for (i = 0; i < nlines; i++)
-        random_spark_footpoint( NULL, &foot_pts_mag[i], &psr, 0.0 );
+    int n;
+    point *B = NULL;
+    point *V = NULL;
+    for (n = 0; n < npoints; n++)
+    {
+        if (use_known_fields)
+        {
+            B = &pns[n].B;
+            V = &pns[n].V;
+        }
+
+        traj_step( &(pns[n].source), t, &psr, tstep, DIR_OUTWARD,
+                &(pns[n].source), B, V );
+    }
 }
 
 void draw_2D_circle( double radius, double xc, double yc )
@@ -337,6 +350,9 @@ void set_scene_properties()
     scn->far_clip  = 2.0*psr.rL;
 
     scn = &scenes[SCENE_ANGLES];
+    scn->dim = 2;
+
+    scn = &scenes[SCENE_GAMMA];
     scn->dim = 2;
 }
 
@@ -521,6 +537,10 @@ void init(void)
     gd.g_max = 550.0;
 
     // Set up the default gamma distribution graph
+    gamma_graph.lv     = 0.1;
+    gamma_graph.rv     = 0.95;
+    gamma_graph.bv     = 0.6;
+    gamma_graph.tv     = 0.8;
     gamma_graph.xmin   = 400.0;
     gamma_graph.xmax   = 600.0;
     gamma_graph.ymin   = 0.0;
@@ -540,20 +560,13 @@ void init(void)
     set_scene_properties();
     set_view_properties();
 
-    // Generate some footpoints
-    nlines = 100;
-    regenerate_footpoints();
+    // Set the (initial) creation rate of particles
+    tstep = 0.001; // seconds
+    creation_rate = 100.0 / tstep; // per second
+    //regenerate_footpoints();
 
-    // Allocate memory for the line points arrays,
-    // and calculate line points
-    int l;
-    for(l = 0; l < nlines; l++)
-    {
-        line_pts[l] = (point *)malloc( MAX_NPOINTS * sizeof(point) );
-        npoints[l] = 0;
-    }
-    step_size = MAX_BSTEP*psr.rL;
-    calculate_fieldlines();
+    // Allocate memory
+    // ...
 
     // Set time to zero
     t = 0;
@@ -656,6 +669,7 @@ void display_footpts( int view_num )
     glEnd();
     glPopMatrix();
 
+/*
     // Draw footpoints
     glPushMatrix();
     glColor3f( 1.0, 0.0, 0.0 );
@@ -669,27 +683,32 @@ void display_footpts( int view_num )
     }
     glEnd();
     glPopMatrix();
+*/
 
-    // Draw circle of selected feature, if any
-    glColor3f( 0.0, 0.0, 1.0 );
+    // Draw circles representing sparks
     if (nearest_feature == CSL_CIRCLE)
+        glColor3f( 1.0, 0.0, 0.0 );
+    else
+        glColor3f( 0.0, 0.0, 1.0 );
+
+    glPushMatrix();
+    draw_2D_circle( psr.csl.S.deg, 0.0, 0.0 );
+    glPopMatrix();
+
+    if (nearest_feature == SPARK_CIRCLE)
+        glColor3f( 1.0, 0.0, 0.0 );
+    else
+        glColor3f( 0.0, 0.0, 1.0 );
+
+    int n;
+    for (n = 0; n < psr.csl.n; n++)
     {
         glPushMatrix();
-        draw_2D_circle( psr.csl.S.deg, 0.0, 0.0 );
+        glRotated( 360.0*t/psr.csl.P4, 0.0, 0.0, 1.0 );
+        glRotated( (double)n * 360.0 / (double)psr.csl.n, 0.0, 0.0, 1.0 );
+        glTranslated( 0.0, -psr.csl.S.deg, 0.0 );
+        draw_2D_circle( psr.csl.s.deg, 0.0, 0.0 );
         glPopMatrix();
-    }
-    else if (nearest_feature == SPARK_CIRCLE)
-    {
-        int n;
-        for (n = 0; n < psr.csl.n; n++)
-        {
-            glPushMatrix();
-            glRotated( 360.0*t/psr.csl.P4, 0.0, 0.0, 1.0 );
-            glRotated( (double)n * 360.0 / (double)psr.csl.n, 0.0, 0.0, 1.0 );
-            glTranslated( 0.0, -psr.csl.S.deg, 0.0 );
-            draw_2D_circle( psr.csl.s.deg, 0.0, 0.0 );
-            glPopMatrix();
-        }
     }
 
     // Draw P4 arrow
@@ -735,9 +754,11 @@ void display_fieldlines( int view_num )
     apply_3D_camera( view_num );
     glPushMatrix();
 
+    // Draw the (tiny) pulsar in the middle
     glColor3f( 0.65, 0.65, 0.65 );
     glutSolidSphere(psr.r, 100, 100);
 
+/*
     // Draw field lines
     glColor3f(1.0, 0.0, 0.0);
     //glRotatef( psr.al.deg, 0.0, 1.0, 0.0 );
@@ -753,6 +774,7 @@ void display_fieldlines( int view_num )
         }
         glEnd();
     }
+*/
 
     // Draw the light cylinder
     glColor3f( 0.65, 0.65, 0.65 );
@@ -763,10 +785,11 @@ void display_fieldlines( int view_num )
         z = 0.5*zi*psr.rL;
         draw_3D_circle( psr.rL, 0.0, 0.0, z );
     }
+    int l;
     int nl = 12;
-    glBegin( GL_LINES );
     double minz = -5.0*psr.rL;
     double maxz =  5.0*psr.rL;
+    glBegin( GL_LINES );
     for( l = 0; l < nl; l++)
     {
         glVertex3d( psr.rL*cos(l*2.0*PI/nl),
@@ -789,8 +812,10 @@ void display_gamma( int view_num )
     glPushMatrix();
 
     // Translate to "graph coords"
-    glTranslated( 0.1, 0.6, 0.0 );
-    glScaled( 0.85, 0.20, 1.0 );
+    glTranslated( gamma_graph.lv, gamma_graph.bv, 0.0 );
+    glScaled( gamma_graph.rv - gamma_graph.lv,
+              gamma_graph.tv - gamma_graph.bv,
+              1.0 );
 
     int draw_text = 0;
     if (view_num == VIEW_LEFT_MAIN)
@@ -979,12 +1004,14 @@ void mouseclick( int button, int state, int x, int y)
                 if (state == GLUT_UP)
                 {
                     if (selected_feature == ALPHA_LINE)
-                        calculate_fieldlines();
+                    {
+                        //calculate_fieldlines();
+                    }
                     if (selected_feature == CSL_CIRCLE ||
                         selected_feature == SPARK_CIRCLE)
                     {
-                        regenerate_footpoints();
-                        calculate_fieldlines();
+                        //regenerate_footpoints();
+                        //calculate_fieldlines();
                         set_view_properties();
                     }
                     selected_feature = NO_FEATURE;
@@ -1144,9 +1171,12 @@ void keyboard( unsigned char key, int x, int y )
     switch (key)
     {
         case 'a':
-            regenerate_footpoints();
-            calculate_fieldlines();
+            //regenerate_footpoints();
+            //calculate_fieldlines();
             glutPostRedisplay();
+            break;
+        case 'q':
+            glutDestroyWindow( glutGetWindow() );
             break;
     }
 }
@@ -1172,9 +1202,11 @@ int main(int argc, char** argv)
     glutMainLoop();
 
     /* Free memory */
+/*
     int l;
     for (l = 0; l < MAX_NLINES; l++)
         free( line_pts[l] );
 
     return 0;
+*/
 }

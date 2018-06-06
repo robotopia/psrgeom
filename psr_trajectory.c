@@ -95,7 +95,11 @@ int main( int argc, char *argv[] )
     double t;
 
     for (t = o.tstep; t < o.ttotal; t += o.tstep)
-        traj_step( &X, t, &psr, o.tstep, o.direction, &X, o.rL_norm, f );
+    {
+        traj_step( &X, t, &psr, o.tstep, o.direction, &X, NULL, NULL );
+        // Will have to write out to stdout here..
+        // [NOT YET IMPLEMENTED]
+    }
 
     // Clean up
     destroy_psr_angle( ra  );

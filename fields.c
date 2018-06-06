@@ -1156,7 +1156,7 @@ void B_large_step( point *x1, pulsar *psr, double step, int direction,
 
 
 void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
-            point *x2, int rL_norm, FILE *f )
+            point *x2, point *Bin, point *Vin )
 /* This follows a particle's trajectory from a given starting point to time t.
  * This necessarily cannot be a naive following of the V field, because the V
  * field takes a point to a neighbouring point and the neighbouring point
@@ -1168,16 +1168,16 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
  * interpret tstep as a time.
  *
  * Inputs:
- *   x1       : the starting point
- *   t        : the time since rotation started
- *   psr      : the pulsar (includes geometric information)
- *   tstep    : the time step for RK4, assuming travelling at light speed
- *   direction: whether to follow the line DIR_INWARD or DIR_OUTWARD
- *   rL_norm  : whether to normalise output coords to light cyl units
- *   f        : where to write out the intermediate steps
+ *   x1        : the starting point
+ *   t         : the time since rotation started
+ *   psr       : the pulsar (includes geometric information)
+ *   tstep     : the time step for RK4, assuming travelling at light speed
+ *   direction : whether to follow the line DIR_INWARD or DIR_OUTWARD
+ *   Bin       : the magnetic field at x1, optionally passed in
+ *   Vin       : the velocity field at x1, optionally passed in
  *
  * Outputs:
- *   x2       : the ending point
+ *   x2        : the ending point
  */
 {
     // De-rotate the given point x1 back time t
@@ -1187,10 +1187,20 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
 
     // Evaluate the B and V fields there
     double v = SPEED_OF_LIGHT;
-    point B, V1, V2, A1, A2;
-    point *V = (direction == DIR_OUTWARD ? &V1 : &V2);
-    point *A = (direction == DIR_OUTWARD ? &A1 : &A2);
-    calc_fields( x1, psr, v, &B, &V1, &V2, &A1, &A2, NULL );
+    point B, V1, V2, *V;
+    V = (direction == DIR_OUTWARD ? &V1 : &V2);
+    if (Vin == NULL)
+    {
+        calc_fields( x1, psr, v, &B, &V1, &V2, NULL, NULL, NULL );
+    }
+    else
+    {
+        copy_point( Vin, V );
+        if (Bin == NULL)
+            calc_fields( x1, psr, v, &B, NULL, NULL, NULL, NULL, NULL );
+        else
+            copy_point( Bin, &B );
+    }
 
     // Convert the supplied time step into a size step along B,
     // which is V dotted with B
@@ -1208,22 +1218,6 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
     psr_angle rerotate;
     set_psr_angle_rad( &rerotate, (t+tstep)*psr->Om.rad );
     rotate_about_axis( x2, x2, &rerotate, 'z', POINT_SET_ALL );
-
-    // If requested, write out the trajectory vectors (X, V, A)
-    if (f != NULL)
-    {
-        // Remember that we have to re-rotate V and A as well!
-        rotate_about_axis( V, V, &rerotate, 'z', POINT_SET_XYZ );
-        rotate_about_axis( A, A, &rerotate, 'z', POINT_SET_XYZ );
-
-        // Do we normalise point coordinates to light cylinder units?
-        double s = (rL_norm ? 1.0/psr->rL : 1.0);
-
-        fprintf( f, "%.15e  ", t );
-        fprintf( f, "%.15e %.15e %.15e  ", s*x2->x[0], s*x2->x[1], s*x2->x[2]);
-        fprintf( f, "%.15e %.15e %.15e  ", V->x[0],  V->x[1],  V->x[2]);
-        fprintf( f, "%.15e %.15e %.15e\n", A->x[0],  A->x[1],  A->x[2]);
-    }
 }
 
 
