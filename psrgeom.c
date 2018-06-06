@@ -347,7 +347,7 @@ void draw_3D_circle( double radius, double xc, double yc, double z )
 
 void reshape_views()
 {
-    int status_bar_height = 30;
+    int status_bar_height = 20;
 
     // Thumbnails
     int ntn = 8;      // Number of thumnails
@@ -593,7 +593,7 @@ void screen2csl( int x, int y, psr_angle *S, psr_angle *s, int *n,
         copy_psr_angle( &th, S );
     if (n)
         *n = n_tmp;
-    if (s && n_tmp != 0)
+    if (s && N != 0)
     {
         // Calculate how far away from the nearest spark we are
         double xs, ys; // The coordinates of the spark centre
@@ -834,10 +834,11 @@ void display_status( int view_num )
         glPopMatrix();
     }
 
-    //glPushMatrix();
-    //glColor3f( 0.0, 0.0, 0.0 );
-    print_str( status_str, 0.01, 0.1, GLUT_BITMAP_HELVETICA_18 );
-    //glPopMatrix();
+    print_str( status_str, 0.01, 0.2, GLUT_BITMAP_HELVETICA_18 );
+
+    char time_str[64];
+    sprintf( time_str, "t = %.3f", t );
+    print_str( time_str, 0.51, 0.2, GLUT_BITMAP_HELVETICA_18 );
 }
 
 void display_footpts( int view_num )
@@ -1774,20 +1775,24 @@ void keyboard( unsigned char key, int x, int y )
         case 'q':
             glutDestroyWindow( glutGetWindow() );
             break;
-        case '+':
+        case '+': // Change number of sparks
             if (vw->scene_num == SCENE_FOOTPTS)
             {
                 psr.csl.n++;
                 glutPostRedisplay();
             }
             break;
-        case '-':
+        case '-': // Change number of sparks
             if (vw->scene_num == SCENE_FOOTPTS)
             {
                 if (psr.csl.n >= 1)
                     psr.csl.n--;
                 glutPostRedisplay();
             }
+            break;
+        case ' ': // Advance a time step
+            advance_particles_once();
+            glutPostRedisplay();
             break;
     }
 }
