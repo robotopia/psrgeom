@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <float.h>
 #include "psrgeom.h"
 
 #define MAX_NPOINTS 1000000
@@ -33,6 +34,8 @@ static double P4_scale; // Degrees (of circular P4 arrow) per second
 
 static double t;
 static double tstep;
+
+static double max_power;
 
 enum
 {
@@ -237,6 +240,11 @@ int advance_particles_once()
         // Calculate photon properties
         emit_avg_pulsar_photon( &psr, &pns[n].source, freq_lo, freq_hi,
                                 &gd, &pns[n] );
+
+        // Keep track of the particle with the most power, for normalisation
+        // purposes
+        if (pns[n].power > max_power)
+            max_power = pns[n].power;
     }
 
     // Actually change the time!
@@ -647,6 +655,8 @@ void init(void)
     // Set up initial population of particles
     //init_particles();
 
+    max_power = DBL_MIN; // A dummy, non-zero value to get things started
+
     // Unset nearest_feature
     nearest_feature = NO_FEATURE;
     selected_feature = NO_FEATURE;
@@ -769,22 +779,6 @@ void display_footpts( int view_num )
     glEnd();
     glPopMatrix();
 
-/*
-    // Draw footpoints
-    glPushMatrix();
-    glColor3f( 1.0, 0.0, 0.0 );
-    glRotatef( 360.0*t/psr.csl.P4 - 90.0, 0.0, 0.0, 1.0 );
-    glPointSize( 3.0 );
-    glBegin( GL_POINTS );
-    for( l = 0; l < nlines; l++)
-    {
-        glVertex2d( foot_pts_mag[l].th.deg*foot_pts_mag[l].ph.cos,
-                    foot_pts_mag[l].th.deg*foot_pts_mag[l].ph.sin );
-    }
-    glEnd();
-    glPopMatrix();
-*/
-
     // Draw circles representing sparks
     if (nearest_feature == CSL_CIRCLE)
         glColor3f( 1.0, 0.0, 0.0 );
@@ -814,7 +808,7 @@ void display_footpts( int view_num )
     // Draw P4 arrow
     glPushMatrix();
     glColor3f( 0.0, 0.75, 0.0 );
-    double R = (psr.csl.S.deg + psr.csl.s.deg)*1.3;
+    double R = (vw->top - vw->bottom)*13.0/28.0;
     double P4_L = psr.csl.P4*P4_scale;
     if (psr.csl.P4 > 0.0)
         draw_2D_arc( R, 0.0, 0.0, -90.0, P4_L - 90.0 );
@@ -1026,8 +1020,8 @@ void display_beam( int view_num )
         glPopMatrix();
     }
 
+    // Draw concentric circles representing lines of latitude on a polar plot
     glPushMatrix();
-
     glColor3d( 0.65, 0.65, 0.65 );
     int n;
     double r;
@@ -1036,7 +1030,32 @@ void display_beam( int view_num )
         r = (double)n*10.0;
         draw_2D_circle( r, 0.0, 0.0 );
     }
+    glPopMatrix();
 
+    // Draw the points, whose darkness is weighted by the power
+    double c; // color
+    point mag; // The photon point in magnetic frame coordinates
+    double x, y; // The (polar) position in Cartesian coordinates
+    glPushMatrix();
+    glPointSize( 1.0 );
+    glEnable( GL_BLEND );
+    glBegin( GL_POINTS );
+    for (n = 0; n < npoints; n++)
+    {
+        // Set the color
+        c = 1.0 - pns[n].power / max_power;
+        glColor3d( 1.0, c, 0.0 );
+
+        // Convert the point to the magnetic frame
+        obs_to_mag_frame( &pns[n].retarded_LoS, &psr, NULL, &mag );
+
+        // Draw it on the screen!
+        x = mag.th.deg*mag.ph.cos;
+        y = mag.th.deg*mag.ph.sin;
+        glVertex2d( x, y );
+    }
+    glEnd();
+    glDisable( GL_BLEND );
     glPopMatrix();
 }
 
