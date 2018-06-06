@@ -423,8 +423,10 @@ void init_views()
 void set_scene_properties()
 {
     scenes[SCENE_FOOTPTS].dim = 2;
-    scenes[SCENE_ANGLES ].dim = 2;
-    scenes[SCENE_GAMMA  ].dim = 2;
+    scenes[SCENE_ANGLES ].dim = 0;
+    scenes[SCENE_GAMMA  ].dim = 0;
+    scenes[SCENE_PROFILE].dim = 2;
+    scenes[SCENE_BEAM   ].dim = 2;
 
     scene *scn;
     scn = &scenes[SCENE_FIELDLINES];
@@ -1050,12 +1052,30 @@ void display_beam( int view_num )
         obs_to_mag_frame( &pns[n].retarded_LoS, &psr, NULL, &mag );
 
         // Draw it on the screen!
-        x = mag.th.deg*mag.ph.cos;
-        y = mag.th.deg*mag.ph.sin;
+        x =  mag.th.deg*mag.ph.sin;
+        y = -mag.th.deg*mag.ph.cos;
         glVertex2d( x, y );
     }
     glEnd();
     glDisable( GL_BLEND );
+    glPopMatrix();
+
+    // Draw the line-of-sight line
+    point LoS, LoS_mag;
+    psr_angle a;
+    glPushMatrix();
+    glColor3d( 0.0, 0.0, 0.0 );
+    glBegin( GL_LINE_LOOP );
+    for (n = 0; n < 360; n++)
+    {
+        set_psr_angle_deg( &a, (double)n );
+        set_point_sph( &LoS, 1.0, &psr.ze, &a, POINT_SET_ALL );
+        obs_to_mag_frame( &LoS, &psr, NULL, &LoS_mag );
+        x =  LoS_mag.th.deg*LoS_mag.ph.sin;
+        y = -LoS_mag.th.deg*LoS_mag.ph.cos;
+        glVertex2d( x, y );
+    }
+    glEnd();
     glPopMatrix();
 }
 
@@ -1156,7 +1176,7 @@ void mouseclick( int button, int state, int x, int y)
     double dr;
 
     if (active_view >= VIEW_THUMBNAIL_1 &&
-        active_view <= VIEW_THUMBNAIL_4)
+        active_view <= VIEW_THUMBNAIL_5)
     {
         if (button == MOUSE_LEFT_BUTTON &&
             state  == GLUT_DOWN)
@@ -1165,7 +1185,7 @@ void mouseclick( int button, int state, int x, int y)
             set_view_properties();
         }
     }
-    else if (active_view >= VIEW_THUMBNAIL_5 &&
+    else if (active_view >= VIEW_THUMBNAIL_6 &&
              active_view <= VIEW_THUMBNAIL_8)
     {
         if (button == MOUSE_LEFT_BUTTON &&
@@ -1189,25 +1209,44 @@ void mouseclick( int button, int state, int x, int y)
                 {
                     if (selected_feature == ALPHA_LINE)
                     {
-                        //calculate_fieldlines();
+                        npoints = 0;
                     }
                     if (selected_feature == CSL_CIRCLE ||
                         selected_feature == SPARK_CIRCLE)
                     {
-                        //regenerate_footpoints();
-                        //calculate_fieldlines();
+                        npoints = 0;
                         set_view_properties();
                     }
                     selected_feature = NO_FEATURE;
                 }
                 break;
             case MOUSE_SCROLL_UP:
-                dr = -(cam->r - psr.r)/4.0;
-                reposition_3D_camera( active_view, dr, 0.0, 0.0 );
+                if (scn->dim == 2)
+                {
+                    vw->left   *= 5.0/6.0;
+                    vw->right  *= 5.0/6.0;
+                    vw->bottom *= 5.0/6.0;
+                    vw->top    *= 5.0/6.0;
+                }
+                else if (scn->dim == 3)
+                {
+                    dr = -(cam->r - psr.r)/4.0;
+                    reposition_3D_camera( active_view, dr, 0.0, 0.0 );
+                }
                 break;
             case MOUSE_SCROLL_DOWN:
-                dr = (cam->r - psr.r)/3.0;
-                reposition_3D_camera( active_view, dr, 0.0, 0.0 );
+                if (scn->dim == 2)
+                {
+                    vw->left   *= 6.0/5.0;
+                    vw->right  *= 6.0/5.0;
+                    vw->bottom *= 6.0/5.0;
+                    vw->top    *= 6.0/5.0;
+                }
+                else if (scn->dim == 3)
+                {
+                    dr = (cam->r - psr.r)/3.0;
+                    reposition_3D_camera( active_view, dr, 0.0, 0.0 );
+                }
                 break;
         }
     }
