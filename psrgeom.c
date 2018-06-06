@@ -91,6 +91,7 @@ typedef struct graph_t
 static view  views[NVIEWS];
 static scene scenes[NSCENES];
 static graph gamma_graph;
+static graph period_graph;
 
 static int active_view;
 
@@ -567,15 +568,20 @@ void screen2csl( int x, int y, psr_angle *S, psr_angle *s, int *n,
 
     // Calculate which spark we're "in"
     int N = psr.csl.n;
-    n_tmp = (int)floor((double)N * ph0.deg / 360.0 + 0.5);
-    while (n_tmp <  0)  n_tmp += N;
-    while (n_tmp >= N)  n_tmp -= N;
+    if (N == 0)
+        n_tmp = 0;
+    else
+    {
+        n_tmp = (int)floor((double)N * ph0.deg / 360.0 + 0.5);
+        while (n_tmp <  0)  n_tmp += N;
+        while (n_tmp >= N)  n_tmp -= N;
+    }
 
     if (S)
         copy_psr_angle( &th, S );
     if (n)
         *n = n_tmp;
-    if (s)
+    if (s && n_tmp != 0)
     {
         // Calculate how far away from the nearest spark we are
         double xs, ys; // The coordinates of the spark centre
@@ -609,8 +615,15 @@ void screen2graph( int x, int y, double *xg, double *yg, graph *gr,
     yp = (yv - gr->bv) / (gr->tv - gr->bv);
 
     // And finally to graph-world coords
-    *xg = xp*(gr->xmax - gr->xmin) + gr->xmin;
-    *yg = yp*(gr->ymax - gr->ymin) + gr->ymin;
+    if (!gr->logx)
+        *xg = xp*(gr->xmax - gr->xmin) + gr->xmin;
+    else
+        *xg = gr->xmin*pow( gr->xmax / gr->xmin, xp );
+
+    if (!gr->logy)
+        *yg = yp*(gr->ymax - gr->ymin) + gr->ymin;
+    else
+        *yg = gr->ymin*pow( gr->ymax / gr->ymin, yp );
 }
 
 
@@ -625,7 +638,9 @@ void init(void)
     psr_angle al;
     set_psr_angle_deg( &ze, 5.0 );
     set_psr_angle_deg( &al, 10.0 );
-    set_pulsar( &psr, NULL, NULL, 1.0, 1.0, &al, &ze );
+    double P = 1.0;
+    double rp = 1.0e4;
+    set_pulsar( &psr, NULL, NULL, P, rp, &al, &ze );
 
     // Set up default carousel
     int nsparks = 7;
@@ -668,6 +683,24 @@ void init(void)
     gamma_graph.ymtics = 0.0;;
     strcpy( gamma_graph.xlabel, "γ" );
     strcpy( gamma_graph.ylabel, "" );
+
+    // Set up the default period graph
+    period_graph.lv     = 0.1;
+    period_graph.rv     = 1.4;
+    period_graph.bv     = 0.1;
+    period_graph.tv     = 0.12;
+    period_graph.xmin   = 0.001;
+    period_graph.xmax   = 100.0;
+    period_graph.ymin   = -1.0;
+    period_graph.ymax   = 1.0;
+    period_graph.logx   = 1;
+    period_graph.logy   = 0;
+    period_graph.xtics  = 10.0;
+    period_graph.ytics  = 0.0;
+    period_graph.xmtics = 10.0;
+    period_graph.ymtics = 0.0;;
+    strcpy( period_graph.xlabel, "P (s)" );
+    strcpy( period_graph.ylabel, "" );
 
     // Set the rest of the scene properties based on the cameras
     init_views();
@@ -890,6 +923,13 @@ void display_footpts( int view_num )
     glBegin( GL_POINTS );
         glVertex2d( 0.0, 0.0 );
     glEnd();
+    glPopMatrix();
+
+    // The controls for changing the number of sparks
+    glPushMatrix();
+    glColor3f( 0.0, 0.65, 0.0 );
+    if (view_num == VIEW_LEFT_MAIN)
+        print_str( "-/+", 0.0, 0.0, GLUT_BITMAP_TIMES_ROMAN_24 );
 
     glPopMatrix();
 }
@@ -1078,7 +1118,45 @@ void display_angles( int view_num )
         glPopMatrix();
     }
 
+    // Draw the period graph
     glPushMatrix();
+    glTranslated( period_graph.lv, period_graph.bv, 0.0 );
+    glScaled( period_graph.rv - period_graph.lv,
+              period_graph.tv - period_graph.bv,
+              1.0 );
+    glColor3d( 0.3, 0.3, 0.3 );
+    glLineWidth( 2.0 );
+    glBegin( GL_LINES );
+    glVertex2d( 0.0, 0.0 );
+    glVertex2d( 1.0, 0.0 );
+    int n, N = 6;
+    for (n = 0; n < N; n++)
+    {
+        glVertex2d( (double)n/((double)N-1), -1.0 );
+        glVertex2d( (double)n/((double)N-1),  1.0 );
+    }
+    glEnd();
+    if (view_num == VIEW_LEFT_MAIN)
+    {
+        print_str( "0.001",  0.0, -3.0, GLUT_BITMAP_TIMES_ROMAN_10 );
+        print_str( "0.01",   0.2, -3.0, GLUT_BITMAP_TIMES_ROMAN_10 );
+        print_str( "0.1",    0.4, -3.0, GLUT_BITMAP_TIMES_ROMAN_10 );
+        print_str( "1",      0.6, -3.0, GLUT_BITMAP_TIMES_ROMAN_10 );
+        print_str( "10",     0.8, -3.0, GLUT_BITMAP_TIMES_ROMAN_10 );
+        print_str( "100",    1.0, -3.0, GLUT_BITMAP_TIMES_ROMAN_10 );
+        print_str( "Period", 0.0,  3.0, GLUT_BITMAP_TIMES_ROMAN_10 );
+    }
+    glPointSize( 7.0 );
+    glColor3f( 0.0, 0.65, 0.0 );
+    glBegin( GL_POINTS );
+    glVertex2d( log( psr.P             / period_graph.xmin ) /
+                log( period_graph.xmax / period_graph.xmin ), 0.0 );
+    glEnd();
+    glPopMatrix();
+
+    glPushMatrix();
+
+    glLineWidth( 1.0 );
 
     // Draw a unit circle at the origin
     glColor3f( 0.0, 0.0, 0.0 );
@@ -1642,7 +1720,15 @@ void mousepassivemove( int x, int y )
 
 void keyboard( unsigned char key, int x, int y )
 {
-    if (x || y) {} // Dummy line to avoid compiler warnings
+    int view_num = which_view( x, y );
+    if (view_num == VIEW_NONE)
+    {
+        nearest_feature = NO_FEATURE;
+        glutPostRedisplay();
+        return;
+    }
+
+    view *vw = &views[view_num];
 
     switch (key)
     {
@@ -1653,6 +1739,21 @@ void keyboard( unsigned char key, int x, int y )
             break;
         case 'q':
             glutDestroyWindow( glutGetWindow() );
+            break;
+        case '+':
+            if (vw->scene_num == SCENE_FOOTPTS)
+            {
+                psr.csl.n++;
+                glutPostRedisplay();
+            }
+            break;
+        case '-':
+            if (vw->scene_num == SCENE_FOOTPTS)
+            {
+                if (psr.csl.n >= 1)
+                    psr.csl.n--;
+                glutPostRedisplay();
+            }
             break;
     }
 }
