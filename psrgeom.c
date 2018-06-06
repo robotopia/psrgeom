@@ -15,6 +15,9 @@ static photon pns[MAX_NPOINTS];
 static pulsar psr;
 static gamma_distr gd;
 
+static double freq_lo;
+static double freq_hi;
+
 // Mouse-related variables
 static int mouse_old_x;
 static int mouse_old_y;
@@ -230,6 +233,10 @@ int advance_particles_once()
             respawn_particle( &pns[n] );
             respawned = 1;
         }
+
+        // Calculate photon properties
+        emit_avg_pulsar_photon( &psr, &pns[n].source, freq_lo, freq_hi,
+                                &gd, &pns[n] );
     }
 
     // Actually change the time!
@@ -595,7 +602,7 @@ void init(void)
     set_psr_angle_deg( &s, 0.1 );
     double P4_sec = -10.0;
     set_pulsar_carousel( &psr, nsparks, &s, &S, GAUSSIAN, P4_sec );
-    P4_scale = 2.0;
+    P4_scale = 4.0;
 
     // Set up the default gamma distribution
     gd.type  = NORMAL;
@@ -604,6 +611,10 @@ void init(void)
     gd.idx   = -6.2;
     gd.g_min = 450.0;
     gd.g_max = 550.0;
+
+    // Set up telescope properties
+    freq_lo = 300.0;
+    freq_hi = 350.0;
 
     // Set up the default gamma distribution graph
     gamma_graph.lv     = 0.1;
@@ -1000,6 +1011,36 @@ void display_angles( int view_num )
     glPopMatrix();
 }
 
+
+void display_beam( int view_num )
+{
+    apply_2D_camera( view_num );
+
+    // Draw a border around the perimeter of the view
+    view *vw = &views[view_num];
+    if (vw->border)
+    {
+        double borderwidth = 2.0;
+        glPushMatrix();
+        draw_border( view_num, borderwidth );
+        glPopMatrix();
+    }
+
+    glPushMatrix();
+
+    glColor3d( 0.65, 0.65, 0.65 );
+    int n;
+    double r;
+    for (n = 1; n <= 9; n++)
+    {
+        r = (double)n*10.0;
+        draw_2D_circle( r, 0.0, 0.0 );
+    }
+
+    glPopMatrix();
+}
+
+
 void display_view(int view_num)
 {
     view *vw = &views[view_num];
@@ -1020,6 +1061,9 @@ void display_view(int view_num)
             break;
         case SCENE_GAMMA:
             display_gamma( view_num );
+            break;
+        case SCENE_BEAM:
+            display_beam( view_num );
             break;
     }
 }
@@ -1296,7 +1340,7 @@ void keyboard( unsigned char key, int x, int y )
     switch (key)
     {
         case 'i':
-            glutSetCursor( GLUT_CURSOR_CYCLE );
+            glutSetCursor( GLUT_CURSOR_CYCLE ); // This doesn't appear to work
             init_particles();
             glutSetCursor( GLUT_CURSOR_LEFT_ARROW );
             glutPostRedisplay();
