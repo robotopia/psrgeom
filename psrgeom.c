@@ -44,7 +44,11 @@ enum
     ZETA_LINE,
     CSL_CIRCLE,
     SPARK_CIRCLE,
-    P4_ARROW
+    P4_ARROW,
+    GAMMA_MEAN,
+    GAMMA_STD,
+    GAMMA_LO,
+    GAMMA_HI
 };
 
 typedef struct scene_t
@@ -69,7 +73,7 @@ typedef struct view_t
 
 typedef struct graph_t
 {
-    double lv, rv, bv, tv; // The graph's origin in view coords
+    double lv, rv, bv, tv; // The graph's boundary in view coords
     double xmin, xmax;
     double ymin, ymax;
     int logx, logy;
@@ -159,33 +163,6 @@ int which_view( int x, int y )
     return SCENE_NONE;
 }
 
-/*
-void calculate_fieldlines()
-{
-    int l;
-    for (l = 0; l < nlines; l++)
-    {
-        mag_to_obs_frame( &foot_pts_mag[l], &psr, NULL, &foot_pts[l] );
-        copy_point( &foot_pts[l], &line_pts[l][0] );
-        npoints[l] = 1;
-        do
-        {
-            Bstep(  &(line_pts[l][npoints[l]-1]),
-                    &psr, step_size, DIR_OUTWARD,
-                    &(line_pts[l][npoints[l]]) );
-            set_point_xyz( &(line_pts[l][npoints[l]]),
-                    line_pts[l][npoints[l]].x[0],
-                    line_pts[l][npoints[l]].x[1],
-                    line_pts[l][npoints[l]].x[2],
-                    POINT_SET_ALL );
-            npoints[l]++;
-        }
-        while ( (npoints[l] < MAX_NPOINTS) &&
-                (line_pts[l][npoints[l]-1].r     > psr.r) &&
-                (line_pts[l][npoints[l]-1].rhosq < psr.rL2) );
-    }
-}
-*/
 
 void respawn_particle( photon *pn )
 {
@@ -592,6 +569,25 @@ void screen2csl( int x, int y, psr_angle *S, psr_angle *s, int *n,
     }
 }
 
+
+void screen2graph( int x, int y, double *xg, double *yg, graph *gr,
+        int view_num )
+/* Convert from screen coordinates to graph-world coordinates */
+{
+    double xv, yv; // "View" coordinates
+    screen2world( x, y, &xv, &yv, NULL, NULL, view_num );
+
+    // Convert to "plot" coords
+    double xp, yp;
+    xp = (xv - gr->lv) / (gr->rv - gr->lv);
+    yp = (yv - gr->bv) / (gr->tv - gr->bv);
+
+    // And finally to graph-world coords
+    *xg = xp*(gr->xmax - gr->xmin) + gr->xmin;
+    *yg = yp*(gr->ymax - gr->ymin) + gr->ymin;
+}
+
+
 void init(void) 
 {
     // Set a white background
@@ -933,8 +929,60 @@ void display_gamma( int view_num )
     draw_graph_frame( &gamma_graph, draw_text );
 
     // Now go to the graph's world coordinates
-    glScaled( 1.0/(gamma_graph.xmax - gamma_graph.xmin), 1.0/(gamma_graph.ymax - gamma_graph.ymin), 1.0 );
+    glScaled( 1.0/(gamma_graph.xmax - gamma_graph.xmin),
+              1.0/(gamma_graph.ymax - gamma_graph.ymin),
+              1.0 );
     glTranslated( -gamma_graph.xmin, -gamma_graph.ymin, 0.0 );
+
+    // Draw vertical lines representing the distribution's parameters
+    glBegin( GL_LINES );
+    if (gd.type == NORMAL)
+    {
+        if (nearest_feature == GAMMA_MEAN)
+            glColor3d( 1.0, 0.0, 0.0 );
+        else
+            glColor3d( 0.8, 0.8, 1.0 );
+        if (gamma_graph.xmin <= gd.mean && gd.mean <= gamma_graph.xmax)
+        {
+            glVertex2d( gd.mean, 0.0 );
+            glVertex2d( gd.mean, 1.0 );
+        }
+
+        if (nearest_feature == GAMMA_STD)
+            glColor3d( 1.0, 0.0, 0.0 );
+        else
+            glColor3d( 0.8, 0.8, 1.0 );
+        double h = exp(-0.5);
+        if (gamma_graph.xmin <= gd.mean + gd.std &&
+            gd.mean + gd.std <= gamma_graph.xmax)
+        {
+            glVertex2d( gd.mean + gd.std, 0.0 );
+            glVertex2d( gd.mean + gd.std, h   );
+        }
+        if (gamma_graph.xmin <= gd.mean - gd.std &&
+            gd.mean - gd.std <= gamma_graph.xmax)
+        {
+            glVertex2d( gd.mean - gd.std, 0.0 );
+            glVertex2d( gd.mean - gd.std, h   );
+        }
+    }
+    else if (gd.type == POWER_LAW)
+    {
+        if (nearest_feature == GAMMA_MEAN)
+            glColor3d( 1.0, 0.0, 0.0 );
+        else
+            glColor3d( 0.8, 0.8, 1.0 );
+        glVertex2d( gd.g_min, 0.0 );
+        glVertex2d( gd.g_max, 1.0 );
+
+        if (nearest_feature == GAMMA_STD)
+            glColor3d( 1.0, 0.0, 0.0 );
+        else
+            glColor3d( 0.8, 0.8, 1.0 );
+        glVertex2d( gd.g_max, 0.0 );
+        glVertex2d( gd.g_max, 1.0 );
+    }
+    glEnd();
 
     // Plot the gamma curve
     int nsamples = 1000;
@@ -1211,11 +1259,20 @@ void mouseclick( int button, int state, int x, int y)
                     {
                         npoints = 0;
                     }
-                    if (selected_feature == CSL_CIRCLE ||
-                        selected_feature == SPARK_CIRCLE)
+                    else if (selected_feature == CSL_CIRCLE ||
+                             selected_feature == SPARK_CIRCLE)
                     {
                         npoints = 0;
                         set_view_properties();
+                    }
+                    else if (selected_feature == GAMMA_MEAN ||
+                             selected_feature == GAMMA_STD  ||
+                             selected_feature == GAMMA_LO   ||
+                             selected_feature == GAMMA_HI)
+                    {
+                        // Decide how things change when the gamma
+                        // distribution is changed
+                        // ...
                     }
                     selected_feature = NO_FEATURE;
                 }
@@ -1272,7 +1329,8 @@ void mousemove( int x, int y )
         return;
     }
 
-    double xw, yw;
+    double xw, yw, xw_old, yw_old;
+    double shift;
     psr_angle th, ph;
     psr_angle S, s;
 
@@ -1313,7 +1371,28 @@ void mousemove( int x, int y )
                 else
                     psr.csl.P4 = (-180.0 - ph.deg) / P4_scale;
             }
-
+            break;
+        case SCENE_GAMMA:
+            screen2graph( x, y, &xw, &yw, &gamma_graph, active_view );
+            // Shift mean
+            if (selected_feature == GAMMA_MEAN)
+                gd.mean = xw;
+            // Shift std
+            else if (selected_feature == GAMMA_STD)
+                gd.std = fabs( xw - gd.mean );
+            // For panning, mouse must be in graph region
+            else if ((gamma_graph.xmin <= xw) && (xw <= gamma_graph.xmax) &&
+                     (gamma_graph.ymin <= yw) && (yw <= gamma_graph.ymax))
+            {
+                // Get old mouse pos (in graph-world coords)
+                screen2graph( mouse_old_x, mouse_old_y, &xw_old, &yw_old,
+                        &gamma_graph, active_view );
+                shift = xw - xw_old;
+                gamma_graph.xmin -= shift;
+                gamma_graph.xmax -= shift;
+                mouse_old_x = x;
+                mouse_old_y = y;
+            }
             break;
     }
     glutPostRedisplay();
@@ -1332,7 +1411,7 @@ void mousepassivemove( int x, int y )
     }
 
     // Some possibly needed variables
-    double xw, yw;
+    double xw, yw, w;
     double dal, dze, dS, ds, dP4;
     double P4x, P4y, P4r;
     psr_angle th, ph;
@@ -1342,10 +1421,8 @@ void mousepassivemove( int x, int y )
     // Behaviour is different depending on whether the mouse is over a
     // thumbnail, or over one of the larger panes
 
-    if (view_num == VIEW_THUMBNAIL_1 ||
-        view_num == VIEW_THUMBNAIL_2 ||
-        view_num == VIEW_THUMBNAIL_3 ||
-        view_num == VIEW_THUMBNAIL_4 )
+    if (view_num >= VIEW_THUMBNAIL_1 &&
+        view_num <= VIEW_THUMBNAIL_8)
     {
         highlight = view_num;
     }
@@ -1386,6 +1463,34 @@ void mousepassivemove( int x, int y )
                     nearest_feature = NO_FEATURE;
 
                 glutPostRedisplay();
+                break;
+            case SCENE_GAMMA:
+                screen2graph( x, y, &xw, &yw, &gamma_graph, view_num );
+                // Must be in graph region
+                if ((gamma_graph.xmin <= xw) && (xw <= gamma_graph.xmax) &&
+                    (gamma_graph.ymin <= yw) && (yw <= gamma_graph.ymax))
+                {
+                    w = (gamma_graph.xmax - gamma_graph.xmin);
+                    if (gd.type == NORMAL)
+                    {
+                        if (fabs(xw - gd.mean) / w <= 0.02)
+                        {
+                            nearest_feature = GAMMA_MEAN;
+                        }
+                        else if (fabs(xw - (gd.mean + gd.std)) / w <= 0.02 ||
+                                 fabs(xw - (gd.mean - gd.std)) / w <= 0.02)
+                        {
+                            nearest_feature = GAMMA_STD;
+                        }
+                        else
+                            nearest_feature = NO_FEATURE;
+                    }
+                }
+                else
+                    nearest_feature = NO_FEATURE;
+
+                glutPostRedisplay();
+                break;
         }
     }
 }

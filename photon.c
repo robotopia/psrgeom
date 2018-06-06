@@ -78,13 +78,13 @@ void emit_avg_pulsar_photon( pulsar *psr, point *pt, double freq_lo,
     pn->curvature = calc_curvature( &pn->V, &pn->A );
 
     // Calculate the average photon power
-    if (freq_hi < freq_lo) {} // A dummy expression to avoid compiler warnings
-    pn->power = avg_power_single( gd, pn->A.r );
+    //pn->power = avg_power_single( gd, pn->A.r );
     /* ^-- This isn't the correct method, because this power is integrated
      * over ALL frequencies, not just the given frequency range. However,
      * I'm leaving it here as a placeholder until I can find the correct
      * expression.
      */
+    pn->power = binary_power_single( gd, freq_lo, freq_hi, pn->curvature );
 
     // Calculate the observed phase (incl. retardation)
     psr_angle dph;
@@ -97,6 +97,21 @@ void emit_avg_pulsar_photon( pulsar *psr, point *pt, double freq_lo,
 
     // Calculate the polarisation angle
     accel_to_pol_angle( psr, &pn->A, &pn->phase, &pn->psi );
+}
+
+
+double binary_power_single( gamma_distr *gd, double freq_lo, double freq_hi,
+        double curvature )
+/* This returns 1.0 if the mean gamma (GD->MEAN) corresponds to a critical
+ * frequency (given the CURVATURE) that falls in the range [FREQ_LO:FREQ_HI],
+ * and 0.0 otherwise.
+ */
+{
+    double f_c = calc_crit_freq( gd->mean, curvature );
+    if (freq_lo <= f_c && f_c <= freq_hi)
+        return 1.0;
+    else
+        return 0.0;
 }
 
 

@@ -320,6 +320,8 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
 void emit_pulsar_photon( pulsar *psr, point *pt, double freq, photon *pn );
 void emit_avg_pulsar_photon( pulsar *psr, point *pt, double freq_lo,
                 double freq_hi, gamma_distr *gd, photon *pn );
+double binary_power_single( gamma_distr *gd, double freq_lo, double freq_hi,
+        double curvature );
 
 double weight_photon_by_particle_density( photon *pn );
 double weight_photon_by_line_density( point *init_pt, pulsar *psr );
