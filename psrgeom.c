@@ -19,6 +19,8 @@ static gamma_distr gd;
 static double freq_lo;
 static double freq_hi;
 
+static char status_str[256];
+
 // Mouse-related variables
 static int mouse_old_x;
 static int mouse_old_y;
@@ -138,13 +140,27 @@ void print_str( char *s, double x, double y, void *font )
         exit(EXIT_FAILURE);
     }
 
-    glRasterPos2d( x - strlen(s)*2.0, y );
+    glRasterPos2d( x, y );
     while (*s)
     {
         glutBitmapCharacter(font, *s);
         s++;
     }
 }
+
+
+void print_status( char *s )
+{
+    strcpy( status_str, s );
+    glutPostRedisplay();
+}
+
+
+void clear_status()
+{
+    print_status("");
+}
+
 
 int which_view( int x, int y )
 {
@@ -393,23 +409,25 @@ void init_views()
     views[VIEW_THUMBNAIL_6 ].border = 1;
     views[VIEW_THUMBNAIL_7 ].border = 1;
     views[VIEW_THUMBNAIL_8 ].border = 1;
+    views[VIEW_LEFT_MAIN   ].border = 0;
+    views[VIEW_RIGHT_MAIN  ].border = 0;
+    views[VIEW_STATUS      ].border = 1;
 
     reshape_views();
 }
 
 void set_scene_properties()
 {
-    scenes[SCENE_FOOTPTS].dim = 2;
-    scenes[SCENE_ANGLES ].dim = 0;
-    scenes[SCENE_GAMMA  ].dim = 0;
-    scenes[SCENE_PROFILE].dim = 2;
-    scenes[SCENE_BEAM   ].dim = 2;
+    scenes[SCENE_FOOTPTS   ].dim = 2;
+    scenes[SCENE_ANGLES    ].dim = 0;
+    scenes[SCENE_GAMMA     ].dim = 0;
+    scenes[SCENE_PROFILE   ].dim = 2;
+    scenes[SCENE_BEAM      ].dim = 2;
+    scenes[SCENE_STATUS    ].dim = 0;
+    scenes[SCENE_FIELDLINES].dim = 3;
 
-    scene *scn;
-    scn = &scenes[SCENE_FIELDLINES];
-    scn->dim = 3;
-    scn->near_clip = 0.0;
-    scn->far_clip  = 2.0*psr.rL;
+    scenes[SCENE_FIELDLINES].near_clip = 0.0;
+    scenes[SCENE_FIELDLINES].far_clip  = 2.0*psr.rL;
 
 }
 
@@ -450,6 +468,12 @@ void set_view_properties()
                 vw->right  =  100.0;
                 vw->bottom = -100.0;
                 vw->top    =  100.0;
+                break;
+            case SCENE_STATUS:
+                vw->left   = 0.0;
+                vw->right  = 1.0;
+                vw->bottom = 0.0;
+                vw->top    = 1.0;
                 break;
         }
     }
@@ -619,8 +643,11 @@ void init(void)
     gd.g_max = 550.0;
 
     // Set up telescope properties
-    freq_lo = 300.0;
-    freq_hi = 350.0;
+    freq_lo = 300.0e6;
+    freq_hi = 350.0e6;
+
+    // No status message to start with
+    strcpy( status_str, "" );
 
     // Set up the default gamma distribution graph
     gamma_graph.lv     = 0.1;
@@ -719,7 +746,7 @@ void draw_graph_frame( graph *gr, int draw_text )
         for (xtic = xtic_min; xtic <= xtic_max; xtic += gr->xtics)
         {
             sprintf( ticlabel, "%d", (int)xtic );
-            print_str( ticlabel, xtic, -0.20, GLUT_BITMAP_HELVETICA_12 );
+            print_str( ticlabel, xtic-2.0*strlen(ticlabel), -0.20, GLUT_BITMAP_HELVETICA_12 );
         }
     }
 
@@ -730,7 +757,10 @@ void draw_graph_frame( graph *gr, int draw_text )
 void draw_border( int view_num, double linewidth )
 {
     view *vw = &views[view_num];
-    glColor3f( 0.0, 0.0, 0.0 );
+    //if (highlight == view_num)
+        glColor3f( 0.0, 0.0, 0.0 );
+    //else
+    //    glColor3f( 1.0, 0.5, 0.0 );
     glLineWidth( linewidth );
     glBegin( GL_LINE_LOOP );
         glVertex2d( vw->left , vw->bottom );
@@ -739,6 +769,27 @@ void draw_border( int view_num, double linewidth )
         glVertex2d( vw->left , vw->top    );
     glEnd();
     glLineWidth( 1.0 );
+}
+
+
+void display_status( int view_num )
+{
+    apply_2D_camera( view_num );
+
+    // Draw a border around the perimeter of the view
+    view *vw = &views[view_num];
+    if (vw->border)
+    {
+        double borderwidth = 2.0;
+        glPushMatrix();
+        draw_border( view_num, borderwidth );
+        glPopMatrix();
+    }
+
+    //glPushMatrix();
+    //glColor3f( 0.0, 0.0, 0.0 );
+    print_str( status_str, 0.01, 0.1, GLUT_BITMAP_HELVETICA_18 );
+    //glPopMatrix();
 }
 
 void display_footpts( int view_num )
@@ -1152,6 +1203,9 @@ void display_view(int view_num)
         case SCENE_BEAM:
             display_beam( view_num );
             break;
+        case SCENE_STATUS:
+            display_status( view_num );
+            break;
     }
 }
 
@@ -1218,10 +1272,12 @@ void mouseclick( int button, int state, int x, int y)
     scene *scn = &scenes[vw->scene_num];
     point *cam = &scn->camera;
 
+    double xw, yw;
+
     mouse_old_x = x;
     mouse_old_y = y;
 
-    double dr;
+    double dr, r, mid;
 
     if (active_view >= VIEW_THUMBNAIL_1 &&
         active_view <= VIEW_THUMBNAIL_5)
@@ -1290,6 +1346,19 @@ void mouseclick( int button, int state, int x, int y)
                     dr = -(cam->r - psr.r)/4.0;
                     reposition_3D_camera( active_view, dr, 0.0, 0.0 );
                 }
+                else if (vw->scene_num == SCENE_GAMMA)
+                {
+                    screen2graph( x, y, &xw, &yw, &gamma_graph, active_view );
+                    // Must be in graph region
+                    if ((gamma_graph.xmin <= xw) && (xw <= gamma_graph.xmax) &&
+                        (gamma_graph.ymin <= yw) && (yw <= gamma_graph.ymax))
+                    {
+                        mid = (gamma_graph.xmax + gamma_graph.xmin)/2.0;
+                        r   = (gamma_graph.xmax - gamma_graph.xmin)/2.0;
+                        gamma_graph.xmin = mid - r*5.0/6.0;
+                        gamma_graph.xmax = mid + r*5.0/6.0;
+                    }
+                }
                 break;
             case MOUSE_SCROLL_DOWN:
                 if (scn->dim == 2)
@@ -1303,6 +1372,20 @@ void mouseclick( int button, int state, int x, int y)
                 {
                     dr = (cam->r - psr.r)/3.0;
                     reposition_3D_camera( active_view, dr, 0.0, 0.0 );
+                }
+                else if (vw->scene_num == SCENE_GAMMA)
+                {
+                    screen2graph( x, y, &xw, &yw, &gamma_graph, active_view );
+                    // Must be in graph region
+                    if ((gamma_graph.xmin <= xw) && (xw <= gamma_graph.xmax) &&
+                        (gamma_graph.ymin <= yw) && (yw <= gamma_graph.ymax))
+                    {
+                        mid = (gamma_graph.xmax + gamma_graph.xmin)/2.0;
+                        r   = (gamma_graph.xmax - gamma_graph.xmin)/2.0;
+                        gamma_graph.xmin = mid - r*6.0/5.0;
+                        gamma_graph.xmax = mid + r*6.0/5.0;
+                        if (gamma_graph.xmin < 0.0)  gamma_graph.xmin = 0.0;
+                    }
                 }
                 break;
         }
@@ -1370,6 +1453,7 @@ void mousemove( int x, int y )
                     psr.csl.P4 = ( 180.0 - ph.deg) / P4_scale;
                 else
                     psr.csl.P4 = (-180.0 - ph.deg) / P4_scale;
+                sprintf( status_str, "P4 = %f sec", psr.csl.P4 );
             }
             break;
         case SCENE_GAMMA:
@@ -1388,8 +1472,11 @@ void mousemove( int x, int y )
                 screen2graph( mouse_old_x, mouse_old_y, &xw_old, &yw_old,
                         &gamma_graph, active_view );
                 shift = xw - xw_old;
-                gamma_graph.xmin -= shift;
-                gamma_graph.xmax -= shift;
+                if (gamma_graph.xmin - shift >= 0.0)
+                {
+                    gamma_graph.xmin -= shift;
+                    gamma_graph.xmax -= shift;
+                }
                 mouse_old_x = x;
                 mouse_old_y = y;
             }
@@ -1491,6 +1578,8 @@ void mousepassivemove( int x, int y )
 
                 glutPostRedisplay();
                 break;
+            default:
+                clear_status();
         }
     }
 }
@@ -1503,9 +1592,9 @@ void keyboard( unsigned char key, int x, int y )
     switch (key)
     {
         case 'i':
-            glutSetCursor( GLUT_CURSOR_CYCLE ); // This doesn't appear to work
+            print_status( "Initialising particle population..." );
             init_particles();
-            glutSetCursor( GLUT_CURSOR_LEFT_ARROW );
+            clear_status();
             glutPostRedisplay();
             break;
         case 'q':
