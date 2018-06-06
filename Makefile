@@ -21,7 +21,6 @@ SMALL_TARGETS = psr_fields \
 				psr_cost_function \
 				psr_polangle \
 				psr_fitwidth \
-				psr_trajectory \
 				psr_visiblepoints \
 				psr_mcpa \
 				psr_findcaps \

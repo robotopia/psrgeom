@@ -1155,7 +1155,7 @@ void B_large_step( point *x1, pulsar *psr, double step, int direction,
 }
 
 
-void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
+void traj_step( point *x1, pulsar *psr, double tstep, int direction,
             point *x2, point *Bin, point *Vin )
 /* This follows a particle's trajectory from a given starting point to time t.
  * This necessarily cannot be a naive following of the V field, because the V
@@ -1180,13 +1180,6 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
  *   x2        : the ending point
  */
 {
-    /*
-    // De-rotate the given point x1 back time t
-    psr_angle back_rot;
-    set_psr_angle_rad( &back_rot, -t*psr->Om.rad );
-    rotate_about_axis( x1, x1, &back_rot, 'z', POINT_SET_ALL );
-    */
-
     // Evaluate the B and V fields there
     double v = SPEED_OF_LIGHT;
     point B, V1, V2, *V;
@@ -1213,15 +1206,7 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
 
     // dstep is a distance, so now we can just call Bstep() to step along the
     // magnetic field by the appropriate amount.
-
     Bstep( x1, psr, dstep, direction, x2 );
-
-    /*
-    // Finally, re-rotate the point back to the correct rotation
-    psr_angle rerotate;
-    set_psr_angle_rad( &rerotate, (t+tstep)*psr->Om.rad );
-    rotate_about_axis( x2, x2, &rerotate, 'z', POINT_SET_ALL );
-    */
 }
 
 

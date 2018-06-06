@@ -206,7 +206,7 @@ int advance_particles_once()
                        POINT_SET_ALL );
 
         // Take a step forward in time
-        traj_step( &(pns[n].source), t, &psr, tstep, DIR_OUTWARD,
+        traj_step( &(pns[n].source), &psr, tstep, DIR_OUTWARD,
                 &(pns[n].source), &pns[n].B, &pns[n].V );
 
         set_point_xyz( &(pns[n].source),
@@ -440,16 +440,22 @@ void set_view_properties()
                 vw->aspect_ratio = (GLfloat) vw->w/(GLfloat) vw->h;
                 break;
             case SCENE_ANGLES:
-                vw->left = -0.1;
-                vw->right = 1.5;
+                vw->left   = -0.1;
+                vw->right  = 1.5;
                 vw->bottom = 0.0;
-                vw->top = (vw->right - vw->left)*(double)vw->h/(double)vw->w;
+                vw->top    = (vw->right - vw->left)*(double)vw->h/(double)vw->w;
                 break;
             case SCENE_GAMMA:
-                vw->left = 0.0;
-                vw->right = 1.0;
+                vw->left   = 0.0;
+                vw->right  = 1.0;
                 vw->bottom = 0.0;
-                vw->top = 1.0;
+                vw->top    = 1.0;
+                break;
+            case SCENE_BEAM:
+                vw->left   = -100.0;
+                vw->right  =  100.0;
+                vw->bottom = -100.0;
+                vw->top    =  100.0;
                 break;
         }
     }
@@ -846,9 +852,10 @@ void display_fieldlines( int view_num )
         glPopMatrix();
     }
 
-    glPushMatrix();
 
     // Draw the (tiny) pulsar in the middle
+    glPushMatrix();
+    glRotated( 360.0*t/psr.P, 0.0, 0.0, 0.1 );
     glColor3f( 0.65, 0.65, 0.65 );
     glutSolidSphere(psr.r, 100, 100);
 
@@ -860,8 +867,10 @@ void display_fieldlines( int view_num )
     for (n = 0; n < npoints; n++)
         glVertex3dv( pns[n].source.x );
     glEnd();
+    glPopMatrix();
 
     // Draw the light cylinder
+    glPushMatrix();
     glColor3f( 0.65, 0.65, 0.65 );
     double z;
     int zi;
@@ -885,7 +894,6 @@ void display_fieldlines( int view_num )
                     maxz );
     }
     glEnd();
-
     glPopMatrix();
 }
 

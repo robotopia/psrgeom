@@ -233,7 +233,7 @@ void calc_deutsch_fields( point *X, pulsar *psr, double v, point *B1,
 void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
 void B_large_step( point *x1, pulsar *psr, double step, int direction,
         point *x2 );
-void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
+void traj_step( point *x1, pulsar *psr, double tstep, int direction,
             point *x2, point *Bin, point *Vin );
 double Bdotrxy( point *x, pulsar *psr );
 int cmp_extreme( point *x, pulsar *psr, double precision );
