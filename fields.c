@@ -1180,10 +1180,12 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
  *   x2        : the ending point
  */
 {
+    /*
     // De-rotate the given point x1 back time t
     psr_angle back_rot;
     set_psr_angle_rad( &back_rot, -t*psr->Om.rad );
     rotate_about_axis( x1, x1, &back_rot, 'z', POINT_SET_ALL );
+    */
 
     // Evaluate the B and V fields there
     double v = SPEED_OF_LIGHT;
@@ -1214,10 +1216,12 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
 
     Bstep( x1, psr, dstep, direction, x2 );
 
+    /*
     // Finally, re-rotate the point back to the correct rotation
     psr_angle rerotate;
     set_psr_angle_rad( &rerotate, (t+tstep)*psr->Om.rad );
     rotate_about_axis( x2, x2, &rerotate, 'z', POINT_SET_ALL );
+    */
 }
 
 

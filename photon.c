@@ -31,7 +31,7 @@ void emit_pulsar_photon( pulsar *psr, point *pt, double freq, photon *pn )
     calc_fields( pt, psr, SPEED_OF_LIGHT,
             &pn->B, &pn->V, NULL, &pn->A, NULL, NULL );
     set_point_xyz( &pn->V, pn->V.x[0], pn->V.x[1], pn->V.x[2],
-            POINT_SET_TH | POINT_SET_PH );
+            POINT_SET_ALL );
 
     // Calculate the particle's trajectory curvature
     pn->curvature = calc_curvature( &pn->V, &pn->A );

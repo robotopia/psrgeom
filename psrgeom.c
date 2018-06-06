@@ -8,7 +8,7 @@
 
 #define MAX_NPOINTS 1000000
 
-static double creation_rate; // particles per second (avg)
+static int creation_rate; // particles per time step
 static int npoints;
 static photon pns[MAX_NPOINTS];
 
@@ -58,6 +58,7 @@ typedef struct view_t
     double aspect_ratio;
     int scene_num;
     double left, right, bottom, top;
+    int border; // boolean: border or not?
 } view;
 
 typedef struct graph_t
@@ -71,8 +72,8 @@ typedef struct graph_t
     char xlabel[256], ylabel[256];
 } graph;
 
-#define NVIEWS   8
-#define NSCENES  7
+#define NVIEWS   11
+#define NSCENES  8
 static view  views[NVIEWS];
 static scene scenes[NSCENES];
 static graph gamma_graph;
@@ -100,10 +101,12 @@ enum
     VIEW_THUMBNAIL_3  = 2,
     VIEW_THUMBNAIL_4  = 3,
     VIEW_THUMBNAIL_5  = 4,
-    VIEW_LEFT_MAIN    = 5,
-    VIEW_RIGHT_TOP    = 6,
-    VIEW_RIGHT_BOTTOM = 7,
-    VIEW_STATUS       = 8
+    VIEW_THUMBNAIL_6  = 5,
+    VIEW_THUMBNAIL_7  = 6,
+    VIEW_THUMBNAIL_8  = 7,
+    VIEW_LEFT_MAIN    = 8,
+    VIEW_RIGHT_MAIN   = 9,
+    VIEW_STATUS       = 10
 };
 
 enum
@@ -178,21 +181,92 @@ void calculate_fieldlines()
 }
 */
 
-void advance_particles_once( int use_known_fields )
+void respawn_particle( photon *pn )
 {
+    random_spark_footpoint( &(pn->source), NULL, &psr, t );
+}
+
+int advance_particles_once()
+/* Move each existing particle along a bit.
+ * Returns 1 is at least one particle was killed and respawned,
+ * 0 otherwise.
+ */
+{
+    int respawned = 0;
     int n;
-    point *B = NULL;
-    point *V = NULL;
+    double V_dot_r;
     for (n = 0; n < npoints; n++)
     {
-        if (use_known_fields)
+        // Calculate the magnetic and velocity vectors at the
+        // current point
+        calc_fields( &pns[n].source, &psr, SPEED_OF_LIGHT,
+                &pns[n].B, &pns[n].V, NULL, NULL, NULL, NULL );
+        set_point_xyz( &pns[n].V,
+                       pns[n].V.x[0], pns[n].V.x[1], pns[n].V.x[2],
+                       POINT_SET_ALL );
+
+        // Take a step forward in time
+        traj_step( &(pns[n].source), t, &psr, tstep, DIR_OUTWARD,
+                &(pns[n].source), &pns[n].B, &pns[n].V );
+
+        set_point_xyz( &(pns[n].source),
+                       pns[n].source.x[0],
+                       pns[n].source.x[1],
+                       pns[n].source.x[2],
+                       POINT_SET_ALL );
+
+        // See if we have to kill any particles off and respawn them
+        // Are any about to crash into the pulsar?
+        // Are any about to escape the light cylinder?
+        // For the former, need to check that the velocity is pointing
+        // inward as well
+        V_dot_r = pns[n].V.x[0] * pns[n].source.x[0] +
+                  pns[n].V.x[1] * pns[n].source.x[1] +
+                  pns[n].V.x[2] * pns[n].source.x[2];
+        if (((pns[n].source.r <= SPEED_OF_LIGHT*tstep) &&
+             (V_dot_r < 0.0)) ||
+            (pns[n].source.rhosq >= psr.rL2))
         {
-            B = &pns[n].B;
-            V = &pns[n].V;
+            respawn_particle( &pns[n] );
+            respawned = 1;
+        }
+    }
+
+    // Actually change the time!
+    t += tstep;
+
+    return respawned;
+}
+
+void init_particles()
+/* Populate the pns array until one of the created particles is killed off
+ */
+{
+    npoints = 0;
+    int n;
+    t = 0.0;
+    int respawned;
+
+    while (1)
+    {
+        // Advance existing particles one time step, and check to see if any
+        // were respawned. If so, declare that we have enough particles, and
+        // stop the loop.
+        respawned = advance_particles_once();
+        if (respawned)   break;
+
+        // Make sure our array is still big enough to accommodate a new batch
+        if (npoints + creation_rate > MAX_NPOINTS)
+        {
+            fprintf( stderr, "warning: init_particles: exceeded MAX_NPOINTS. "
+                    "Try lowering the creation rate.\n" );
+            break;
         }
 
-        traj_step( &(pns[n].source), t, &psr, tstep, DIR_OUTWARD,
-                &(pns[n].source), B, V );
+        // Create a new batch (size is determined by creation_rate)
+        for (n = npoints; n < npoints + creation_rate; n++)
+            respawn_particle( &pns[n] );
+        npoints += creation_rate;
     }
 }
 
@@ -253,48 +327,29 @@ void reshape_views()
     int status_bar_height = 30;
 
     // Thumbnails
-    int ntn = 5;          // Number of thumnails
-    int tn_s = W/(2*ntn); // Size of thumbnails
+    int ntn = 8;      // Number of thumnails
+    int tn_s = W/ntn; // Size of thumbnails
 
-    views[VIEW_THUMBNAIL_1].x = 0;
-    views[VIEW_THUMBNAIL_1].y = H-tn_s;
-    views[VIEW_THUMBNAIL_1].h = tn_s;
-    views[VIEW_THUMBNAIL_1].w = tn_s;
-
-    views[VIEW_THUMBNAIL_2].x = tn_s;
-    views[VIEW_THUMBNAIL_2].y = H-tn_s;
-    views[VIEW_THUMBNAIL_2].h = tn_s;
-    views[VIEW_THUMBNAIL_2].w = tn_s;
-
-    views[VIEW_THUMBNAIL_3].x = 2*tn_s;
-    views[VIEW_THUMBNAIL_3].y = H-tn_s;
-    views[VIEW_THUMBNAIL_3].h = tn_s;
-    views[VIEW_THUMBNAIL_3].w = tn_s;
-
-    views[VIEW_THUMBNAIL_4].x = 3*tn_s;
-    views[VIEW_THUMBNAIL_4].y = H-tn_s;
-    views[VIEW_THUMBNAIL_4].h = tn_s;
-    views[VIEW_THUMBNAIL_4].w = tn_s;
-
-    views[VIEW_THUMBNAIL_5].x = 4*tn_s;
-    views[VIEW_THUMBNAIL_5].y = H-tn_s;
-    views[VIEW_THUMBNAIL_5].h = tn_s;
-    views[VIEW_THUMBNAIL_5].w = tn_s;
+    int tn, v;
+    for (tn = 0; tn < ntn; tn++)
+    {
+        v = tn + VIEW_THUMBNAIL_1; // This assumes the view numbers of the
+                                   // thumbnails are contiguous
+        views[v].x = tn*tn_s;
+        views[v].y = H-tn_s;
+        views[v].h = tn_s;
+        views[v].w = tn_s;
+    }
 
     views[VIEW_LEFT_MAIN].x = 0;
     views[VIEW_LEFT_MAIN].y = status_bar_height;
-    views[VIEW_LEFT_MAIN].h = H-tn_s - status_bar_height;
+    views[VIEW_LEFT_MAIN].h = H - tn_s - status_bar_height;
     views[VIEW_LEFT_MAIN].w = W/2;
 
-    views[VIEW_RIGHT_TOP].x = W/2;
-    views[VIEW_RIGHT_TOP].y = (H + status_bar_height)/2;
-    views[VIEW_RIGHT_TOP].h = (H - status_bar_height)/2;
-    views[VIEW_RIGHT_TOP].w = W/2;
-
-    views[VIEW_RIGHT_BOTTOM].x = W/2;
-    views[VIEW_RIGHT_BOTTOM].y = status_bar_height;
-    views[VIEW_RIGHT_BOTTOM].h = (H - status_bar_height)/2;
-    views[VIEW_RIGHT_BOTTOM].w = W/2;
+    views[VIEW_RIGHT_MAIN].x = W/2;
+    views[VIEW_RIGHT_MAIN].y = status_bar_height;
+    views[VIEW_RIGHT_MAIN].h = H - tn_s - status_bar_height;
+    views[VIEW_RIGHT_MAIN].w = W/2;
 
     views[VIEW_STATUS].x = 0;
     views[VIEW_STATUS].y = 0;
@@ -324,36 +379,44 @@ void init_scenes()
 
 void init_views()
 {
+    // Assign scenes to views
     views[VIEW_THUMBNAIL_1 ].scene_num = SCENE_FOOTPTS;
     views[VIEW_THUMBNAIL_2 ].scene_num = SCENE_FIELDLINES;
     views[VIEW_THUMBNAIL_3 ].scene_num = SCENE_ANGLES;
     views[VIEW_THUMBNAIL_4 ].scene_num = SCENE_GAMMA;
     views[VIEW_THUMBNAIL_5 ].scene_num = SCENE_TELESCOPE;
-    views[VIEW_LEFT_MAIN   ].scene_num = SCENE_FIELDLINES;
-    views[VIEW_RIGHT_TOP   ].scene_num = SCENE_BEAM;
-    views[VIEW_RIGHT_BOTTOM].scene_num = SCENE_PROFILE;
+    views[VIEW_THUMBNAIL_6 ].scene_num = SCENE_BEAM;
+    views[VIEW_THUMBNAIL_7 ].scene_num = SCENE_PROFILE;
+    views[VIEW_THUMBNAIL_8 ].scene_num = SCENE_NONE;
+    views[VIEW_LEFT_MAIN   ].scene_num = SCENE_FOOTPTS;
+    views[VIEW_RIGHT_MAIN  ].scene_num = SCENE_BEAM;
     views[VIEW_STATUS      ].scene_num = SCENE_STATUS;
+
+    // Turn on borders
+    views[VIEW_THUMBNAIL_1 ].border = 1;
+    views[VIEW_THUMBNAIL_2 ].border = 1;
+    views[VIEW_THUMBNAIL_3 ].border = 1;
+    views[VIEW_THUMBNAIL_4 ].border = 1;
+    views[VIEW_THUMBNAIL_5 ].border = 1;
+    views[VIEW_THUMBNAIL_6 ].border = 1;
+    views[VIEW_THUMBNAIL_7 ].border = 1;
+    views[VIEW_THUMBNAIL_8 ].border = 1;
 
     reshape_views();
 }
 
 void set_scene_properties()
 {
+    scenes[SCENE_FOOTPTS].dim = 2;
+    scenes[SCENE_ANGLES ].dim = 2;
+    scenes[SCENE_GAMMA  ].dim = 2;
+
     scene *scn;
-
-    scn = &scenes[SCENE_FOOTPTS];
-    scn->dim = 2;
-
     scn = &scenes[SCENE_FIELDLINES];
     scn->dim = 3;
     scn->near_clip = 0.0;
     scn->far_clip  = 2.0*psr.rL;
 
-    scn = &scenes[SCENE_ANGLES];
-    scn->dim = 2;
-
-    scn = &scenes[SCENE_GAMMA];
-    scn->dim = 2;
 }
 
 void set_view_properties()
@@ -562,14 +625,10 @@ void init(void)
 
     // Set the (initial) creation rate of particles
     tstep = 0.001; // seconds
-    creation_rate = 100.0 / tstep; // per second
-    //regenerate_footpoints();
+    creation_rate = 100; // per time step
 
-    // Allocate memory
-    // ...
-
-    // Set time to zero
-    t = 0;
+    // Set up initial population of particles
+    //init_particles();
 
     // Unset nearest_feature
     nearest_feature = NO_FEATURE;
@@ -643,9 +702,33 @@ void draw_graph_frame( graph *gr, int draw_text )
 }
 
 
+void draw_border( int view_num, double linewidth )
+{
+    view *vw = &views[view_num];
+    glColor3f( 0.0, 0.0, 0.0 );
+    glLineWidth( linewidth );
+    glBegin( GL_LINE_LOOP );
+        glVertex2d( vw->left , vw->bottom );
+        glVertex2d( vw->right, vw->bottom );
+        glVertex2d( vw->right, vw->top    );
+        glVertex2d( vw->left , vw->top    );
+    glEnd();
+    glLineWidth( 1.0 );
+}
+
 void display_footpts( int view_num )
 {
     apply_2D_camera( view_num );
+
+    // Draw a border around the perimeter of the view
+    view *vw = &views[view_num];
+    if (vw->border)
+    {
+        double borderwidth = 2.0;
+        glPushMatrix();
+        draw_border( view_num, borderwidth );
+        glPopMatrix();
+    }
 
     // Draw lines of colatitude
     glPushMatrix();
@@ -752,29 +835,31 @@ void display_footpts( int view_num )
 void display_fieldlines( int view_num )
 {
     apply_3D_camera( view_num );
+
+    // Draw a border around the perimeter of the view
+    view *vw = &views[view_num];
+    if (vw->border)
+    {
+        double borderwidth = 2.0;
+        glPushMatrix();
+        draw_border( view_num, borderwidth );
+        glPopMatrix();
+    }
+
     glPushMatrix();
 
     // Draw the (tiny) pulsar in the middle
     glColor3f( 0.65, 0.65, 0.65 );
     glutSolidSphere(psr.r, 100, 100);
 
-/*
-    // Draw field lines
-    glColor3f(1.0, 0.0, 0.0);
-    //glRotatef( psr.al.deg, 0.0, 1.0, 0.0 );
-    int l, p;
-    for (l = 0; l < nlines; l++)
-    {
-        glBegin( GL_LINE_STRIP );
-        for (p = 0; p < npoints[l]; p++)
-        {
-            glVertex3d( line_pts[l][p].x[0],
-                    line_pts[l][p].x[1],
-                    line_pts[l][p].x[2] );
-        }
-        glEnd();
-    }
-*/
+    // Draw particles
+    glColor3f(0.0, 0.65, 0.0);
+    int n;
+    glPointSize( 2.0 );
+    glBegin( GL_POINTS );
+    for (n = 0; n < npoints; n++)
+        glVertex3dv( pns[n].source.x );
+    glEnd();
 
     // Draw the light cylinder
     glColor3f( 0.65, 0.65, 0.65 );
@@ -808,6 +893,16 @@ void display_fieldlines( int view_num )
 void display_gamma( int view_num )
 {
     apply_2D_camera( view_num );
+
+    // Draw a border around the perimeter of the view
+    view *vw = &views[view_num];
+    if (vw->border)
+    {
+        double borderwidth = 2.0;
+        glPushMatrix();
+        draw_border( view_num, borderwidth );
+        glPopMatrix();
+    }
 
     glPushMatrix();
 
@@ -855,6 +950,17 @@ void display_gamma( int view_num )
 void display_angles( int view_num )
 {
     apply_2D_camera( view_num );
+
+    // Draw a border around the perimeter of the view
+    view *vw = &views[view_num];
+    if (vw->border)
+    {
+        double borderwidth = 2.0;
+        glPushMatrix();
+        draw_border( view_num, borderwidth );
+        glPopMatrix();
+    }
+
     glPushMatrix();
 
     // Draw a unit circle at the origin
@@ -978,16 +1084,23 @@ void mouseclick( int button, int state, int x, int y)
 
     double dr;
 
-    if (active_view == VIEW_THUMBNAIL_1 ||
-        active_view == VIEW_THUMBNAIL_2 ||
-        active_view == VIEW_THUMBNAIL_3 ||
-        active_view == VIEW_THUMBNAIL_4 ||
-        active_view == VIEW_THUMBNAIL_5)
+    if (active_view >= VIEW_THUMBNAIL_1 &&
+        active_view <= VIEW_THUMBNAIL_4)
     {
         if (button == MOUSE_LEFT_BUTTON &&
             state  == GLUT_DOWN)
         {
             views[VIEW_LEFT_MAIN].scene_num = views[active_view].scene_num;
+            set_view_properties();
+        }
+    }
+    else if (active_view >= VIEW_THUMBNAIL_5 &&
+             active_view <= VIEW_THUMBNAIL_8)
+    {
+        if (button == MOUSE_LEFT_BUTTON &&
+            state  == GLUT_DOWN)
+        {
+            views[VIEW_RIGHT_MAIN].scene_num = views[active_view].scene_num;
             set_view_properties();
         }
     }
@@ -1040,7 +1153,11 @@ void mousemove( int x, int y )
     if (active_view == VIEW_THUMBNAIL_1 ||
         active_view == VIEW_THUMBNAIL_2 ||
         active_view == VIEW_THUMBNAIL_3 ||
-        active_view == VIEW_THUMBNAIL_4)
+        active_view == VIEW_THUMBNAIL_4 ||
+        active_view == VIEW_THUMBNAIL_5 ||
+        active_view == VIEW_THUMBNAIL_6 ||
+        active_view == VIEW_THUMBNAIL_7 ||
+        active_view == VIEW_THUMBNAIL_8)
     {
         return;
     }
@@ -1170,9 +1287,10 @@ void keyboard( unsigned char key, int x, int y )
 
     switch (key)
     {
-        case 'a':
-            //regenerate_footpoints();
-            //calculate_fieldlines();
+        case 'i':
+            glutSetCursor( GLUT_CURSOR_CYCLE );
+            init_particles();
+            glutSetCursor( GLUT_CURSOR_LEFT_ARROW );
             glutPostRedisplay();
             break;
         case 'q':
