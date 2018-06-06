@@ -32,6 +32,8 @@ static int selected_feature;
 
 static int highlight;
 
+static int repopulate; // bool message, whether to call init_population()
+
 static double P4_scale; // Degrees (of circular P4 arrow) per second
 
 static double t;
@@ -672,6 +674,7 @@ void init(void)
     init_scenes();
     set_scene_properties();
     set_view_properties();
+    repopulate = 0;
 
     // Set the (initial) creation rate of particles
     tstep = 0.001; // seconds
@@ -1221,6 +1224,14 @@ void display(void)
     }
 
     glutSwapBuffers();
+
+    if (repopulate)
+    {
+        init_particles();
+        repopulate = 0;
+        strcpy( status_str, "" );
+        glutPostRedisplay();
+    }
 }
 
 
@@ -1437,33 +1448,51 @@ void mousemove( int x, int y )
             if (ph.deg >= 90.0)  set_psr_angle_deg( &ph, 90.0 );
 
             if (selected_feature == ALPHA_LINE)
+            {
                 copy_psr_angle( &ph, &psr.al );
+                sprintf( status_str, "alpha = %.3f deg", psr.al.deg );
+            }
             else if (selected_feature == ZETA_LINE)
+            {
                 copy_psr_angle( &ph, &psr.ze );
+                sprintf( status_str, "zeta = %.3f deg", psr.ze.deg );
+            }
             break;
         case SCENE_FOOTPTS:
             screen2csl( x, y, &S, &s, NULL, active_view );
             if (selected_feature == CSL_CIRCLE)
+            {
                 copy_psr_angle( &S, &psr.csl.S );
+                sprintf( status_str, "Carousel size = %.3f deg", psr.csl.S.deg );
+            }
             else if (selected_feature == SPARK_CIRCLE)
+            {
                 copy_psr_angle( &s, &psr.csl.s );
+                sprintf( status_str, "Spark size = %.3f deg", psr.csl.s.deg );
+            }
             else if (selected_feature == P4_ARROW)
             {
                 if (ph.deg > 0.0)
                     psr.csl.P4 = ( 180.0 - ph.deg) / P4_scale;
                 else
                     psr.csl.P4 = (-180.0 - ph.deg) / P4_scale;
-                sprintf( status_str, "P4 = %f sec", psr.csl.P4 );
+                sprintf( status_str, "P4 = %.2f sec", fabs(psr.csl.P4) );
             }
             break;
         case SCENE_GAMMA:
             screen2graph( x, y, &xw, &yw, &gamma_graph, active_view );
             // Shift mean
             if (selected_feature == GAMMA_MEAN)
+            {
+                sprintf( status_str, "Mean gamma = %.2f", gd.mean );
                 gd.mean = xw;
+            }
             // Shift std
             else if (selected_feature == GAMMA_STD)
+            {
+                sprintf( status_str, "Std gamma = %.2f", gd.std );
                 gd.std = fabs( xw - gd.mean );
+            }
             // For panning, mouse must be in graph region
             else if ((gamma_graph.xmin <= xw) && (xw <= gamma_graph.xmax) &&
                      (gamma_graph.ymin <= yw) && (yw <= gamma_graph.ymax))
@@ -1523,10 +1552,19 @@ void mousepassivemove( int x, int y )
                 dal = fabs( ph.rad - psr.al.rad );
                 dze = fabs( ph.rad - psr.ze.rad );
                 nearest_feature = (dal <= dze ?  ALPHA_LINE : ZETA_LINE);
-                if (nearest_feature == ALPHA_LINE && dal > 5.0*PI/180.0)
+                if (nearest_feature == ALPHA_LINE && dal < 5.0*PI/180.0)
+                {
+                    sprintf( status_str, "alpha = %.3f deg", psr.al.deg );
+                }
+                else if (nearest_feature == ZETA_LINE && dze < 5.0*PI/180.0)
+                {
+                    sprintf( status_str, "zeta = %.3f deg", psr.ze.deg );
+                }
+                else
+                {
                     nearest_feature = NO_FEATURE;
-                else if (nearest_feature == ZETA_LINE && dze > 5.0*PI/180.0)
-                    nearest_feature = NO_FEATURE;
+                    strcpy( status_str, "" );
+                }
                 glutPostRedisplay();
                 break;
             case SCENE_FOOTPTS:
@@ -1541,13 +1579,25 @@ void mousepassivemove( int x, int y )
                 dP4 = hypot( P4x - xw, P4y - yw );
 
                 if ((dS <= ds) && (dS <= dP4) && (dS/psr.csl.S.deg < 0.05))
+                {
                     nearest_feature = CSL_CIRCLE;
+                    sprintf( status_str, "Carousel size = %.3f deg", psr.csl.S.deg );
+                }
                 else if ((ds <= dP4) && (ds/psr.csl.S.deg < 0.05))
+                {
                     nearest_feature = SPARK_CIRCLE;
+                    sprintf( status_str, "Spark size = %.3f deg", psr.csl.s.deg );
+                }
                 else if (dP4/psr.csl.S.deg < 0.05)
+                {
                     nearest_feature = P4_ARROW;
+                    sprintf( status_str, "P4 = %.2f sec", fabs(psr.csl.P4) );
+                }
                 else
+                {
                     nearest_feature = NO_FEATURE;
+                    strcpy( status_str, "" );
+                }
 
                 glutPostRedisplay();
                 break;
@@ -1563,14 +1613,19 @@ void mousepassivemove( int x, int y )
                         if (fabs(xw - gd.mean) / w <= 0.02)
                         {
                             nearest_feature = GAMMA_MEAN;
+                            sprintf( status_str, "Mean gamma = %.2f", gd.mean );
                         }
                         else if (fabs(xw - (gd.mean + gd.std)) / w <= 0.02 ||
                                  fabs(xw - (gd.mean - gd.std)) / w <= 0.02)
                         {
                             nearest_feature = GAMMA_STD;
+                            sprintf( status_str, "Std gamma = %.2f", gd.std );
                         }
                         else
+                        {
                             nearest_feature = NO_FEATURE;
+                            strcpy( status_str, "" );
+                        }
                     }
                 }
                 else
@@ -1592,9 +1647,8 @@ void keyboard( unsigned char key, int x, int y )
     switch (key)
     {
         case 'i':
-            print_status( "Initialising particle population..." );
-            init_particles();
-            clear_status();
+            strcpy( status_str, "Initialising particle population..." );
+            repopulate = 1;
             glutPostRedisplay();
             break;
         case 'q':
