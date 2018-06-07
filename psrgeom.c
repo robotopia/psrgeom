@@ -90,6 +90,7 @@ typedef struct graph_t
     double xtics, ytics;
     double xmtics, ymtics;
     char xlabel[256], ylabel[256];
+    double xtic_size, ytic_size;
 } graph;
 
 #define NVIEWS   11
@@ -98,6 +99,7 @@ static view  views[NVIEWS];
 static scene scenes[NSCENES];
 static graph gamma_graph;
 static graph period_graph;
+static graph profile_graph;
 
 static int active_view;
 
@@ -237,7 +239,7 @@ void add_to_profile_bins()
                        pns[n].source.x[2]*LoS.x[2]) / SPEED_OF_LIGHT;
 
         // Calculate the profile bin (bin 0 is the fiducial point)
-        bin = (int)round( (t - retard_time)/psr.P );
+        bin = (int)round( NBINS*(t - retard_time)/psr.P );
         while (bin <  0    )  bin += NBINS;
         while (bin >= NBINS)  bin -= NBINS;
 
@@ -483,7 +485,7 @@ void set_scene_properties()
     scenes[SCENE_FOOTPTS   ].dim = 2;
     scenes[SCENE_ANGLES    ].dim = 0;
     scenes[SCENE_GAMMA     ].dim = 0;
-    scenes[SCENE_PROFILE   ].dim = 2;
+    scenes[SCENE_PROFILE   ].dim = 0;
     scenes[SCENE_BEAM      ].dim = 2;
     scenes[SCENE_STATUS    ].dim = 0;
     scenes[SCENE_FIELDLINES].dim = 3;
@@ -520,6 +522,12 @@ void set_view_properties()
                 vw->top    = (vw->right - vw->left)*(double)vw->h/(double)vw->w;
                 break;
             case SCENE_GAMMA:
+                vw->left   = 0.0;
+                vw->right  = 1.0;
+                vw->bottom = 0.0;
+                vw->top    = 1.0;
+                break;
+            case SCENE_PROFILE:
                 vw->left   = 0.0;
                 vw->right  = 1.0;
                 vw->bottom = 0.0;
@@ -699,6 +707,71 @@ void adjust_tstep()
 }
 
 
+void init_graphs()
+{
+    // Set up the default gamma distribution graph
+    gamma_graph.lv     = 0.1;
+    gamma_graph.rv     = 0.95;
+    gamma_graph.bv     = 0.6;
+    gamma_graph.tv     = 0.8;
+    gamma_graph.xmin   = 400.0;
+    gamma_graph.xmax   = 600.0;
+    gamma_graph.ymin   = 0.0;
+    gamma_graph.ymax   = 1.0;
+    gamma_graph.logx   = 0;
+    gamma_graph.logy   = 0;
+    gamma_graph.xtics  = 50.0;
+    gamma_graph.ytics  = 0.0;
+    gamma_graph.xmtics = 10.0;
+    gamma_graph.ymtics = 0.0;
+    gamma_graph.xtic_size = 0.05;
+    gamma_graph.ytic_size = 0.0;
+    strcpy( gamma_graph.xlabel, "γ" );
+    strcpy( gamma_graph.ylabel, "" );
+
+    // Set up the default period graph
+    period_graph.lv     = 0.1;
+    period_graph.rv     = 1.4;
+    period_graph.bv     = 0.1;
+    period_graph.tv     = 0.12;
+    period_graph.xmin   = 0.001;
+    period_graph.xmax   = 100.0;
+    period_graph.ymin   = -1.0;
+    period_graph.ymax   = 1.0;
+    period_graph.logx   = 1;
+    period_graph.logy   = 0;
+    period_graph.xtics  = 10.0;
+    period_graph.ytics  = 0.0;
+    period_graph.xmtics = 10.0;
+    period_graph.ymtics = 0.0;
+    gamma_graph.xtic_size = 0.0;
+    gamma_graph.ytic_size = 0.0;
+    strcpy( period_graph.xlabel, "P (s)" );
+    strcpy( period_graph.ylabel, "" );
+
+    // Set up the default profile graph
+    profile_graph.lv     = 0.1;
+    profile_graph.rv     = 0.95;
+    profile_graph.bv     = 0.1;
+    profile_graph.tv     = 0.95;
+    profile_graph.xmin   = -180.0;
+    profile_graph.xmax   =  180.0;
+    profile_graph.ymin   = 0.0;
+    profile_graph.ymax   = 1.0;
+    profile_graph.logx   = 0;
+    profile_graph.logy   = 0;
+    profile_graph.xtics  = 10.0;
+    profile_graph.ytics  = 0.0;
+    profile_graph.xmtics = 10.0;
+    profile_graph.ymtics = 0.0;
+    profile_graph.xtic_size = 0.01;
+    profile_graph.ytic_size = 0.0;
+    strcpy( profile_graph.xlabel, "Rotation phase (deg)" );
+    strcpy( profile_graph.ylabel, "Flux density (a.u.)" );
+
+}
+
+
 void init(void) 
 {
     // Set a white background
@@ -738,41 +811,8 @@ void init(void)
     // No status message to start with
     strcpy( status_str, "" );
 
-    // Set up the default gamma distribution graph
-    gamma_graph.lv     = 0.1;
-    gamma_graph.rv     = 0.95;
-    gamma_graph.bv     = 0.6;
-    gamma_graph.tv     = 0.8;
-    gamma_graph.xmin   = 400.0;
-    gamma_graph.xmax   = 600.0;
-    gamma_graph.ymin   = 0.0;
-    gamma_graph.ymax   = 1.0;
-    gamma_graph.logx   = 0;
-    gamma_graph.logy   = 0;
-    gamma_graph.xtics  = 50.0;
-    gamma_graph.ytics  = 0.0;
-    gamma_graph.xmtics = 10.0;
-    gamma_graph.ymtics = 0.0;;
-    strcpy( gamma_graph.xlabel, "γ" );
-    strcpy( gamma_graph.ylabel, "" );
-
-    // Set up the default period graph
-    period_graph.lv     = 0.1;
-    period_graph.rv     = 1.4;
-    period_graph.bv     = 0.1;
-    period_graph.tv     = 0.12;
-    period_graph.xmin   = 0.001;
-    period_graph.xmax   = 100.0;
-    period_graph.ymin   = -1.0;
-    period_graph.ymax   = 1.0;
-    period_graph.logx   = 1;
-    period_graph.logy   = 0;
-    period_graph.xtics  = 10.0;
-    period_graph.ytics  = 0.0;
-    period_graph.xmtics = 10.0;
-    period_graph.ymtics = 0.0;;
-    strcpy( period_graph.xlabel, "P (s)" );
-    strcpy( period_graph.ylabel, "" );
+    // Set up graphs
+    init_graphs();
 
     // Set the rest of the scene properties based on the cameras
     init_views();
@@ -834,7 +874,7 @@ void draw_graph_frame( graph *gr, int draw_text )
         for (xtic = xtic_min; xtic <= xtic_max; xtic += gr->xtics)
         {
             glVertex2d( xtic, gr->ymin );
-            glVertex2d( xtic, 0.05*(gr->ymax - gr->ymin) + gr->ymin );
+            glVertex2d( xtic, gr->xtic_size*(gr->ymax - gr->ymin) + gr->ymin );
         }
     }
     if (gr->ytics > 0.0)
@@ -855,7 +895,8 @@ void draw_graph_frame( graph *gr, int draw_text )
         for (xtic = xtic_min; xtic <= xtic_max; xtic += gr->xtics)
         {
             sprintf( ticlabel, "%d", (int)xtic );
-            print_str( ticlabel, xtic-2.0*strlen(ticlabel), -0.20, GLUT_BITMAP_HELVETICA_12 );
+            print_str( ticlabel, xtic-2.0*strlen(ticlabel), -0.20,
+                    GLUT_BITMAP_HELVETICA_12 );
         }
     }
 
@@ -1370,6 +1411,75 @@ void display_beam( int view_num )
 }
 
 
+void display_profile( int view_num )
+{
+    apply_2D_camera( view_num );
+
+    // Draw a border around the perimeter of the view
+    glLineWidth( 1.0 );
+    view *vw = &views[view_num];
+    if (vw->border)
+    {
+        double borderwidth = 2.0;
+        glPushMatrix();
+        draw_border( view_num, borderwidth );
+        glPopMatrix();
+    }
+
+    glPushMatrix();
+
+    // Translate to "graph coords"
+    glTranslated( profile_graph.lv, profile_graph.bv, 0.0 );
+    glScaled( profile_graph.rv - profile_graph.lv,
+              profile_graph.tv - profile_graph.bv,
+              1.0 );
+
+    int draw_text = 0;
+    if (view_num == VIEW_LEFT_MAIN)
+        draw_text = 1;
+    draw_graph_frame( &profile_graph, draw_text );
+
+    // Now go to the graph's world coordinates
+    glScaled( 1.0/(profile_graph.xmax - profile_graph.xmin),
+              1.0/(profile_graph.ymax - profile_graph.ymin),
+              1.0 );
+    glTranslated( -profile_graph.xmin, -profile_graph.ymin, 0.0 );
+
+    // Find the max power, for normalisation purposes
+    int n;
+    double max_power = 0.0;
+    for (n = 0; n < NBINS; n++)
+        if (profile[n] > max_power)
+            max_power = profile[n];
+
+    // Plot the profile (with the fiducial point in the middle)
+    double x, y;
+    if (max_power > 0.0)
+    {
+        glColor3f( 0.0, 0.0, 1.0 );
+        glBegin( GL_LINE_STRIP );
+        for (n = NBINS/2; n < NBINS; n++)
+        {
+            x = 360.0 * (double)(n - NBINS)/(double)(NBINS);
+            y = profile[n] / max_power;
+            if (profile_graph.xmin <= x && x <= profile_graph.xmax)
+                glVertex2d( x, y );
+        }
+        for (n = 0; n < NBINS/2; n++)
+        {
+            x = 360.0 * (double)n/(double)(NBINS);
+            y = profile[n] / max_power;
+            if (profile_graph.xmin <= x && x <= profile_graph.xmax)
+                glVertex2d( x, y );
+        }
+        glEnd();
+    }
+
+    glPopMatrix();
+}
+
+
+
 void display_view(int view_num)
 {
     view *vw = &views[view_num];
@@ -1394,6 +1504,9 @@ void display_view(int view_num)
         case SCENE_BEAM:
             display_beam( view_num );
             break;
+        case SCENE_PROFILE:
+            display_profile( view_num );
+            break;
         case SCENE_STATUS:
             display_status( view_num );
             break;
@@ -1415,8 +1528,8 @@ void display(void)
 
     if (repopulate)
     {
-        init_particles();
         repopulate = 0;
+        init_particles();
         strcpy( status_str, "" );
         glutPostRedisplay();
     }
@@ -1535,6 +1648,7 @@ void mouseclick( int button, int state, int x, int y)
                 }
                 else if (vw->scene_num == SCENE_GAMMA)
                 {
+                    // Zoom in
                     screen2graph( x, y, &xw, &yw, &gamma_graph, active_view );
                     // Must be in graph region
                     if ((gamma_graph.xmin <= xw) && (xw <= gamma_graph.xmax) &&
@@ -1544,6 +1658,20 @@ void mouseclick( int button, int state, int x, int y)
                         r   = (gamma_graph.xmax - gamma_graph.xmin)/2.0;
                         gamma_graph.xmin = mid - r*5.0/6.0;
                         gamma_graph.xmax = mid + r*5.0/6.0;
+                    }
+                }
+                else if (vw->scene_num == SCENE_PROFILE)
+                {
+                    // Zoom in
+                    screen2graph( x, y, &xw, &yw, &profile_graph, active_view );
+                    // Must be in graph region
+                    if ((profile_graph.xmin <= xw) && (xw <= profile_graph.xmax) &&
+                        (profile_graph.ymin <= yw) && (yw <= profile_graph.ymax))
+                    {
+                        mid = (profile_graph.xmax + profile_graph.xmin)/2.0;
+                        r   = (profile_graph.xmax - profile_graph.xmin)/2.0;
+                        profile_graph.xmin = mid - r*5.0/6.0;
+                        profile_graph.xmax = mid + r*5.0/6.0;
                     }
                 }
                 break;
@@ -1562,6 +1690,7 @@ void mouseclick( int button, int state, int x, int y)
                 }
                 else if (vw->scene_num == SCENE_GAMMA)
                 {
+                    // Zoom out
                     screen2graph( x, y, &xw, &yw, &gamma_graph, active_view );
                     // Must be in graph region
                     if ((gamma_graph.xmin <= xw) && (xw <= gamma_graph.xmax) &&
@@ -1572,6 +1701,22 @@ void mouseclick( int button, int state, int x, int y)
                         gamma_graph.xmin = mid - r*6.0/5.0;
                         gamma_graph.xmax = mid + r*6.0/5.0;
                         if (gamma_graph.xmin < 0.0)  gamma_graph.xmin = 0.0;
+                    }
+                }
+                else if (vw->scene_num == SCENE_PROFILE)
+                {
+                    // Zoom out
+                    screen2graph( x, y, &xw, &yw, &profile_graph, active_view );
+                    // Must be in graph region
+                    if ((profile_graph.xmin <= xw) && (xw <= profile_graph.xmax) &&
+                        (profile_graph.ymin <= yw) && (yw <= profile_graph.ymax))
+                    {
+                        mid = (profile_graph.xmax + profile_graph.xmin)/2.0;
+                        r   = (profile_graph.xmax - profile_graph.xmin)/2.0;
+                        profile_graph.xmin = mid - r*6.0/5.0;
+                        profile_graph.xmax = mid + r*6.0/5.0;
+                        if (profile_graph.xmin < -180.0)  profile_graph.xmin = -180.0;
+                        if (profile_graph.xmax >  180.0)  profile_graph.xmax =  180.0;
                     }
                 }
                 break;
@@ -1689,6 +1834,26 @@ void mousemove( int x, int y )
                 {
                     gamma_graph.xmin -= shift;
                     gamma_graph.xmax -= shift;
+                }
+                mouse_old_x = x;
+                mouse_old_y = y;
+            }
+            break;
+        case SCENE_PROFILE:
+            // For panning, mouse must be in graph region
+            screen2graph( x, y, &xw, &yw, &profile_graph, active_view );
+            if ((profile_graph.xmin <= xw) && (xw <= profile_graph.xmax) &&
+                (profile_graph.ymin <= yw) && (yw <= profile_graph.ymax))
+            {
+                // Get old mouse pos (in graph-world coords)
+                screen2graph( mouse_old_x, mouse_old_y, &xw_old, &yw_old,
+                        &profile_graph, active_view );
+                shift = xw - xw_old;
+                if (profile_graph.xmin - shift >= -180.0 &&
+                    profile_graph.xmax - shift <=  180.0)
+                {
+                    profile_graph.xmin -= shift;
+                    profile_graph.xmax -= shift;
                 }
                 mouse_old_x = x;
                 mouse_old_y = y;
@@ -1838,6 +2003,7 @@ void mousepassivemove( int x, int y )
 void play()
 {
     advance_particles_once();
+    add_to_profile_bins();
     glutPostRedisplay();
 }
 
