@@ -145,6 +145,11 @@ enum
 
 static int W, H;
 
+void reset_time()
+{
+    t = 0;
+}
+
 void print_str( char *s, double x, double y, void *font )
 {
     if (s == NULL)
@@ -2025,6 +2030,7 @@ void play()
 }
 
 
+
 void keyboard( unsigned char key, int x, int y )
 {
     int view_num = which_view( x, y );
@@ -2071,6 +2077,7 @@ void keyboard( unsigned char key, int x, int y )
             {
                 clear_profile();
                 clear_timeseries();
+                reset_time();
                 glutPostRedisplay();
             }
             break;
@@ -2110,6 +2117,10 @@ void keyboard( unsigned char key, int x, int y )
                 fprintf( stderr, "error: could not open file "
                                  "'timeseries.txt'\n" );
             }
+            break;
+        case '0':
+            reset_time();
+            glutPostRedisplay();
             break;
         case 'h': // Display help
             printf( "Keyboard commands (mouse cursor must be within program "
