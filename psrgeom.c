@@ -41,6 +41,9 @@ static double tstep;
 
 static double max_power;
 
+static int playforward;
+
+
 enum
 {
     NO_FEATURE,
@@ -593,23 +596,30 @@ void screen2csl( int x, int y, psr_angle *S, psr_angle *s, int *n,
         copy_psr_angle( &th, S );
     if (n)
         *n = n_tmp;
-    if (s && N != 0)
+    if (s)
     {
-        // Calculate how far away from the nearest spark we are
-        double xs, ys; // The coordinates of the spark centre
-        double dx, dy;
+        if (N == 0)
+        {
+            set_psr_angle_deg( s, fabs( psr.csl.S.deg - th.deg ) );
+        }
+        else
+        {
+            // Calculate how far away from the nearest spark we are
+            double xs, ys; // The coordinates of the spark centre
+            double dx, dy;
 
-        psr_angle ph_s;
-        set_psr_angle_deg( &ph_s, (double)n_tmp*360.0/(double)N +
-                                  ph_t - 90.0 );
+            psr_angle ph_s;
+            set_psr_angle_deg( &ph_s, (double)n_tmp*360.0/(double)N +
+                    ph_t - 90.0 );
 
-        xs = psr.csl.S.deg * ph_s.cos;
-        ys = psr.csl.S.deg * ph_s.sin;
+            xs = psr.csl.S.deg * ph_s.cos;
+            ys = psr.csl.S.deg * ph_s.sin;
 
-        dx = xw - xs;
-        dy = yw - ys;
+            dx = xw - xs;
+            dy = yw - ys;
 
-        set_psr_angle_deg( s, hypot( dx, dy ) );
+            set_psr_angle_deg( s, hypot( dx, dy ) );
+        }
     }
 }
 
@@ -636,6 +646,12 @@ void screen2graph( int x, int y, double *xg, double *yg, graph *gr,
         *yg = yp*(gr->ymax - gr->ymin) + gr->ymin;
     else
         *yg = gr->ymin*pow( gr->ymax / gr->ymin, yp );
+}
+
+
+void adjust_tstep()
+{
+    tstep = 0.005*psr.P/(2.0*PI);
 }
 
 
@@ -722,8 +738,9 @@ void init(void)
     repopulate = 0;
 
     // Set the (initial) creation rate of particles
-    tstep = 0.001; // seconds
+    adjust_tstep();
     creation_rate = 100; // per time step
+    playforward = 0;
 
     // Set up initial population of particles
     //init_particles();
@@ -837,7 +854,10 @@ void display_status( int view_num )
     print_str( status_str, 0.01, 0.2, GLUT_BITMAP_HELVETICA_18 );
 
     char time_str[64];
-    sprintf( time_str, "t = %.3f", t );
+    if (playforward)
+        sprintf( time_str, "t = %.3f    Push space to pause", t );
+    else
+        sprintf( time_str, "t = %.3f    Push space to play", t );
     print_str( time_str, 0.51, 0.2, GLUT_BITMAP_HELVETICA_18 );
 }
 
@@ -892,15 +912,25 @@ void display_footpts( int view_num )
     else
         glColor3f( 0.0, 0.0, 1.0 );
 
-    int n;
-    for (n = 0; n < psr.csl.n; n++)
+    if (psr.csl.n == 0)
     {
         glPushMatrix();
-        glRotated( 360.0*t/psr.csl.P4, 0.0, 0.0, 1.0 );
-        glRotated( (double)n * 360.0 / (double)psr.csl.n, 0.0, 0.0, 1.0 );
-        glTranslated( 0.0, -psr.csl.S.deg, 0.0 );
-        draw_2D_circle( psr.csl.s.deg, 0.0, 0.0 );
+        draw_2D_circle( psr.csl.S.deg + psr.csl.s.deg, 0.0, 0.0 );
+        draw_2D_circle( psr.csl.S.deg - psr.csl.s.deg, 0.0, 0.0 );
         glPopMatrix();
+    }
+    else
+    {
+        int n;
+        for (n = 0; n < psr.csl.n; n++)
+        {
+            glPushMatrix();
+            glRotated( 360.0*t/psr.csl.P4, 0.0, 0.0, 1.0 );
+            glRotated( (double)n * 360.0 / (double)psr.csl.n, 0.0, 0.0, 1.0 );
+            glTranslated( 0.0, -psr.csl.S.deg, 0.0 );
+            draw_2D_circle( psr.csl.s.deg, 0.0, 0.0 );
+            glPopMatrix();
+        }
     }
 
     // Draw P4 arrow
@@ -1146,14 +1176,17 @@ void display_angles( int view_num )
 
     if (nearest_feature == ALPHA_LINE)
         glColor3f( 1.0, 0.0, 0.0 );
+    else
+        glColor3f( 0.0, 0.0, 1.0 );
     glBegin( GL_LINES );
     glVertex2d( 0.0, 0.0 );
     glVertex2d( 1.5*sin(psr.al.rad), 1.5*cos(psr.al.rad) );
     glEnd();
-    glColor3f( 0.0, 0.0, 0.0 );
 
     if (nearest_feature == ZETA_LINE)
         glColor3f( 1.0, 0.0, 0.0 );
+    else
+        glColor3f( 0.0, 0.65, 0.0 );
     glBegin( GL_LINES );
     glVertex2d( 0.0, 0.0 );
     glVertex2d( 1.5*sin(psr.ze.rad), 1.5*cos(psr.ze.rad) );
@@ -1419,17 +1452,7 @@ void mouseclick( int button, int state, int x, int y)
                 }
                 if (state == GLUT_UP)
                 {
-                    if (selected_feature == ALPHA_LINE)
-                    {
-                        npoints = 0;
-                    }
-                    else if (selected_feature == CSL_CIRCLE ||
-                             selected_feature == SPARK_CIRCLE)
-                    {
-                        npoints = 0;
-                        set_view_properties();
-                    }
-                    else if (selected_feature == GAMMA_MEAN ||
+                    if (selected_feature == GAMMA_MEAN ||
                              selected_feature == GAMMA_STD  ||
                              selected_feature == GAMMA_LO   ||
                              selected_feature == GAMMA_HI)
@@ -1546,7 +1569,8 @@ void mousemove( int x, int y )
             if (selected_feature == PERIOD_SLIDER)
             {
                 screen2graph( x, y, &xw, &yw, &period_graph, active_view );
-                psr.P = xw;
+                set_pulsar_period( &psr, xw );
+                adjust_tstep();
                 sprintf( status_str, "period = %.3f sec", psr.P );
             }
             if (selected_feature == ALPHA_LINE)
@@ -1753,6 +1777,13 @@ void mousepassivemove( int x, int y )
 }
 
 
+void play()
+{
+    advance_particles_once();
+    glutPostRedisplay();
+}
+
+
 void keyboard( unsigned char key, int x, int y )
 {
     int view_num = which_view( x, y );
@@ -1769,6 +1800,7 @@ void keyboard( unsigned char key, int x, int y )
     {
         case 'i':
             strcpy( status_str, "Initialising particle population..." );
+            playforward = 0;
             repopulate = 1;
             glutPostRedisplay();
             break;
@@ -1790,9 +1822,12 @@ void keyboard( unsigned char key, int x, int y )
                 glutPostRedisplay();
             }
             break;
-        case ' ': // Advance a time step
-            advance_particles_once();
-            glutPostRedisplay();
+        case ' ': // Push "play/pause"
+            playforward = !playforward;
+            if (!playforward)
+                glutIdleFunc( NULL );
+            else
+                glutIdleFunc( play );
             break;
     }
 }
