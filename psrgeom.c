@@ -230,7 +230,7 @@ void add_to_profile_bins()
                            pns[n].V.x[2]*LoS.x[2] );
 
         // Only worry about particles where θ <= 1/γ
-        if (impact_angle.rad > 1.0/gd.mean)
+        if (impact_angle.rad > 10.0/gd.mean)
             continue;
 
         // Calculate the retardation time
