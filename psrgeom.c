@@ -200,6 +200,53 @@ void update_powers()
     }
 }
 
+
+void add_to_profile_bins()
+/* Iterate over all existing points and add their powers (assumed to be
+ * already calculated) to the appropriate profile bin.
+ */
+{
+    int n;
+    double retard_time;
+    int bin;
+
+    // Calculate the phase and the line of sight
+    psr_angle phase;
+    point LoS;
+
+    psr_angle impact_angle;
+
+    set_psr_angle_deg( &phase, 360.0*t/psr.P );
+    line_of_sight( &psr, &phase, &LoS );
+
+    for (n = 0; n < npoints; n++)
+    {
+        // Check to see if the particle is pointing in the right direction
+        set_psr_angle_cos( &impact_angle,
+                           pns[n].V.x[0]*LoS.x[0] +
+                           pns[n].V.x[1]*LoS.x[1] +
+                           pns[n].V.x[2]*LoS.x[2] );
+
+        // Only worry about particles where θ <= 1/γ
+        if (impact_angle.rad > 1.0/gd.mean)
+            continue;
+
+        // Calculate the retardation time
+        retard_time = (pns[n].source.x[0]*LoS.x[0] +
+                       pns[n].source.x[1]*LoS.x[1] +
+                       pns[n].source.x[2]*LoS.x[2]) / SPEED_OF_LIGHT;
+
+        // Calculate the profile bin (bin 0 is the fiducial point)
+        bin = (int)round( (t - retard_time)/psr.P );
+        while (bin <  0    )  bin += NBINS;
+        while (bin >= NBINS)  bin -= NBINS;
+
+        // Add the power to the profile bin
+        profile[bin] += pns[n].power;
+    }
+}
+
+
 int advance_particles_once()
 /* Move each existing particle along a bit.
  * Returns 1 is at least one particle was killed and respawned,
@@ -739,8 +786,8 @@ void init(void)
     creation_rate = 100; // per time step
     playforward = 0;
 
-    // Set up initial population of particles
-    //init_particles();
+    // Clear the profile and pulsestack
+    clear_profile();
 
     max_power = DBL_MIN; // A dummy, non-zero value to get things started
 
@@ -1819,19 +1866,13 @@ void keyboard( unsigned char key, int x, int y )
             glutDestroyWindow( glutGetWindow() );
             break;
         case '+': // Change number of sparks
-            if (vw->scene_num == SCENE_FOOTPTS)
-            {
-                psr.csl.n++;
-                glutPostRedisplay();
-            }
+            psr.csl.n++;
+            glutPostRedisplay();
             break;
         case '-': // Change number of sparks
-            if (vw->scene_num == SCENE_FOOTPTS)
-            {
-                if (psr.csl.n >= 1)
-                    psr.csl.n--;
-                glutPostRedisplay();
-            }
+            if (psr.csl.n >= 1)
+                psr.csl.n--;
+            glutPostRedisplay();
             break;
         case ' ': // Push "play/pause"
             playforward = !playforward;
@@ -1839,6 +1880,20 @@ void keyboard( unsigned char key, int x, int y )
                 glutIdleFunc( NULL );
             else
                 glutIdleFunc( play );
+            break;
+        case 'c': // Clear profile or pulsestack
+            if (vw->scene_num == SCENE_PROFILE)
+                clear_profile();
+            break;
+        case 'h': // Display help
+            printf( "Keyboard commands (mouse cursor must be within program "
+                    "window):\n" );
+            printf( "  c        Clear the profile\n" );
+            printf( "  h        Display this help\n" );
+            printf( "  i        Initialise particle population\n" );
+            printf( "  q        Quit\n" );
+            printf( "  +/-      Change number of sparks\n" );
+            printf( "  [space]  Play/pause time\n" );
             break;
     }
 }
