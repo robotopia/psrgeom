@@ -170,6 +170,14 @@ void clear_profile()
 }
 
 
+void clear_timeseries()
+{
+    int n;
+    for (n = 0; n < NBINS*NPULSES; n++)
+        timeseries[n] = 0.0;
+}
+
+
 int which_view( int x, int y )
 {
     view *vw;
@@ -836,6 +844,7 @@ void init(void)
 
     // Clear the profile and pulsestack
     clear_profile();
+    clear_timeseries();
 
     max_power = DBL_MIN; // A dummy, non-zero value to get things started
 
@@ -2061,6 +2070,7 @@ void keyboard( unsigned char key, int x, int y )
             if (vw->scene_num == SCENE_PROFILE)
             {
                 clear_profile();
+                clear_timeseries();
                 glutPostRedisplay();
             }
             break;
