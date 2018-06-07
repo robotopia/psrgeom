@@ -8,10 +8,12 @@
 #include "psrgeom.h"
 
 #define MAX_NPOINTS 1000000
+#define NBINS 1024
 
 static int creation_rate; // particles per time step
 static int npoints;
 static photon pns[MAX_NPOINTS];
+static double profile[NBINS];
 
 static pulsar psr;
 static gamma_distr gd;
@@ -156,16 +158,11 @@ void print_str( char *s, double x, double y, void *font )
 }
 
 
-void print_status( char *s )
+void clear_profile()
 {
-    strcpy( status_str, s );
-    glutPostRedisplay();
-}
-
-
-void clear_status()
-{
-    print_status("");
+    int n;
+    for (n = 0; n < NBINS; n++)
+        profile[n] = 0.0;
 }
 
 
@@ -1308,6 +1305,20 @@ void display_beam( int view_num )
         glVertex2d( x, y );
     }
     glEnd();
+
+    // Draw the line-of-sight dot
+    psr_angle phase;
+    set_psr_angle_deg( &phase, 360.0*t/psr.P );
+    line_of_sight( &psr, &phase, &LoS );
+    obs_to_mag_frame( &LoS, &psr, NULL, &LoS_mag );
+    x =  LoS_mag.th.deg*LoS_mag.ph.sin;
+    y = -LoS_mag.th.deg*LoS_mag.ph.cos;
+    glColor3d( 0.0, 0.65, 0.0 );
+    glPointSize( 5.0 );
+    glBegin( GL_POINTS );
+    glVertex2d( x, y );
+    glEnd();
+
     glPopMatrix();
 }
 
@@ -1771,7 +1782,7 @@ void mousepassivemove( int x, int y )
                 glutPostRedisplay();
                 break;
             default:
-                clear_status();
+                strcpy( status_str, "" );
         }
     }
 }
