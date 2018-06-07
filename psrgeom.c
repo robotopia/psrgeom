@@ -9,11 +9,13 @@
 
 #define MAX_NPOINTS 1000000
 #define NBINS 1024
+#define NPULSES 100
 
 static int creation_rate; // particles per time step
 static int npoints;
 static photon pns[MAX_NPOINTS];
 static double profile[NBINS];
+static double timeseries[NPULSES*NBINS];
 
 static pulsar psr;
 static gamma_distr gd;
@@ -203,14 +205,14 @@ void update_powers()
 }
 
 
-void add_to_profile_bins()
+void add_to_bins()
 /* Iterate over all existing points and add their powers (assumed to be
  * already calculated) to the appropriate profile bin.
  */
 {
     int n;
     double retard_time;
-    int bin;
+    int profile_bin, timeseries_bin;
 
     // Calculate the phase and the line of sight
     psr_angle phase;
@@ -239,12 +241,18 @@ void add_to_profile_bins()
                        pns[n].source.x[2]*LoS.x[2]) / SPEED_OF_LIGHT;
 
         // Calculate the profile bin (bin 0 is the fiducial point)
-        bin = (int)round( NBINS*(t - retard_time)/psr.P );
-        while (bin <  0    )  bin += NBINS;
-        while (bin >= NBINS)  bin -= NBINS;
+        timeseries_bin = (int)round( NBINS*(t - retard_time)/psr.P );
+
+        profile_bin = timeseries_bin;
+        while (profile_bin <  0    )  profile_bin += NBINS;
+        while (profile_bin >= NBINS)  profile_bin -= NBINS;
 
         // Add the power to the profile bin
-        profile[bin] += pns[n].power;
+        profile[profile_bin] += pns[n].power;
+
+        // Add the power to the timeseries bin
+        if (timeseries_bin >= 0 && timeseries_bin < NPULSES*NBINS)
+            timeseries[timeseries_bin] += pns[n].power;
     }
 }
 
@@ -2003,7 +2011,7 @@ void mousepassivemove( int x, int y )
 void play()
 {
     advance_particles_once();
-    add_to_profile_bins();
+    add_to_bins();
     glutPostRedisplay();
 }
 
@@ -2019,6 +2027,8 @@ void keyboard( unsigned char key, int x, int y )
     }
 
     view *vw = &views[view_num];
+    int n, p;
+    FILE *f;
 
     switch (key)
     {
@@ -2049,7 +2059,47 @@ void keyboard( unsigned char key, int x, int y )
             break;
         case 'c': // Clear profile or pulsestack
             if (vw->scene_num == SCENE_PROFILE)
+            {
                 clear_profile();
+                glutPostRedisplay();
+            }
+            break;
+        case 'p':
+            f = fopen( "profile.txt", "w" );
+            if (f != NULL)
+            {
+                for (n = 0; n < NBINS; n++)
+                    fprintf( f, "%.15e %.15e\n",
+                            360.0*(double)n/(double)NBINS,
+                            profile[n] );
+                fclose( f );
+            }
+            else
+            {
+                fprintf( stderr, "error: could not open file "
+                                 "'profile.txt'\n" );
+            }
+            break;
+        case 't':
+            f = fopen( "timeseries.txt", "w" );
+            if (f != NULL)
+            {
+                for (p = 0; p < NPULSES; p++)
+                {
+                    for (n = 0; n < NBINS; n++)
+                        fprintf( f, "%d %.15e %.15e\n",
+                                    p,
+                                    360.0*(double)n/(double)NBINS,
+                                    timeseries[p*NBINS+n] );
+                    fprintf( f, "\n" );
+                }
+                fclose( f );
+            }
+            else
+            {
+                fprintf( stderr, "error: could not open file "
+                                 "'timeseries.txt'\n" );
+            }
             break;
         case 'h': // Display help
             printf( "Keyboard commands (mouse cursor must be within program "
@@ -2057,7 +2107,10 @@ void keyboard( unsigned char key, int x, int y )
             printf( "  c        Clear the profile\n" );
             printf( "  h        Display this help\n" );
             printf( "  i        Initialise particle population\n" );
+            printf( "  p        Write out the profile to 'profile.txt'\n" );
             printf( "  q        Quit\n" );
+            printf( "  t        Write out the timeseries to "
+                               "'timeseries.txt'\n" );
             printf( "  +/-      Change number of sparks\n" );
             printf( "  [space]  Play/pause time\n" );
             break;
