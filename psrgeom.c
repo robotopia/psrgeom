@@ -1146,7 +1146,7 @@ void display_status( int view_num )
     if (npoints > 0)
     {
         char colorvalue_str[64];
-        char lo[64], hi[64], curr[64];
+        char lo[64], hi[64];
         glColor3d( 0.0, 0.0, 0.0 );
         double curr_val;
         double min, max, scale;
@@ -1196,10 +1196,7 @@ void display_status( int view_num )
         print_str( hi, 0.87, 0.7, GLUT_BITMAP_HELVETICA_12 );
 
         if (!isnan(curr_color))
-        {
-            sprintf( curr, "%e", curr_val );
-            print_str( curr, curr_color, 0.7, GLUT_BITMAP_HELVETICA_12 );
-        }
+            sprintf( status_str, "%s = %e", colorvalue_str, curr_val );
     }
 
     // Print the custom status message
