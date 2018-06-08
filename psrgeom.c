@@ -61,6 +61,7 @@ static int global_colormap;
 static int global_colorvalue;
 static int global_colorlog;
 static int global_colorinvert;
+static double curr_color;
 
 enum
 {
@@ -226,7 +227,7 @@ double normalise( double x, double min, double max, int logscale )
 {
     double xn;
     if (!logscale)
-        xn = (x-min)/(x-max);
+        xn = (x-min)/(max-min);
     else
         xn = log(x/min)/log(max/min);
     return xn;
@@ -1142,39 +1143,60 @@ void display_status( int view_num )
     glEnd();
 
     char colorvalue_str[64];
-    char lo[64], hi[64];
+    char lo[64], hi[64], curr[64];
     glColor3d( 0.0, 0.0, 0.0 );
+    double curr_val;
+    double min, max, scale;
     switch (global_colorvalue)
     {
         case CLR_POWER:
             strcpy( colorvalue_str, "Power (a.u.)" );
-            sprintf( lo, "%e", min_power );
-            sprintf( hi, "%e", max_power );
+            min = min_power;
+            max = max_power;
+            scale = 1.0;
             break;
         case CLR_RADIAL_HEIGHT:
             strcpy( colorvalue_str, "Radial Height (km)" );
-            sprintf( lo, "%e", min_radial_height / 1.0e3 );
-            sprintf( hi, "%e", max_radial_height / 1.0e3 );
+            min = min_radial_height;
+            max = max_radial_height;
+            scale = 1.0e-3;
             break;
         case CLR_PERP_HEIGHT:
             strcpy( colorvalue_str, "Perpendicular Height (km)" );
-            sprintf( lo, "%e", min_perp_height / 1.0e3 );
-            sprintf( hi, "%e", max_perp_height / 1.0e3 );
+            min = min_perp_height;
+            max = max_perp_height;
+            scale = 1.0e-3;
             break;
         case CLR_CURVATURE:
             strcpy( colorvalue_str, "Curvature (km^-1)" );
-            sprintf( lo, "%e", min_curvature * 1.0e3 );
-            sprintf( hi, "%e", max_curvature * 1.0e3 );
+            min = min_curvature;
+            max = max_curvature;
+            scale = 1.0e3;
             break;
         case CLR_MAG_FIELD:
             strcpy( colorvalue_str, "Magnetic Field (/B_0)" );
-            sprintf( lo, "%e", min_mag_field );
-            sprintf( hi, "%e", max_mag_field );
+            min = min_mag_field;
+            max = max_mag_field;
+            scale = 1.0;
             break;
     }
+
+    curr_val = unnormalise( curr_color, min, max, global_colorlog ) * scale;
+    min *= scale;
+    max *= scale;
+
+    sprintf( lo, "%e", min );
+    sprintf( hi, "%e", max );
     print_str( colorvalue_str, 0.5, 0.7, GLUT_BITMAP_HELVETICA_12 );
+
     print_str( lo, 0.01, 0.7, GLUT_BITMAP_HELVETICA_12 );
     print_str( hi, 0.87, 0.7, GLUT_BITMAP_HELVETICA_12 );
+
+    if (!isnan(curr_color))
+    {
+        sprintf( curr, "%e", curr_val );
+        print_str( curr, curr_color, 0.7, GLUT_BITMAP_HELVETICA_12 );
+    }
 
     // Print the custom status message
     glColor3d( 0.0, 0.0, 0.0 );
@@ -2126,6 +2148,8 @@ void mousepassivemove( int x, int y )
     psr_angle S, s;
     int n;
 
+    curr_color = NAN;
+
     // Behaviour is different depending on whether the mouse is over a
     // thumbnail, or over one of the larger panes
 
@@ -2134,7 +2158,8 @@ void mousepassivemove( int x, int y )
     {
         highlight = view_num;
     }
-    else /* mouse if not over a thumbnail */
+    else if (view_num == VIEW_LEFT_MAIN ||
+             view_num == VIEW_RIGHT_MAIN)
     {
         int scene_num = views[view_num].scene_num;
         screen2world( x, y, &xw, &yw, &th, &ph, view_num );
@@ -2234,6 +2259,11 @@ void mousepassivemove( int x, int y )
                 glutPostRedisplay();
                 break;
         }
+    }
+    else if (view_num == VIEW_STATUS)
+    {
+        screen2world( x, y, &curr_color, &yw, NULL, NULL, view_num );
+        glutPostRedisplay();
     }
 }
 
