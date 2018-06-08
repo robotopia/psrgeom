@@ -44,9 +44,23 @@ static double t;
 static double tstep;
 
 static double max_power;
+static double max_curvature;
+static double max_radial_height;
+static double max_perp_height;
+static double max_mag_field;
+
+static double min_power;
+static double min_curvature;
+static double min_radial_height;
+static double min_perp_height;
+static double min_mag_field;
 
 static int playforward;
 
+static int global_colormap;
+static int global_colorvalue;
+static int global_colorlog;
+static int global_colorinvert;
 
 enum
 {
@@ -144,6 +158,133 @@ enum
 };
 
 static int W, H;
+
+// Values to control the point colors
+enum
+{
+    CLR_RADIAL_HEIGHT,
+    CLR_PERP_HEIGHT,
+    CLR_CURVATURE,
+    CLR_MAG_FIELD,
+    CLR_POWER
+};
+
+// Color maps
+enum
+{
+    HEAT_MAP,
+    RAINBOW_MAP,
+    GRAYSCALE_MAP,
+    GNUPLOT_MAP
+};
+
+void colormap( double x, int colormap, int invert )
+{
+    if (invert)
+        x = 1.0 - x;
+
+    double r, g, b;
+    switch (colormap)
+    {
+        case GNUPLOT_MAP:
+            r = sqrt(x);
+            g = x*x*x;
+            b = fabs(sin(2.0*PI*x));
+            break;
+        case HEAT_MAP:
+            r = 3.0*x;
+            g = 3.0*x - 1.0;
+            b = 3.0*x - 2.0;
+            break;
+        case RAINBOW_MAP:
+            r = fabs(2.0*x-0.5);
+            g = fabs(sin(PI*x));
+            b = fabs(cos(0.5*PI*x));
+            break;
+        case GRAYSCALE_MAP:
+            r = x;
+            g = x;
+            b = x;
+            break;
+        default:
+            fprintf( stderr, "warning: unrecognised colormap\n" );
+            break;
+    }
+
+    if (r < 0.0)  r = 0.0;
+    if (g < 0.0)  g = 0.0;
+    if (b < 0.0)  b = 0.0;
+
+    if (r > 1.0)  r = 1.0;
+    if (g > 1.0)  g = 1.0;
+    if (b > 1.0)  b = 1.0;
+
+    glColor3d( r, g, b );
+}
+
+double normalise( double x, double min, double max, int logscale )
+{
+    double xn;
+    if (!logscale)
+        xn = (x-min)/(x-max);
+    else
+        xn = log(x/min)/log(max/min);
+    return xn;
+}
+
+double unnormalise( double xn, double min, double max, int logscale )
+{
+    double x;
+    if (!logscale)
+        x = xn*(max-min) + min;
+    else
+        x = min*pow( max / min, xn );
+    return x;
+}
+
+void set_point_color( photon *pn )
+{
+    double c;
+    switch (global_colorvalue)
+    {
+        case CLR_RADIAL_HEIGHT:
+            c = normalise( pn->source.r,
+                           min_radial_height,
+                           max_radial_height,
+                           global_colorlog );
+            colormap( c, global_colormap, global_colorinvert );
+            break;
+        case CLR_PERP_HEIGHT:
+            c = normalise( sqrt(pn->source.rhosq),
+                           min_perp_height,
+                           max_perp_height,
+                           global_colorlog );
+            colormap( c, global_colormap, global_colorinvert );
+            break;
+        case CLR_CURVATURE:
+            c = normalise( pn->curvature,
+                           min_curvature,
+                           max_curvature,
+                           global_colorlog );
+            colormap( c, global_colormap, global_colorinvert );
+            break;
+        case CLR_MAG_FIELD:
+            c = normalise( pn->B.r,
+                           min_mag_field,
+                           max_mag_field,
+                           global_colorlog );
+            colormap( c, global_colormap, global_colorinvert );
+            break;
+        case CLR_POWER:
+            c = normalise( pn->power,
+                           min_power,
+                           max_power,
+                           global_colorlog );
+            colormap( c, global_colormap, global_colorinvert );
+            break;
+    }
+}
+
 
 void reset_time()
 {
@@ -279,6 +420,7 @@ int advance_particles_once()
     int respawned = 0;
     int n;
     double V_dot_r;
+    double perp_height;
     for (n = 0; n < npoints; n++)
     {
         // Calculate the magnetic and velocity vectors at the
@@ -319,16 +461,42 @@ int advance_particles_once()
         emit_avg_pulsar_photon( &psr, &pns[n].source, freq_lo, freq_hi,
                                 &gd, &pns[n] );
 
-        // Keep track of the particle with the most power, for normalisation
-        // purposes
-        if (pns[n].power > max_power)
-            max_power = pns[n].power;
+        // Keep track of the most extreme particles, for color
+        // normalisation purposes
+        perp_height = sqrt(pns[n].source.rhosq);
+        if (pns[n].power     > max_power        ) max_power         = pns[n].power;
+        if (pns[n].curvature > max_curvature    ) max_curvature     = pns[n].curvature;
+        if (pns[n].source.r  > max_radial_height) max_radial_height = pns[n].source.r;
+        if (perp_height      > max_perp_height  ) max_perp_height   = perp_height;
+        if (pns[n].B.r       > max_mag_field    ) max_mag_field     = pns[n].B.r;
+
+        if (pns[n].power     < min_power        ) min_power         = pns[n].power;
+        if (pns[n].curvature < min_curvature    ) min_curvature     = pns[n].curvature;
+        if (pns[n].source.r  < min_radial_height) min_radial_height = pns[n].source.r;
+        if (perp_height      < min_perp_height  ) min_perp_height   = perp_height;
+        if (pns[n].B.r       < min_mag_field    ) min_mag_field     = pns[n].B.r;
     }
 
     // Actually change the time!
     t += tstep;
 
     return respawned;
+}
+
+void init_maxminvalues()
+{
+    // Set max and min values
+    max_power         = DBL_MIN;
+    max_curvature     = DBL_MIN;
+    max_radial_height = DBL_MIN;
+    max_perp_height   = DBL_MIN;
+    max_mag_field     = DBL_MIN;
+
+    min_power         = 0.0;
+    min_curvature     = 0.0;
+    min_radial_height = 0.0;
+    min_perp_height   = 0.0;
+    min_mag_field     = 0.0;
 }
 
 void init_particles()
@@ -339,6 +507,8 @@ void init_particles()
     int n;
     t = 0.0;
     int respawned;
+
+    init_maxminvalues();
 
     while (1)
     {
@@ -417,7 +587,7 @@ void draw_3D_circle( double radius, double xc, double yc, double z )
 
 void reshape_views()
 {
-    int status_bar_height = 20;
+    int status_bar_height = 50;
 
     // Thumbnails
     int ntn = 8;      // Number of thumnails
@@ -710,15 +880,8 @@ void screen2graph( int x, int y, double *xg, double *yg, graph *gr,
     yp = (yv - gr->bv) / (gr->tv - gr->bv);
 
     // And finally to graph-world coords
-    if (!gr->logx)
-        *xg = xp*(gr->xmax - gr->xmin) + gr->xmin;
-    else
-        *xg = gr->xmin*pow( gr->xmax / gr->xmin, xp );
-
-    if (!gr->logy)
-        *yg = yp*(gr->ymax - gr->ymin) + gr->ymin;
-    else
-        *yg = gr->ymin*pow( gr->ymax / gr->ymin, yp );
+    *xg = unnormalise( xp, gr->xmin, gr->xmax, gr->logx );
+    *yg = unnormalise( yp, gr->ymin, gr->ymax, gr->logy );
 }
 
 
@@ -851,7 +1014,13 @@ void init(void)
     clear_profile();
     clear_timeseries();
 
-    max_power = DBL_MIN; // A dummy, non-zero value to get things started
+    init_maxminvalues();
+
+    // Set the default plotting colormap and colorvalue
+    global_colormap    = HEAT_MAP;
+    global_colorvalue  = CLR_POWER;
+    global_colorlog    = 0;
+    global_colorinvert = 0;
 
     // Unset nearest_feature
     nearest_feature = NO_FEATURE;
@@ -958,14 +1127,66 @@ void display_status( int view_num )
         glPopMatrix();
     }
 
-    print_str( status_str, 0.01, 0.2, GLUT_BITMAP_HELVETICA_18 );
+    // Draw a labeled colorbar
+    glLineWidth( 5.0 );
+    int n;
+    int N = 1000;
+    double x;
+    glBegin( GL_LINE_STRIP );
+    for (n = 0; n < N; n++)
+    {
+        x = (double)n/(double)N;
+        colormap( x, global_colormap, global_colorinvert );
+        glVertex2d( x, 0.55 );
+    }
+    glEnd();
 
+    char colorvalue_str[64];
+    char lo[64], hi[64];
+    glColor3d( 0.0, 0.0, 0.0 );
+    switch (global_colorvalue)
+    {
+        case CLR_POWER:
+            strcpy( colorvalue_str, "Power (a.u.)" );
+            sprintf( lo, "%e", min_power );
+            sprintf( hi, "%e", max_power );
+            break;
+        case CLR_RADIAL_HEIGHT:
+            strcpy( colorvalue_str, "Radial Height (km)" );
+            sprintf( lo, "%e", min_radial_height / 1.0e3 );
+            sprintf( hi, "%e", max_radial_height / 1.0e3 );
+            break;
+        case CLR_PERP_HEIGHT:
+            strcpy( colorvalue_str, "Perpendicular Height (km)" );
+            sprintf( lo, "%e", min_perp_height / 1.0e3 );
+            sprintf( hi, "%e", max_perp_height / 1.0e3 );
+            break;
+        case CLR_CURVATURE:
+            strcpy( colorvalue_str, "Curvature (km^-1)" );
+            sprintf( lo, "%e", min_curvature * 1.0e3 );
+            sprintf( hi, "%e", max_curvature * 1.0e3 );
+            break;
+        case CLR_MAG_FIELD:
+            strcpy( colorvalue_str, "Magnetic Field (/B_0)" );
+            sprintf( lo, "%e", min_mag_field );
+            sprintf( hi, "%e", max_mag_field );
+            break;
+    }
+    print_str( colorvalue_str, 0.5, 0.7, GLUT_BITMAP_HELVETICA_12 );
+    print_str( lo, 0.01, 0.7, GLUT_BITMAP_HELVETICA_12 );
+    print_str( hi, 0.87, 0.7, GLUT_BITMAP_HELVETICA_12 );
+
+    // Print the custom status message
+    glColor3d( 0.0, 0.0, 0.0 );
+    print_str( status_str, 0.01, 0.1, GLUT_BITMAP_HELVETICA_12 );
+
+    // Print the time information on the right hand side
     char time_str[64];
     if (playforward)
         sprintf( time_str, "t = %.3f    Push space to pause", t );
     else
         sprintf( time_str, "t = %.3f    Push space to play", t );
-    print_str( time_str, 0.51, 0.2, GLUT_BITMAP_HELVETICA_18 );
+    print_str( time_str, 0.70, 0.1, GLUT_BITMAP_HELVETICA_12 );
 }
 
 void display_footpts( int view_num )
@@ -1107,12 +1328,14 @@ void display_fieldlines( int view_num )
     glutSolidSphere(psr.r, 100, 100);
 
     // Draw particles
-    glColor3f(0.0, 0.65, 0.0);
     int n;
-    glPointSize( 2.0 );
+    glPointSize( 1.0 );
     glBegin( GL_POINTS );
     for (n = 0; n < npoints; n++)
+    {
+        set_point_color( &(pns[n]) );
         glVertex3dv( pns[n].source.x );
+    }
     glEnd();
     glPopMatrix();
 
@@ -1373,8 +1596,7 @@ void display_beam( int view_num )
     }
     glPopMatrix();
 
-    // Draw the points, whose darkness is weighted by the power
-    double c; // color
+    // Draw the points that make up the beam
     point mag; // The photon point in magnetic frame coordinates
     double x, y; // The (polar) position in Cartesian coordinates
     glPushMatrix();
@@ -1384,8 +1606,7 @@ void display_beam( int view_num )
     for (n = 0; n < npoints; n++)
     {
         // Set the color
-        c = 1.0 - pns[n].power / max_power;
-        glColor3d( 1.0, c, 0.0 );
+        set_point_color( &(pns[n]) );
 
         // Convert the point to the magnetic frame
         obs_to_mag_frame( &pns[n].retarded_LoS, &psr, NULL, &mag );
@@ -1944,7 +2165,6 @@ void mousepassivemove( int x, int y )
                     else
                     {
                         nearest_feature = NO_FEATURE;
-                        strcpy( status_str, "" );
                     }
                 }
                 glutPostRedisplay();
@@ -1978,7 +2198,6 @@ void mousepassivemove( int x, int y )
                 else
                 {
                     nearest_feature = NO_FEATURE;
-                    strcpy( status_str, "" );
                 }
 
                 glutPostRedisplay();
@@ -2006,7 +2225,6 @@ void mousepassivemove( int x, int y )
                         else
                         {
                             nearest_feature = NO_FEATURE;
-                            strcpy( status_str, "" );
                         }
                     }
                 }
@@ -2015,8 +2233,6 @@ void mousepassivemove( int x, int y )
 
                 glutPostRedisplay();
                 break;
-            default:
-                strcpy( status_str, "" );
         }
     }
 }
@@ -2045,25 +2261,28 @@ void keyboard( unsigned char key, int x, int y )
     int n, p;
     FILE *f;
 
+    static int choose_color = 0;
+    static int choose_map   = 0;
+
     switch (key)
     {
         case 'i':
+            global_colorinvert = !global_colorinvert;
+            break;
+        case 'I':
             strcpy( status_str, "Initialising particle population..." );
             playforward = 0;
             repopulate = 1;
-            glutPostRedisplay();
             break;
         case 'q':
             glutDestroyWindow( glutGetWindow() );
             break;
         case '+': // Change number of sparks
             psr.csl.n++;
-            glutPostRedisplay();
             break;
         case '-': // Change number of sparks
             if (psr.csl.n >= 1)
                 psr.csl.n--;
-            glutPostRedisplay();
             break;
         case ' ': // Push "play/pause"
             playforward = !playforward;
@@ -2072,29 +2291,37 @@ void keyboard( unsigned char key, int x, int y )
             else
                 glutIdleFunc( play );
             break;
-        case 'c': // Clear profile or pulsestack
+        case 'C': // Clear profile or pulsestack
             if (vw->scene_num == SCENE_PROFILE)
             {
                 clear_profile();
                 clear_timeseries();
                 reset_time();
-                glutPostRedisplay();
             }
             break;
         case 'p':
-            f = fopen( "profile.txt", "w" );
-            if (f != NULL)
+            if (choose_color)
             {
-                for (n = 0; n < NBINS; n++)
-                    fprintf( f, "%.15e %.15e\n",
-                            360.0*(double)n/(double)NBINS,
-                            profile[n] );
-                fclose( f );
+                global_colorvalue = CLR_POWER;
+                choose_color = 0;
+                strcpy( status_str, "" );
             }
             else
             {
-                fprintf( stderr, "error: could not open file "
-                                 "'profile.txt'\n" );
+                f = fopen( "profile.txt", "w" );
+                if (f != NULL)
+                {
+                    for (n = 0; n < NBINS; n++)
+                        fprintf( f, "%.15e %.15e\n",
+                                360.0*(double)n/(double)NBINS,
+                                profile[n] );
+                    fclose( f );
+                }
+                else
+                {
+                    fprintf( stderr, "error: could not open file "
+                            "'profile.txt'\n" );
+                }
             }
             break;
         case 't':
@@ -2120,22 +2347,108 @@ void keyboard( unsigned char key, int x, int y )
             break;
         case '0':
             reset_time();
-            glutPostRedisplay();
+            break;
+        case 'c':
+            if (choose_color)
+            {
+                global_colorvalue = CLR_CURVATURE;
+                choose_color = 0;
+                strcpy( status_str, "" );
+            }
+            else
+            {
+                choose_color = 1;
+                strcpy( status_str, "Choose plot colour: r = rad. hgt; "
+                                    "h = perp. hgt; c = curvature; "
+                                    "b = mag. field; p = power" );
+            }
+            break;
+        case 'r':
+            if (choose_color)
+            {
+                global_colorvalue = CLR_RADIAL_HEIGHT;
+                choose_color = 0;
+                strcpy( status_str, "" );
+            }
+            else if (choose_map)
+            {
+                global_colormap = RAINBOW_MAP;
+                choose_map = 0;
+                strcpy( status_str, "" );
+            }
+            break;
+            break;
+        case 'm':
+            if (!choose_map)
+            {
+                choose_map = 1;
+                strcpy( status_str, "Choose colormap: h = heat; r = rainbow; "
+                                    "g = grayscale; n = gnuplot; i = invert" );
+            }
+            break;
+        case 'b':
+            if (choose_color)
+            {
+                global_colorvalue = CLR_MAG_FIELD;
+                choose_color = 0;
+                strcpy( status_str, "" );
+            }
+            break;
+        case 'n':
+            if (choose_map)
+            {
+                global_colormap = GNUPLOT_MAP;
+                choose_map = 0;
+                strcpy( status_str, "" );
+            }
+            break;
+        case 'g':
+            if (choose_map)
+            {
+                global_colormap = GRAYSCALE_MAP;
+                choose_map = 0;
+                strcpy( status_str, "" );
+            }
+            break;
+        case 'l':
+            global_colorlog = !global_colorlog;
             break;
         case 'h': // Display help
-            printf( "Keyboard commands (mouse cursor must be within program "
-                    "window):\n" );
-            printf( "  c        Clear the profile\n" );
-            printf( "  h        Display this help\n" );
-            printf( "  i        Initialise particle population\n" );
-            printf( "  p        Write out the profile to 'profile.txt'\n" );
-            printf( "  q        Quit\n" );
-            printf( "  t        Write out the timeseries to "
-                               "'timeseries.txt'\n" );
-            printf( "  +/-      Change number of sparks\n" );
-            printf( "  [space]  Play/pause time\n" );
+            if (choose_color)
+            {
+                global_colorvalue = CLR_PERP_HEIGHT;
+                choose_color = 0;
+                strcpy( status_str, "" );
+            }
+            else if (choose_map)
+            {
+                global_colormap = HEAT_MAP;
+                choose_map = 0;
+                strcpy( status_str, "" );
+            }
+            else
+            {
+                printf( "Keyboard commands (mouse cursor must be within "
+                        "program window):\n" );
+                printf( "  c        Set what determines the point colors\n" );
+                printf( "  C        Clear the profile\n" );
+                printf( "  h        Display this help\n" );
+                printf( "  i        Invert the color map\n" );
+                printf( "  I        Initialise particle population\n" );
+                printf( "  l        Toggle logscale for plotting color\n" );
+                printf( "  m        Set the colormap\n" );
+                printf( "  p        Write out the profile to "
+                                   "'profile.txt'\n" );
+                printf( "  q        Quit\n" );
+                printf( "  t        Write out the timeseries to "
+                                   "'timeseries.txt'\n" );
+                printf( "  +/-      Change number of sparks\n" );
+                printf( "  0        Reset time to t=0\n" );
+                printf( "  [space]  Play/pause time\n" );
+            }
             break;
     }
+    glutPostRedisplay();
 }
 
 int main(int argc, char** argv)
