@@ -487,17 +487,17 @@ int advance_particles_once()
 void init_maxminvalues()
 {
     // Set max and min values
+    min_power         = DBL_MAX;
+    min_curvature     = DBL_MAX;
+    min_radial_height = DBL_MAX;
+    min_perp_height   = DBL_MAX;
+    min_mag_field     = DBL_MAX;
+
     max_power         = DBL_MIN;
     max_curvature     = DBL_MIN;
     max_radial_height = DBL_MIN;
     max_perp_height   = DBL_MIN;
     max_mag_field     = DBL_MIN;
-
-    min_power         = 0.0;
-    min_curvature     = 0.0;
-    min_radial_height = 0.0;
-    min_perp_height   = 0.0;
-    min_mag_field     = 0.0;
 }
 
 void init_particles()
@@ -1128,7 +1128,7 @@ void display_status( int view_num )
         glPopMatrix();
     }
 
-    // Draw a labeled colorbar
+    // Draw a colorbar
     glLineWidth( 5.0 );
     int n;
     int N = 1000;
@@ -1142,60 +1142,64 @@ void display_status( int view_num )
     }
     glEnd();
 
-    char colorvalue_str[64];
-    char lo[64], hi[64], curr[64];
-    glColor3d( 0.0, 0.0, 0.0 );
-    double curr_val;
-    double min, max, scale;
-    switch (global_colorvalue)
+    // Draw labels on the colorbar
+    if (npoints > 0)
     {
-        case CLR_POWER:
-            strcpy( colorvalue_str, "Power (a.u.)" );
-            min = min_power;
-            max = max_power;
-            scale = 1.0;
-            break;
-        case CLR_RADIAL_HEIGHT:
-            strcpy( colorvalue_str, "Radial Height (km)" );
-            min = min_radial_height;
-            max = max_radial_height;
-            scale = 1.0e-3;
-            break;
-        case CLR_PERP_HEIGHT:
-            strcpy( colorvalue_str, "Perpendicular Height (km)" );
-            min = min_perp_height;
-            max = max_perp_height;
-            scale = 1.0e-3;
-            break;
-        case CLR_CURVATURE:
-            strcpy( colorvalue_str, "Curvature (km^-1)" );
-            min = min_curvature;
-            max = max_curvature;
-            scale = 1.0e3;
-            break;
-        case CLR_MAG_FIELD:
-            strcpy( colorvalue_str, "Magnetic Field (/B_0)" );
-            min = min_mag_field;
-            max = max_mag_field;
-            scale = 1.0;
-            break;
-    }
+        char colorvalue_str[64];
+        char lo[64], hi[64], curr[64];
+        glColor3d( 0.0, 0.0, 0.0 );
+        double curr_val;
+        double min, max, scale;
+        switch (global_colorvalue)
+        {
+            case CLR_POWER:
+                strcpy( colorvalue_str, "Power (a.u.)" );
+                min = min_power;
+                max = max_power;
+                scale = 1.0;
+                break;
+            case CLR_RADIAL_HEIGHT:
+                strcpy( colorvalue_str, "Radial Height (km)" );
+                min = min_radial_height;
+                max = max_radial_height;
+                scale = 1.0e-3;
+                break;
+            case CLR_PERP_HEIGHT:
+                strcpy( colorvalue_str, "Perpendicular Height (km)" );
+                min = min_perp_height;
+                max = max_perp_height;
+                scale = 1.0e-3;
+                break;
+            case CLR_CURVATURE:
+                strcpy( colorvalue_str, "Curvature (km^-1)" );
+                min = min_curvature;
+                max = max_curvature;
+                scale = 1.0e3;
+                break;
+            case CLR_MAG_FIELD:
+                strcpy( colorvalue_str, "Magnetic Field (/B_0)" );
+                min = min_mag_field;
+                max = max_mag_field;
+                scale = 1.0;
+                break;
+        }
 
-    curr_val = unnormalise( curr_color, min, max, global_colorlog ) * scale;
-    min *= scale;
-    max *= scale;
+        curr_val = unnormalise( curr_color, min, max, global_colorlog ) * scale;
+        min *= scale;
+        max *= scale;
 
-    sprintf( lo, "%e", min );
-    sprintf( hi, "%e", max );
-    print_str( colorvalue_str, 0.5, 0.7, GLUT_BITMAP_HELVETICA_12 );
+        sprintf( lo, "%e", min );
+        sprintf( hi, "%e", max );
+        print_str( colorvalue_str, 0.5, 0.7, GLUT_BITMAP_HELVETICA_12 );
 
-    print_str( lo, 0.01, 0.7, GLUT_BITMAP_HELVETICA_12 );
-    print_str( hi, 0.87, 0.7, GLUT_BITMAP_HELVETICA_12 );
+        print_str( lo, 0.01, 0.7, GLUT_BITMAP_HELVETICA_12 );
+        print_str( hi, 0.87, 0.7, GLUT_BITMAP_HELVETICA_12 );
 
-    if (!isnan(curr_color))
-    {
-        sprintf( curr, "%e", curr_val );
-        print_str( curr, curr_color, 0.7, GLUT_BITMAP_HELVETICA_12 );
+        if (!isnan(curr_color))
+        {
+            sprintf( curr, "%e", curr_val );
+            print_str( curr, curr_color, 0.7, GLUT_BITMAP_HELVETICA_12 );
+        }
     }
 
     // Print the custom status message
