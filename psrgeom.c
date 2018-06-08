@@ -61,6 +61,7 @@ static int global_colormap;
 static int global_colorvalue;
 static int global_colorlog;
 static int global_colorinvert;
+static double global_pointsize;
 static double curr_color;
 
 enum
@@ -1022,6 +1023,7 @@ void init(void)
     global_colorvalue  = CLR_POWER;
     global_colorlog    = 0;
     global_colorinvert = 0;
+    global_pointsize   = 1.0;
 
     // Unset nearest_feature
     nearest_feature = NO_FEATURE;
@@ -1150,39 +1152,45 @@ void display_status( int view_num )
         glColor3d( 0.0, 0.0, 0.0 );
         double curr_val;
         double min, max, scale;
+        char *log_str;
+        if (global_colorlog)
+            log_str = strdup( "log " );
+        else
+            log_str = strdup( "" );
         switch (global_colorvalue)
         {
             case CLR_POWER:
-                strcpy( colorvalue_str, "Power (a.u.)" );
+                sprintf( colorvalue_str, "%sPower (a.u.)", log_str );
                 min = min_power;
                 max = max_power;
                 scale = 1.0;
                 break;
             case CLR_RADIAL_HEIGHT:
-                strcpy( colorvalue_str, "Radial Height (km)" );
+                sprintf( colorvalue_str, "%sRadial Height (km)", log_str );
                 min = min_radial_height;
                 max = max_radial_height;
                 scale = 1.0e-3;
                 break;
             case CLR_PERP_HEIGHT:
-                strcpy( colorvalue_str, "Perpendicular Height (km)" );
+                sprintf( colorvalue_str, "%sPerpendicular Height (km)", log_str );
                 min = min_perp_height;
                 max = max_perp_height;
                 scale = 1.0e-3;
                 break;
             case CLR_CURVATURE:
-                strcpy( colorvalue_str, "Curvature (km^-1)" );
+                sprintf( colorvalue_str, "%sCurvature (km^-1)", log_str );
                 min = min_curvature;
                 max = max_curvature;
                 scale = 1.0e3;
                 break;
             case CLR_MAG_FIELD:
-                strcpy( colorvalue_str, "Magnetic Field (/B_0)" );
+                sprintf( colorvalue_str, "%sMagnetic Field (/B_0)", log_str );
                 min = min_mag_field;
                 max = max_mag_field;
                 scale = 1.0;
                 break;
         }
+        free( log_str );
 
         curr_val = unnormalise( curr_color, min, max, global_colorlog ) * scale;
         min *= scale;
@@ -1352,7 +1360,7 @@ void display_fieldlines( int view_num )
 
     // Draw particles
     int n;
-    glPointSize( 1.0 );
+    glPointSize( global_pointsize );
     glBegin( GL_POINTS );
     for (n = 0; n < npoints; n++)
     {
@@ -1623,7 +1631,7 @@ void display_beam( int view_num )
     point mag; // The photon point in magnetic frame coordinates
     double x, y; // The (polar) position in Cartesian coordinates
     glPushMatrix();
-    glPointSize( 1.0 );
+    glPointSize( global_pointsize );
     glEnable( GL_BLEND );
     glBegin( GL_POINTS );
     for (n = 0; n < npoints; n++)
@@ -2407,7 +2415,21 @@ void keyboard( unsigned char key, int x, int y )
                 choose_map = 0;
                 strcpy( status_str, "" );
             }
-            break;
+            else
+            {
+                if (creation_rate == 100)
+                {
+                    creation_rate = 1;
+                    global_pointsize = 3.0;
+                }
+                else if (creation_rate == 1)
+                {
+                    creation_rate = 100;
+                    global_pointsize = 1.0;
+                }
+                sprintf( status_str, "Creating %d particle(s) per timestep",
+                        creation_rate );
+            }
             break;
         case 'm':
             if (!choose_map)
@@ -2471,6 +2493,8 @@ void keyboard( unsigned char key, int x, int y )
                 printf( "  p        Write out the profile to "
                                    "'profile.txt'\n" );
                 printf( "  q        Quit\n" );
+                printf( "  r        Toggle creation rate between 1 and 100 "
+                                   "particles per time step\n" );
                 printf( "  t        Write out the timeseries to "
                                    "'timeseries.txt'\n" );
                 printf( "  +/-      Change number of sparks\n" );
