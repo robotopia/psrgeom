@@ -51,6 +51,7 @@ struct opts
     double  p_start;     // starting value of p
     double  p_stop;      // stopping value of p
     int     p_nstep;     // number of p steps
+    int     dipole;      // use a dipole field instead of Deutsch
 };
 
 void usage();
@@ -61,17 +62,18 @@ int main( int argc, char *argv[] )
 {
     // Set up struct for command line options and set default values
     struct opts o;
-    o.al_deg      = NAN;
-    o.P_sec       = NAN;
-    o.ze_deg      = NAN;
-    o.rL_norm     = 0;
-    o.outfile     = NULL;
+    o.al_deg    = NAN;
+    o.P_sec     = NAN;
+    o.ze_deg    = NAN;
+    o.rL_norm   = 0;
+    o.outfile   = NULL;
     o.s_start   = NAN;
     o.s_stop    = NAN;
     o.s_nstep   = 0;
     o.p_start   = NAN;
     o.p_stop    = NAN;
     o.p_nstep   = 0;
+    o.dipole    = 0;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -103,6 +105,9 @@ int main( int argc, char *argv[] )
                        pulsar surface */
 
     set_pulsar( &psr, ra, dec, P, r, al, ze );
+
+    if (o.dipole)
+        psr.field_type = DIPOLE;
 
     // Set scaling factor in case user requests result in units of rL
     double xscale = (o.rL_norm ? 1.0/psr.rL : 1.0);
@@ -305,6 +310,8 @@ void usage()
     printf( "  -z  zeta     The angle between the rotation axis and the line "
                            "of sight in degrees (required)\n" );
     printf( "\nOTHER OPTIONS:\n" );
+    printf( "  -d           Use a dipole field instead of the default "
+                           "Deutsch field\n" );
     printf( "  -h           Display this help and exit\n" );
     printf( "  -L           Normalise distances to light cylinder radius\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
@@ -316,12 +323,15 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:hLo:p:P:s:S:z:")) != -1)
+    while ((c = getopt( argc, argv, "a:dhLo:p:P:s:S:z:")) != -1)
     {
         switch (c)
         {
             case 'a':
                 o->al_deg = atof(optarg);
+                break;
+            case 'd':
+                o->dipole = 1;
                 break;
             case 'h':
                 usage();
