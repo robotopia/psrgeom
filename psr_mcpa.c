@@ -42,6 +42,7 @@ struct opts
 {
     double  al_deg;      // alpha angle in deg
     double  ze_deg;      // zeta angle in deg
+    double  be_deg;      // beta angle in deg
     double  P_sec;       // period, in sec
     int     rL_norm;     // bool: normalise to light cylinder radius?
     char   *outfile;     // name of output file (NULL means stdout)
@@ -66,6 +67,7 @@ int main( int argc, char *argv[] )
     o.al_deg    = NAN;
     o.P_sec     = NAN;
     o.ze_deg    = NAN;
+    o.be_deg    = NAN;
     o.rL_norm   = 0;
     o.outfile   = NULL;
     o.s_start   = NAN;
@@ -142,13 +144,16 @@ int main( int argc, char *argv[] )
     psr_angle s; // The "polar cap distance" to the magnetic pole
     psr_angle p; // The azimuth angle around the polar cap
 
+    psr_angle pc_radius; // The polar cap radius
+    set_psr_angle_sin( &pc_radius, sqrt( psr.r / psr.rL ) );
+
     for (s_idx = 0; s_idx < o.s_nstep; s_idx++)
     {
         // Convert s_idx to an angle
         ds = (o.s_nstep == 1 ?
                 0.0 :
                 (o.s_stop - o.s_start)/(o.s_nstep - 1.0));
-        s_deg = o.s_start + s_idx*ds;
+        s_deg = (o.s_start + s_idx*ds) * pc_radius.deg;
         set_psr_angle_deg( &s, s_deg );
 
         // Reset open_found to NOT found
@@ -299,6 +304,9 @@ void usage()
     printf( "REQUIRED OPTIONS:\n" );
     printf( "  -a  alpha    The angle between the rotation and magetic axes "
                            "in degrees (required)\n" );
+    printf( "  -b  zeta     The \"impact\" angle between the magnetic axis "
+                           "and the line of sight in degrees (either -z or "
+                           "-b is required)\n" );
     printf( "  -P  period   The rotation period of the pulsar, in seconds "
                            "(required)\n" );
     printf( "  -p  p[:P[:n]]   The azimuth relative to the magnetic axis, "
@@ -307,15 +315,16 @@ void usage()
             "                 p      ==> p:p:1\n"
             "                 p:P    ==> p:P:2\n" );
     printf( "  -s  s[:S[:n]]   The angular distance from the magnetic axis, "
-                           "in degrees. The range is from s to S with n "
-                           "steps.\n"
+                           "normalised to the polar cap radius. The range is "
+                           "from s to S with n steps.\n"
             "                 s      ==> s:s:1\n"
             "                 s:S    ==> s:S:2\n" );
     printf( "  -t  step     Step size for moving along magnetic field lines, "
                            "as a fraction of the light cylinder radius "
                            "(default: 0.01)\n" );
     printf( "  -z  zeta     The angle between the rotation axis and the line "
-                           "of sight in degrees (required)\n" );
+                           "of sight in degrees (either -z or -b is "
+                           "required, but -z trumps -b)\n" );
     printf( "\nOTHER OPTIONS:\n" );
     printf( "  -1           Only report one (i.e. the first) solution for "
                            "each field line (default: off)\n" );
@@ -332,7 +341,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "1a:dhLo:p:P:s:S:z:")) != -1)
+    while ((c = getopt( argc, argv, "1a:b:dhLo:p:P:s:S:z:")) != -1)
     {
         switch (c)
         {
@@ -341,6 +350,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 break;
             case 'a':
                 o->al_deg = atof(optarg);
+                break;
+            case 'b':
+                o->be_deg = atof(optarg);
                 break;
             case 'd':
                 o->dipole = 1;
@@ -383,9 +395,10 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
     }
 
     // Check that all the arguments are valid
-    if (isnan(o->al_deg) || isnan(o->P_sec) || isnan(o->ze_deg))
+    if ( isnan(o->al_deg) || isnan(o->P_sec) ||
+        (isnan(o->ze_deg) && isnan(o->be_deg)))
     {
-        fprintf( stderr, "error: -a, -P, and -z options required"
+        fprintf( stderr, "error: -a, -P, and -z/-b options required"
                          "\n" );
         usage();
         exit(EXIT_FAILURE);
@@ -397,6 +410,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
         usage();
         exit(EXIT_FAILURE);
     }
+
+    if (isnan(o->ze_deg))
+        o->ze_deg = o->al_deg + o->be_deg;
 }
 
 
