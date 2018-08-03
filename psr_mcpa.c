@@ -52,6 +52,7 @@ struct opts
     double  p_stop;      // stopping value of p
     int     p_nstep;     // number of p steps
     int     dipole;      // use a dipole field instead of Deutsch
+    int     firstonly;   // for each field line, stop at the first solution
 };
 
 void usage();
@@ -74,6 +75,7 @@ int main( int argc, char *argv[] )
     o.p_stop    = NAN;
     o.p_nstep   = 0;
     o.dipole    = 0;
+    o.firstonly = 0;
 
     parse_cmd_line( argc, argv, &o );
 
@@ -253,12 +255,17 @@ int main( int argc, char *argv[] )
                 // size of the volume that converges appears to be larger than
                 // expected. This is probably a bug, but for now I'll just
                 // move along 1 km before trying again.
-                copy_point( &emit_pt, &init_pt );
-                Bstep( &init_pt, &psr, 1000.0, DIR_OUTWARD, &init_pt );
-                set_point_xyz( &init_pt, init_pt.x[0],
-                                         init_pt.x[1],
-                                         init_pt.x[2],
-                                         POINT_SET_ALL );
+                if (o.firstonly)
+                    break;
+                else
+                {
+                    copy_point( &emit_pt, &init_pt );
+                    Bstep( &init_pt, &psr, 1000.0, DIR_OUTWARD, &init_pt );
+                    set_point_xyz( &init_pt, init_pt.x[0],
+                                             init_pt.x[1],
+                                             init_pt.x[2],
+                                             POINT_SET_ALL );
+                }
             }
 
             // If s = 0°, then no need to do any more values of p
@@ -310,6 +317,8 @@ void usage()
     printf( "  -z  zeta     The angle between the rotation axis and the line "
                            "of sight in degrees (required)\n" );
     printf( "\nOTHER OPTIONS:\n" );
+    printf( "  -1           Only report one (i.e. the first) solution for "
+                           "each field line (default: off)\n" );
     printf( "  -d           Use a dipole field instead of the default "
                            "Deutsch field\n" );
     printf( "  -h           Display this help and exit\n" );
@@ -323,10 +332,13 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "a:dhLo:p:P:s:S:z:")) != -1)
+    while ((c = getopt( argc, argv, "1a:dhLo:p:P:s:S:z:")) != -1)
     {
         switch (c)
         {
+            case '1':
+                o->firstonly = 1;
+                break;
             case 'a':
                 o->al_deg = atof(optarg);
                 break;
