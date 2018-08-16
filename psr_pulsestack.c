@@ -64,6 +64,7 @@ struct opts
     int     nsparks;     // the number of sparks
     double  sigma;       // the spark angular size (measured from mag. pole)
     double  tstep;       // the increment travel distance along field lines
+    char   *profile;     // file containing profile information
 };
 
 void usage();
@@ -237,6 +238,7 @@ int main( int argc, char *argv[] )
     // Clean up
 
     free( o.outfile );
+    free( o.profile );
 
     if (o.outfile != NULL)
         fclose( f );
@@ -264,6 +266,7 @@ void set_default_options( struct opts *o )
     o->nsparks   = 0;
     o->sigma     = NAN;
     o->tstep     = 0.01;
+    o->profile   = NULL;
 }
 
 
@@ -337,6 +340,12 @@ void usage()
                            "each field line (default: off)\n" );
     printf( "  -d           Use a dipole field instead of the default "
                            "Deutsch field\n" );
+    printf( "  -e  file     File containing profile which will be used to "
+                           "modulate the pulsestack.\n"
+            "               The file must contain a single list of whitespace-"
+                           "separated numbers indicating total intensity.\n"
+            "               It is assumed that the numbers span all 360 deg "
+                           "of rotation phase (from -180 to 180).\n" );
     printf( "  -h           Display this help and exit\n" );
     printf( "  -i           Don't interpolate in pulse phase\n" );
     printf( "  -l  pulses   Number of pulses to output (default: 100)\n" );
@@ -358,7 +367,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "14:a:b:dhil:n:N:o:p:P:r:s:S:t:z:")) != -1)
+    while ((c = getopt( argc, argv, "14:a:b:de:hil:n:N:o:p:P:r:s:S:t:z:")) != -1)
     {
         switch (c)
         {
@@ -376,6 +385,9 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 break;
             case 'd':
                 o->dipole = 1;
+                break;
+            case 'e':
+                o->profile = strdup(optarg);
                 break;
             case 'h':
                 usage();
