@@ -29,7 +29,8 @@ TARGETS = psr_fields \
 		  psr_lofl \
 		  psr_profile \
 		  psr_jacksonbeamsingle \
-		  psr_beam
+		  psr_beam \
+		  psr_pulsestack
 
 TESTS = calc_fields_test \
 		transform_new_xz_test \
