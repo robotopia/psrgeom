@@ -263,7 +263,7 @@ void set_polar_cap_radius( pulsar *psr )
  * The result is put in pc_radius.
  */
 {
-    set_psr_angle_sin( &(psr->pcr), sqrt( psr->r, psr->rL ) );
+    set_psr_angle_sin( &(psr->pcr), sqrt( psr->r / psr->rL ) );
 }
 
 

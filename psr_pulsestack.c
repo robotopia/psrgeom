@@ -85,7 +85,7 @@ int main( int argc, char *argv[] )
     o.nphases   = 1024;
     o.npulses   = 100;
     o.dipole    = 0;
-    o.firstonly = 0;
+    o.firstonly = 1;
     o.no_interp = 0;
     o.P4        = NAN;
     o.nsparks   = 0;
@@ -136,55 +136,44 @@ int main( int argc, char *argv[] )
     print_psrg_header( f, argc, argv );
     print_col_headers( f );
 
-    // For calculating the (retarded) line of sight
-    point B; // The magnetic field at the emission point
-    point V, retarded_LoS;
-    point A; // The acceleration vector at the emission point
-    psr_angle dph; // The retardation angle
-    psr_angle psi; // The polarisation angle
-
     // Loop over the polar cap
-    int open_found; // Set to 1 if an open line is found for a given s
     int linetype;   // either CLOSED_LINE or OPEN_LINE
     point foot_pt, foot_pt_mag;
-    point init_pt, emit_pt;
-    psr_angle phase;     // The emission phase
-    psr_angle ret_phase; // The retarded (observed) phase
-    double kappa; // The curvature
+    point init_pt;
     int find_emitpt_result;
-    double dist, dist_tmp; // Keep track of distance travelled along field lines
+    double dist[o.npoints], dist_tmp; /* Keep track of dist travelled along
+                                       * field lines
+                                       */
 
     int p_idx;
     double p_deg;
     psr_angle p; // The azimuth angle around the polar cap
 
-    psr_angle pc_radius; // The polar cap radius
-    set_psr_angle_sin( &pc_radius, sqrt( psr.r / psr.rL ) );
+    // Loop around the polar cap in azimuth and find the emission points
+    point emit_pts[o.npoints];
 
-    // Reset open_found to NOT found
-    open_found = 0;
-
-    // Loop around the polar cap in azimuth
     for (p_idx = 0; p_idx < o.npoints; p_idx++)
     {
         // Convert p_idx to an angle
-        p_deg = p_idx * 360.0 / o.npoints;
+        p_deg = p_idx * 360.0 / o.npoints - 180.0; // Go from -180° to 180°
         set_psr_angle_deg( &p, p_deg );
 
         // Convert (s,p) into a point in the magnetic frame
-        set_point_sph( &foot_pt_mag, psr.r, &s, &p, POINT_SET_ALL );
+        set_point_sph( &foot_pt_mag, psr.r, &psr.csl.S, &p, POINT_SET_ALL );
 
         // Convert the foot_pt into observer coordinates
         mag_to_obs_frame( &foot_pt_mag, &psr, NULL, &foot_pt );
 
         // Now check that we're on an open field line
-        linetype = get_fieldline_type( &foot_pt, &psr, o.rL_norm, NULL,
+        linetype = get_fieldline_type( &foot_pt, &psr, 0, NULL,
                 NULL, NULL );
         if (linetype == CLOSED_LINE)
         {
-            continue;
+            fprintf( stderr, "error: field line at magnetic azimuth p = %f "
+                             "is closed. Try a smaller value of s.\n",
+                             p_deg );
+            exit(EXIT_FAILURE);
         }
-        open_found = 1;
 
         // Now find the emission points along this line!
         // Start 1 metre above the surface
@@ -193,87 +182,60 @@ int main( int argc, char *argv[] )
                                  init_pt.x[1],
                                  init_pt.x[2],
                                  POINT_SET_ALL );
-        dist = 0.0; // Start distance tracker
+        dist[p_idx] = 0.0; // Start distance tracker
 
-        while (1)
+        // Climb up the field line to find the next emit_pt
+        find_emitpt_result = find_next_line_emission_point( &psr,
+                &init_pt, DIR_OUTWARD, &emit_pts[p_idx], &dist_tmp,
+                NULL );
+        dist[p_idx] += dist_tmp;
+
+        // If no point was found, put x = y = z = 0
+        if (find_emitpt_result != EMIT_PT_FOUND)
         {
-            // Climb up the field line to find the next emit_pt
-            find_emitpt_result = find_next_line_emission_point( &psr,
-                    &init_pt, DIR_OUTWARD, &emit_pt, &dist_tmp,
-                    NULL );
-            dist += dist_tmp;
-
-            // If no point was found, exit the loop
-            if (find_emitpt_result != EMIT_PT_FOUND)
-            {
-                break;
-            }
-
-            // Calculate the (retarded) phase at which the emission would
-            // be seen. First, set the V to the velocity vector. While
-            // we're at it, get the acceleration vector and the curvature.
-            calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, &B, &V,
-                         NULL, &A, NULL, NULL );
-            calc_retardation( &emit_pt, &psr, &V, &dph, &retarded_LoS );
-            kappa = calc_curvature( &V, &A );
-
-            // Now, the observed phase is the negative of the azimuthal
-            // angle of the retarded line of sight
-            set_point_xyz( &V, V.x[0], V.x[1], V.x[2], POINT_SET_PH );
-            if (psr.spin == SPIN_POS)
-                set_psr_angle_deg( &phase, -V.ph.deg );
-            else
-                copy_psr_angle( &(V.ph), &phase );
-            set_psr_angle_deg( &ret_phase, -(retarded_LoS.ph.deg) );
-
-            // Calculate the observed polarisation angle at emit_pt
-            accel_to_pol_angle( &psr, &A, &phase, &psi );
-
-            // Print out results!
-            /*
-            fprintf( f, "%.15e %.15e %.15e %.15e "
-                        "%.15e %.15e %.15e %.15e\n",
-                        psr.csl.S.deg, p_deg,
-                        emit_pt.x[0] * xscale,
-                        emit_pt.x[1] * xscale,
-                        emit_pt.x[2] * xscale,
-                        ret_phase.deg, psi.deg, kappa );
-            */
-            fprintf( f, "%.15e %.15e %.15e %.15e "
-                        "%.15e %.15e %.15e %.15e "
-                        "%.15e %.15e %.15e %.15e "
-                        "%.15e %.15e %.15e %.15e "
-                        "%.15e %.15e %.15e %.15e "
-                        "%.15e\n",
-                        psr.csl.S.deg, p_deg,
-                        emit_pt.x[0] * xscale,
-                        emit_pt.x[1] * xscale,
-                        emit_pt.x[2] * xscale,
-                        phase.deg, psi.deg, kappa,
-                        B.x[0], B.x[1], B.x[2], B.r,
-                        V.x[0], V.x[1], V.x[2], V.r,
-                        A.x[0], A.x[1], A.x[2], A.r,
-                        dist );
-
-            // Set the emission point to the new initial point, go another
-            // 1 km along, and then try to find the next emit_pt
-            // It seems that anything much short than a 1 km jump
-            // results in the next point being found in the same area. The
-            // size of the volume that converges appears to be larger than
-            // expected. This is probably a bug, but for now I'll just
-            // move along 1 km before trying again.
-            if (o.firstonly)
-                break;
-            else
-            {
-                copy_point( &emit_pt, &init_pt );
-                Bstep( &init_pt, &psr, 1000.0, DIR_OUTWARD, &init_pt );
-                set_point_xyz( &init_pt, init_pt.x[0],
-                                         init_pt.x[1],
-                                         init_pt.x[2],
-                                         POINT_SET_ALL );
-            }
+            set_point_xyz( &emit_pts[p_idx], 0.0, 0.0, 0.0, POINT_SET_ALL );
         }
+    }
+
+    // Calculate the (retarded) phase at which the emission would be seen.
+    // First, set the V to the velocity vector. While we're at it, get the
+    // acceleration vector.
+
+    point B[o.npoints]; // The magnetic field at the emission point
+    point V[o.npoints]; // The velocity field at the emission point
+    point A[o.npoints]; // The accelrtn field at the emission point
+    point retarded_LoS[o.npoints];
+
+    psr_angle dph[o.npoints]; // The retardation angle
+    psr_angle psi[o.npoints]; // The polarisation angle
+
+    psr_angle phase[o.npoints];     // The emission phase
+    psr_angle ret_phase[o.npoints]; // The retarded (observed) phase
+
+    for (p_idx = 0; p_idx < o.npoints; p_idx++)
+    {
+        calc_fields( &emit_pts[p_idx], &psr, SPEED_OF_LIGHT, &B[p_idx],
+                &V[p_idx], NULL, &A[p_idx], NULL, NULL );
+
+        calc_retardation( &emit_pts[p_idx], &psr, &V[p_idx], &dph[p_idx],
+                &retarded_LoS[p_idx] );
+
+        // Now, the observed phase is the negative of the azimuthal
+        // angle of the retarded line of sight
+        set_point_xyz( &V[p_idx], V[p_idx].x[0], V[p_idx].x[1], V[p_idx].x[2],
+                POINT_SET_PH );
+        if (psr.spin == SPIN_POS)
+            set_psr_angle_deg( &phase[p_idx], -V[p_idx].ph.deg );
+        else
+            copy_psr_angle( &(V[p_idx].ph), &phase[p_idx] );
+        set_psr_angle_deg( &ret_phase[p_idx], -(retarded_LoS[p_idx].ph.deg) );
+
+        // Calculate the observed polarisation angle at emit_pt
+        accel_to_pol_angle( &psr, &A[p_idx], &phase[p_idx], &psi[p_idx] );
+
+        // For each emission point, calculate the rotation phase at which the
+        // particle must have left the surface in order to arrive at the emission
+        // point at the correct phase for observing.
     }
 
 
@@ -418,7 +380,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
         exit(EXIT_FAILURE);
     }
 
-    if (isnan(o->s) || isnan(o->4) || isnan(o->sigma))
+    if (isnan(o->s) || isnan(o->P4) || isnan(o->sigma))
     {
         fprintf( stderr, "error: -s, -S, and -4 options required\n" );
         usage();
@@ -439,7 +401,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
         exit(EXIT_FAILURE);
     }
 
-    if (o->nphases <= 0 && !o.no_interp)
+    if (o->nphases <= 0 && !o->no_interp)
     {
         fprintf( stderr, "error: number of phase bins (-p) must be > 0\n" );
         usage();
