@@ -39,7 +39,8 @@ void calc_fields( point *X, pulsar *psr, double v,
             calc_deutsch_fields( X, psr, v, B1, V1, V2, A1, A2, nsols );
             break;
         default:
-            fprintf( stderr, "error: calc_fields: unrecognised field type\n" );
+            fprintf( stderr, "error: calc_fields: unrecognised field type "
+                    " = %d\n", psr->field_type );
             break;
     }
 }

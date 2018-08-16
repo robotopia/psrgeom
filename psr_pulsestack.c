@@ -127,9 +127,8 @@ int main( int argc, char *argv[] )
                 NULL, NULL );
         if (linetype == CLOSED_LINE)
         {
-            fprintf( stderr, "error: field line at magnetic azimuth p = %f "
-                             "is closed. Try a smaller value of s.\n",
-                             p_deg );
+            fprintf( stderr, "error: field line at magnetic azimuth p = %.1f "
+                             "is closed. Try a smaller value of s.\n", p_deg );
             exit(EXIT_FAILURE);
         }
 
@@ -170,6 +169,9 @@ int main( int argc, char *argv[] )
     psr_angle phase[o.npoints];     // The emission phase
     psr_angle ret_phase[o.npoints]; // The retarded (observed) phase
 
+    psr_angle spark_phase[o.npoints]; // The phase when the particles left
+                                      // the surface
+
     for (p_idx = 0; p_idx < o.npoints; p_idx++)
     {
         calc_fields( &emit_pts[p_idx], &psr, SPEED_OF_LIGHT, &B[p_idx],
@@ -194,6 +196,41 @@ int main( int argc, char *argv[] )
         // For each emission point, calculate the rotation phase at which the
         // particle must have left the surface in order to arrive at the emission
         // point at the correct phase for observing.
+        set_psr_angle_rad( &spark_phase[p_idx],
+                phase[p_idx].rad + dist[p_idx]/psr.rL );
+    }
+
+    // Calculate Stokes I from the 1D carousel model
+    //double I[o.npulses][o.nphases];  // Stokes I
+    double In[o.npulses][o.npoints]; // ... no interpolation in phase
+
+    int pulse, spark;
+    double t, x;
+
+    for (pulse = 0; pulse < o.npulses; pulse++)
+    {
+        for (p_idx = 0; p_idx < o.npoints; p_idx++)
+        {
+            t = pulse*psr.P + spark_phase[p_idx].deg/360.0;
+
+            p_deg = p_idx * 360.0 / o.npoints - 180.0; // Go from -180° to 180°
+            set_psr_angle_deg( &p, p_deg );
+
+            In[pulse][p_idx] = 0.0;
+            for (spark = 0; spark < o.nsparks; spark++)
+            {
+                x = p.rad - 2*PI*((double)spark/(double)o.nsparks + t/psr.csl.P4);
+                while (x < -PI) x += 2.0*PI;
+                while (x >= PI) x -= 2.0*PI;
+                In[pulse][p_idx] += exp(-0.5*x*x/(psr.csl.s.rad*psr.csl.s.rad));
+            }
+
+            // Output results
+            fprintf( f, "%d %d %f %e %e\n",
+                    pulse, 0, ret_phase[p_idx].deg, In[pulse][p_idx],
+                    dist[p_idx] );
+        }
+        fprintf( f, "\n" );
     }
 
 
@@ -448,7 +485,8 @@ void print_col_headers( FILE *f )
  */
 {
     // Print out a line to file handle f
-    fprintf( f, "#  pulse_no  freq_bin  phase  I  Q  U  V  PA  PA_err\n" );
+    //fprintf( f, "#  pulse_no  freq_bin  phase  I  Q  U  V  PA  PA_err\n" );
+    fprintf( f, "#  pulse_no  freq_bin  phase  I\n" );
 }
 
 
