@@ -202,7 +202,6 @@ int main( int argc, char *argv[] )
     }
 
     // Calculate Stokes I from the 1D carousel model
-    //double I[o.npulses][o.nphases];  // Stokes I
     double In[o.npulses][o.npoints]; // ... no interpolation in phase
 
     int pulse, spark;
@@ -214,16 +213,18 @@ int main( int argc, char *argv[] )
         {
             t = pulse*psr.P + spark_phase[p_idx].deg/360.0;
 
-            p_deg = p_idx * 360.0 / o.npoints - 180.0; // Go from -180° to 180°
+            p_deg = p_idx * 360.0 / (o.npoints-1) - 180.0; // From -180 to 180
             set_psr_angle_deg( &p, p_deg );
 
             In[pulse][p_idx] = 0.0;
             for (spark = 0; spark < o.nsparks; spark++)
             {
-                x = p.rad - 2*PI*((double)spark/(double)o.nsparks + t/psr.csl.P4);
+                x = p.rad -
+                    2*PI*((double)spark/(double)o.nsparks + t/psr.csl.P4);
                 while (x < -PI) x += 2.0*PI;
                 while (x >= PI) x -= 2.0*PI;
-                In[pulse][p_idx] += exp(-0.5*x*x/(psr.csl.s.rad*psr.csl.s.rad));
+                In[pulse][p_idx] += exp(-0.5*x*x/
+                                        (psr.csl.s.rad*psr.csl.s.rad));
             }
 
             // Output results
@@ -234,6 +235,8 @@ int main( int argc, char *argv[] )
         fprintf( f, "\n" );
     }
 
+    // Interpolate the phases
+    double I[o.npulses][o.nphases];  // Stokes I
 
     // Clean up
 
@@ -256,7 +259,7 @@ void set_default_options( struct opts *o )
     o->rp        = 1e4;
     o->outfile   = NULL;
     o->s         = NAN;
-    o->npoints   = 360;
+    o->npoints   = 361;
     o->nphases   = 1024;
     o->npulses   = 100;
     o->dipole    = 0;
@@ -350,7 +353,7 @@ void usage()
     printf( "  -i           Don't interpolate in pulse phase\n" );
     printf( "  -l  pulses   Number of pulses to output (default: 100)\n" );
     printf( "  -n  points   The number of footpoints to sample "
-                           "(default: 360)\n" );
+                           "(default: 361)\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
     printf( "  -p  phases   The number of (interpolated) phase points "
