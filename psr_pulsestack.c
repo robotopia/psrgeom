@@ -115,17 +115,20 @@ int main( int argc, char *argv[] )
     psr_angle *al = create_psr_angle_deg( o.al_deg );
     psr_angle *ze = create_psr_angle_deg( o.ze_deg );
 
-    double P = o.P_sec;
-    double r = 1e4; /* This will be used later as we move outwards from the
-                       pulsar surface */
-
-    set_pulsar( &psr, ra, dec, P, r, al, ze );
+    set_pulsar( &psr, ra, dec, o.P_sec, o.rp, al, ze );
 
     if (o.dipole)
         psr.field_type = DIPOLE;
 
-    // Set scaling factor in case user requests result in units of rL
-    double xscale = (o.rL_norm ? 1.0/psr.rL : 1.0);
+    // Set up carousel
+    psr_angle spark_size;
+    psr_angle csl_radius;
+
+    set_psr_angle_deg( &spark_size, o.sigma );
+    s_to_deg( &psr, o.s, csl_radius );
+
+    set_pulsar_carousel( &psr, o.nsparks, &spark_size, &csl_radius, GAUSSIAN,
+            o.P4 );
 
     // Write the file and column headers
     print_psrg_header( f, argc, argv );
@@ -326,7 +329,7 @@ void usage()
     printf( "  -s  radius   The carousel radius, normalised to the (aligned) "
                            "polar cap radius\n" );
     printf( "  -S  sigma    The angular size of the spark gaussian "
-                           "profiles\n" );
+                           "profiles, in degrees\n" );
     printf( "  -z  zeta     The angle between the rotation axis and the line "
                            "of sight in degrees (either -z or -b is "
                            "required, but -z trumps -b)\n" );

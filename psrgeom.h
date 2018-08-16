@@ -117,6 +117,7 @@ typedef struct pulsar_t
     double       r;     // Stellar radius
     double       rL;    // Light cylinder radius
     double       rL2;   // = rL^2 (because it comes up quite often)
+    psr_angle    pcr;   // the polar cap radius (as an angle)
     psr_angle    al;    // Angle between the rotation and magnetic axes
     psr_angle    ze;    // Angle between the rotation axis and the LoS
     int          spin;  // Spin direction (SPIN_POS or SPIN_NEG)
@@ -192,6 +193,9 @@ void pol_zero( pulsar *psr, psr_angle *phase, point *pz );
 
 void calc_retardation( point *X, pulsar *psr, point *LoS,
         psr_angle *dph, point *retarded_LoS );
+void set_polar_cap_radius( pulsar *psr );
+void s_to_deg( pulsar *psr, double s, psr_angle *s_angle );
+
 void set_pulsar_carousel( pulsar *psr, int n, psr_angle *s, psr_angle *S,
         int type, double P4 );
 

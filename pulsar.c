@@ -45,6 +45,10 @@ void set_pulsar( pulsar *psr, psr_angle *ra, psr_angle *dec, double P,
     // Set the pulsar radius
     psr->r = r;
 
+    // Set the polar cap radius
+    set_polar_cap_radius( psr );
+
+    // Set the pulsar inclination and viewing angle
     if (al)
         copy_psr_angle( al, &psr->al );
     if (ze)
@@ -251,6 +255,23 @@ void random_point_in_lightcyl( point *rand_pt, pulsar *psr, double frac,
     rand_pt->r = 0.0;
     while (rand_pt->r < psr->r)
         random_point_in_cyl( rand_pt, rho, max_z );
+}
+
+
+void set_polar_cap_radius( pulsar *psr )
+/* Calculate the (aligned dipole) polar cap radius for pulsar psr.
+ * The result is put in pc_radius.
+ */
+{
+    set_psr_angle_sin( &(psr->pcr), sqrt( psr->r, psr->rL ) );
+}
+
+
+void s_to_deg( pulsar *psr, double s, psr_angle *s_angle )
+/* Convert the s parameter to an angular radius, for pulsar psr.
+ */
+{
+    set_psr_angle_deg( s_angle, s*psr->pcr.deg );
 }
 
 
