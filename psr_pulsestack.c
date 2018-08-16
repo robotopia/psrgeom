@@ -70,67 +70,25 @@ void usage();
 void parse_cmd_line( int argc, char *argv[], struct opts *o );
 void print_col_headers( FILE *f );
 
+void set_default_options( struct opts *o );
+FILE *open_output_file( struct opts *o );
+void setup_pulsar( struct opts *o, pulsar *psr );
+
 int main( int argc, char *argv[] )
 {
     // Set up struct for command line options and set default values
     struct opts o;
-    o.al_deg    = NAN;
-    o.P_sec     = NAN;
-    o.ze_deg    = NAN;
-    o.be_deg    = NAN;
-    o.rp        = 1e4;
-    o.outfile   = NULL;
-    o.s         = NAN;
-    o.npoints   = 360;
-    o.nphases   = 1024;
-    o.npulses   = 100;
-    o.dipole    = 0;
-    o.firstonly = 1;
-    o.no_interp = 0;
-    o.P4        = NAN;
-    o.nsparks   = 0;
-    o.sigma     = NAN;
-    o.tstep     = 0.01;
+    set_default_options( &o );
 
+    // Parse the command line options
     parse_cmd_line( argc, argv, &o );
 
     // Set up output file
-    FILE *f;
-    if (o.outfile == NULL)
-        f = stdout;
-    else
-    {
-        f = fopen( o.outfile, "w" );
-        if (f == NULL)
-        {
-            fprintf( stderr, "error: could not open file %s\n", o.outfile );
-            exit(EXIT_FAILURE);
-        }
-    }
+    FILE *f = open_output_file( &o );
 
     // Set up pulsar
     pulsar psr;
-
-    psr_angle *ra  = NULL;
-    psr_angle *dec = NULL;
-
-    psr_angle *al = create_psr_angle_deg( o.al_deg );
-    psr_angle *ze = create_psr_angle_deg( o.ze_deg );
-
-    set_pulsar( &psr, ra, dec, o.P_sec, o.rp, al, ze );
-
-    if (o.dipole)
-        psr.field_type = DIPOLE;
-
-    // Set up carousel
-    psr_angle spark_size;
-    psr_angle csl_radius;
-
-    set_psr_angle_deg( &spark_size, o.sigma );
-    s_to_deg( &psr, o.s, &csl_radius );
-
-    set_pulsar_carousel( &psr, o.nsparks, &spark_size, &csl_radius, GAUSSIAN,
-            o.P4 );
+    setup_pulsar( &o, &psr );
 
     // Write the file and column headers
     print_psrg_header( f, argc, argv );
@@ -141,9 +99,9 @@ int main( int argc, char *argv[] )
     point foot_pt, foot_pt_mag;
     point init_pt;
     int find_emitpt_result;
-    double dist[o.npoints], dist_tmp; /* Keep track of dist travelled along
-                                       * field lines
-                                       */
+
+    // Keep track of dist travelled along field lines
+    double dist[o.npoints], dist_tmp;
 
     int p_idx;
     double p_deg;
@@ -240,10 +198,6 @@ int main( int argc, char *argv[] )
 
 
     // Clean up
-    destroy_psr_angle( ra  );
-    destroy_psr_angle( dec );
-    destroy_psr_angle( al  );
-    destroy_psr_angle( ze  );
 
     free( o.outfile );
 
@@ -252,6 +206,73 @@ int main( int argc, char *argv[] )
 
     return 0;
 }
+
+void set_default_options( struct opts *o )
+{
+    // Set up struct for command line options and set default values
+    o->al_deg    = NAN;
+    o->P_sec     = NAN;
+    o->ze_deg    = NAN;
+    o->be_deg    = NAN;
+    o->rp        = 1e4;
+    o->outfile   = NULL;
+    o->s         = NAN;
+    o->npoints   = 360;
+    o->nphases   = 1024;
+    o->npulses   = 100;
+    o->dipole    = 0;
+    o->firstonly = 1;
+    o->no_interp = 0;
+    o->P4        = NAN;
+    o->nsparks   = 0;
+    o->sigma     = NAN;
+    o->tstep     = 0.01;
+}
+
+
+FILE *open_output_file( struct opts *o )
+{
+    FILE *f;
+    if (o->outfile == NULL)
+        f = stdout;
+    else
+    {
+        f = fopen( o->outfile, "w" );
+        if (f == NULL)
+        {
+            fprintf( stderr, "error: could not open file %s\n", o->outfile );
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    return f;
+}
+
+
+void setup_pulsar( struct opts *o, pulsar *psr )
+{
+    // Set basic pulsar properties
+    psr_angle al, ze;
+    set_psr_angle_deg( &al, o->al_deg );
+    set_psr_angle_deg( &ze, o->ze_deg );
+
+    //               RA    Dec
+    set_pulsar( psr, NULL, NULL, o->P_sec, o->rp, &al, &ze );
+
+    if (o->dipole)
+        psr->field_type = DIPOLE;
+
+    // Set up carousel
+    psr_angle spark_size;
+    psr_angle csl_radius;
+
+    set_psr_angle_deg( &spark_size, o->sigma );
+    s_to_deg( psr, o->s, &csl_radius );
+
+    set_pulsar_carousel( psr, o->nsparks, &spark_size, &csl_radius, GAUSSIAN,
+            o->P4 );
+}
+
 
 void usage()
 {
