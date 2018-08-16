@@ -75,6 +75,9 @@ void set_default_options( struct opts *o );
 FILE *open_output_file( struct opts *o );
 void setup_pulsar( struct opts *o, pulsar *psr );
 
+void interp( double *x, double *y, int n,
+        double *newx, double *newy, int newn );
+
 int main( int argc, char *argv[] )
 {
     // Set up struct for command line options and set default values
@@ -227,16 +230,39 @@ int main( int argc, char *argv[] )
                                         (psr.csl.s.rad*psr.csl.s.rad));
             }
 
-            // Output results
-            fprintf( f, "%d %d %f %e %e\n",
-                    pulse, 0, ret_phase[p_idx].deg, In[pulse][p_idx],
-                    dist[p_idx] );
         }
-        fprintf( f, "\n" );
     }
 
     // Interpolate the phases
     double I[o.npulses][o.nphases];  // Stokes I
+    double ph[o.npoints];
+    for (p_idx = 0; p_idx < o.npoints; p_idx++)
+    {
+        ph[p_idx] = ret_phase[p_idx].deg;
+    }
+
+    double newph[o.nphases];
+    double dp = 360.0 / (o.nphases-1);
+    for (p_idx = 0; p_idx < o.nphases; p_idx++)
+    {
+        newph[p_idx] = p_idx*dp - 180.0;
+    }
+
+    for (pulse = 0; pulse < o.npulses; pulse++)
+    {
+        // Interpolate!
+        interp( ph, In[pulse], o.npoints,
+                newph, I[pulse], o.nphases );
+
+        // Print out the result
+        for (p_idx = 0; p_idx < o.nphases; p_idx++)
+        {
+            // Output results
+            fprintf( f, "%d %d %f %e\n",
+                    pulse, 0, newph[p_idx], I[pulse][p_idx] );
+        }
+        fprintf( f, "\n" );
+    }
 
     // Clean up
 
@@ -314,6 +340,61 @@ void setup_pulsar( struct opts *o, pulsar *psr )
 
     set_pulsar_carousel( psr, o->nsparks, &spark_size, &csl_radius, GAUSSIAN,
             o->P4 );
+}
+
+
+void interp( double *x, double *y, int n,
+        double *newx, double *newy, int newn )
+/* Linear interpolation of the function defined by the arrays x and y,
+ * evaluated at newx. The result is saved out to newy.
+ *
+ * It is assumed that x and y have at least size n, and that newx and newy
+ * have at least size newn.
+ *
+ * The array x does not have to be ordered
+ */
+{
+    int i, newi;
+    int i0, in; // indexes for lowest x, highest x
+    int il, ir; // indexes for x's that straddle newx value
+
+    // Get lowest and highest x values
+    i0 = in = 0;
+    for (i = 1; i < n; i++)
+    {
+        if (x[i] < x[i0])  i0 = i;
+        if (x[i] > x[in])  in = i;
+    }
+
+    // Go through newx's and find their straddling points in x,
+    // and then linearly interpolate
+    for (newi = 0; newi < newn; newi++)
+    {
+        // Make sure we're within the boundaries
+        if (newx[newi] < x[i0] || newx[newi] > x[in])
+        {
+            newy[newi] = NAN;
+            continue;
+        }
+
+        // Now go through the x's to find the straddling points
+        il = i0;
+        ir = in;
+        for (i = 0; i < n; i++)
+        {
+            if (x[i] <= newx[newi] && x[il] < x[i])  il = i;
+            if (x[i] >= newx[newi] && x[ir] > x[i])  ir = i;
+        }
+
+        // If we find an identical x point, no interpolation needed!
+        if (x[il] == newx[newi])
+            newy[newi] = y[il];
+        else
+        {
+            newy[newi] = (y[ir] - y[il]) * (newx[newi] - x[il]) /
+                         (x[ir] - x[il]) + y[il];
+        }
+    }
 }
 
 
