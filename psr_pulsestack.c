@@ -75,6 +75,7 @@ void set_default_options( struct opts *o );
 FILE *open_output_file( struct opts *o );
 void setup_pulsar( struct opts *o, pulsar *psr );
 
+double *read_profile( char *filename, int *n );
 void interp( double *x, double *y, int n,
         double *newx, double *newy, int newn );
 
@@ -93,6 +94,12 @@ int main( int argc, char *argv[] )
     // Set up pulsar
     pulsar psr;
     setup_pulsar( &o, &psr );
+
+    // If a profile is supplied, read it in
+    double *profile = NULL;
+    int profile_size;
+    if (o.profile != NULL)
+        profile = read_profile( o.profile, &profile_size );
 
     // Write the file and column headers
     print_psrg_header( f, argc, argv );
@@ -268,6 +275,7 @@ int main( int argc, char *argv[] )
 
     free( o.outfile );
     free( o.profile );
+    free( profile );
 
     if (o.outfile != NULL)
         fclose( f );
@@ -340,6 +348,38 @@ void setup_pulsar( struct opts *o, pulsar *psr )
 
     set_pulsar_carousel( psr, o->nsparks, &spark_size, &csl_radius, GAUSSIAN,
             o->P4 );
+}
+
+
+double *read_profile( char *filename, int *n )
+// Reads the (ascii) numbers found in the file named FILENAME, and stores
+// them in a newly allocated array of doubles, which must be freed by the
+// caller.
+{
+    // Open the file for reading
+    FILE *f = fopen( filename, "r" );
+    if (f == NULL)
+    {
+        fprintf( stderr, "error: read_profile: could not open file %s\n",
+                filename );
+        exit(EXIT_FAILURE);
+    }
+
+    // Find out how many numbers there are in the file
+    int i = 0;
+    double d;
+    while ((fscanf( f, "%lf", &d) != EOF))  i++;
+    *n = i;
+
+    rewind(f);
+
+    // Allocate memory for reading the whole file contents
+    double *profile = (double *)malloc( i * sizeof(double) );
+
+    // Go the the file again, and read everything in
+    while ((fscanf( f, "%lf", &d) != EOF))  profile[i] = d;
+
+    return profile;
 }
 
 
