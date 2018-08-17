@@ -282,8 +282,8 @@ int main( int argc, char *argv[] )
             }
 
             // Output results
-            fprintf( f, "%d %d %f %e %e\n",
-                    pulse, 0, newph[p_idx], stokesI[pulse][p_idx], profile[p_idx] );
+            fprintf( f, "%d %d %d %e\n",
+                    pulse, 0, p_idx, stokesI[pulse][p_idx] );
         }
         fprintf( f, "\n" );
     }
