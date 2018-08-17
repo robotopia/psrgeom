@@ -1,5 +1,5 @@
 CC      = gcc
-LDLIBS = -lnewuoa -lnmead -lm
+LDLIBS = -lfftw3 -lnewuoa -lnmead -lm
 
 ## Uncomment this to turn on compiler optimisation
 OPTIM   = #-O2

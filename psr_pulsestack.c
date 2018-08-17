@@ -43,6 +43,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <complex.h>
+#include <fftw3.h>
 #include "psrgeom.h"
 
 struct opts
@@ -79,6 +81,8 @@ double *read_profile( char *filename, int *n );
 void interp( double *x, double *y, int n,
         double *newx, double *newy, int newn );
 
+void resample_array( double *in, int nin, double *out, int nout );
+
 int main( int argc, char *argv[] )
 {
     // Set up struct for command line options and set default values
@@ -96,10 +100,17 @@ int main( int argc, char *argv[] )
     setup_pulsar( &o, &psr );
 
     // If a profile is supplied, read it in
-    double *profile = NULL;
-    int profile_size;
-    if (o.profile != NULL)
-        profile = read_profile( o.profile, &profile_size );
+    double *profile_orig = NULL; // The "raw" profile as read in
+    double profile[o.nphases];   // The resampled profile
+    if (o.profile)
+    {
+        // Read in profile from file
+        int profile_size;
+        profile_orig = read_profile( o.profile, &profile_size );
+
+        // Resample the profile for the desired time resolution
+        resample_array( profile_orig, profile_size, profile, o.nphases );
+    }
 
     // Write the file and column headers
     print_psrg_header( f, argc, argv );
@@ -241,7 +252,7 @@ int main( int argc, char *argv[] )
     }
 
     // Interpolate the phases
-    double I[o.npulses][o.nphases];  // Stokes I
+    double stokesI[o.npulses][o.nphases];  // Stokes I
     double ph[o.npoints];
     for (p_idx = 0; p_idx < o.npoints; p_idx++)
     {
@@ -259,14 +270,20 @@ int main( int argc, char *argv[] )
     {
         // Interpolate!
         interp( ph, In[pulse], o.npoints,
-                newph, I[pulse], o.nphases );
+                newph, stokesI[pulse], o.nphases );
 
         // Print out the result
         for (p_idx = 0; p_idx < o.nphases; p_idx++)
         {
+            // If requested, modulate with the supplied profile
+            if (o.profile)
+            {
+                stokesI[pulse][p_idx] *= profile[p_idx];
+            }
+
             // Output results
-            fprintf( f, "%d %d %f %e\n",
-                    pulse, 0, newph[p_idx], I[pulse][p_idx] );
+            fprintf( f, "%d %d %f %e %e\n",
+                    pulse, 0, newph[p_idx], stokesI[pulse][p_idx], profile[p_idx] );
         }
         fprintf( f, "\n" );
     }
@@ -275,7 +292,7 @@ int main( int argc, char *argv[] )
 
     free( o.outfile );
     free( o.profile );
-    free( profile );
+    free( profile_orig );
 
     if (o.outfile != NULL)
         fclose( f );
@@ -377,7 +394,8 @@ double *read_profile( char *filename, int *n )
     double *profile = (double *)malloc( i * sizeof(double) );
 
     // Go the the file again, and read everything in
-    while ((fscanf( f, "%lf", &d) != EOF))  profile[i] = d;
+    i = 0;
+    while ((fscanf( f, "%lf", &d) != EOF))  profile[i++] = d;
 
     return profile;
 }
@@ -435,6 +453,67 @@ void interp( double *x, double *y, int n,
                          (x[ir] - x[il]) + y[il];
         }
     }
+}
+
+void resample_array( double *in, int nin, double *out, int nout )
+/* Resample the input array IN of size NIN to the output array OUT of size
+ * NOUT. This function assumes that sufficient memory for the arrays has
+ * already been allocated.
+ * 
+ * The resampling is done in Fourier space, and this algorithm is a straight-
+ * forward one that uses the FFTW3 library.
+ *
+ * It is assumed that IN and OUT point to different arrays.
+ */
+{
+    // Make sure supplied array sizes are positive definite
+    if (nin <= 0 || nout <= 0)
+    {
+        fprintf( stderr, "error: resample_array: array sizes must be >= 1\n" );
+        exit(EXIT_FAILURE);
+    }
+
+    int i; // Generic counter
+
+    // If the sizes are the same, just copy the data across
+    if (nin == nout)
+    {
+        for (i = 0; i < nin; i++)
+        {
+            out[i] = in[i];
+        }
+
+        return;
+    }
+
+    // In the general case, FFTs will be needed
+    fftw_complex *F; // The Fourier representation of the input array
+
+    fftw_plan pf, pb; // (f)orward and (b)ackward plans
+
+    int max_size = (nin > nout ? nin : nout);
+
+    F = (fftw_complex*)fftw_malloc( max_size * sizeof(fftw_complex) );
+
+    pf = fftw_plan_dft_r2c_1d( nin,  in,  F, FFTW_ESTIMATE );
+    pb = fftw_plan_dft_c2r_1d( nout, F, out, FFTW_ESTIMATE );
+
+    // Switch to frequency domain
+    fftw_execute( pf );
+
+    if (nout > (nin/2+1)) // i.e. need to upsample --> zero-pad
+    {
+        for (i = nin/2+1; i < nout; i++)
+            F[i] = 0.0 + 0.0*I;
+    }
+
+    // Now change back to time domain
+    fftw_execute( pb );
+
+    // Clean up
+    fftw_destroy_plan( pf );
+    fftw_destroy_plan( pb );
+    fftw_free( F );
 }
 
 
