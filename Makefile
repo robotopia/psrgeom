@@ -1,17 +1,17 @@
 CC      = gcc
-LDLIBS = -lfftw3 -lnewuoa -lnmead -lm
 
 ## Uncomment this to turn on compiler optimisation
-OPTIM   = #-O2
+OPTIM   = -O3
 
 ## Uncomment these to turn on fsanitize option
-#LDLIBS = -lasan -lm
-#OPTIM   = -Wextra -O2 -fsanitize=address 
+#LSANITIZE = -lasan
+#SANITIZE  = -fsanitize=address 
 
 ## Uncomment the following to turn on debugging options
 #DEBUG   = -g -std=gnu99
 
-CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG) -march=native
+CFLAGS  = -Wall -Wextra $(OPTIM) $(DEBUG) $(SANITIZE) -march=native
+LDLIBS = $(LSANITIZE) -lfftw3 -lnewuoa -lnmead -lm
 
 TARGETS = psr_fields \
 		  psr_lines \

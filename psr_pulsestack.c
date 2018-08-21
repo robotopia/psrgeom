@@ -223,10 +223,12 @@ int main( int argc, char *argv[] )
     }
 
     // Calculate Stokes I from the 1D carousel model
-    double In[o.npulses][o.npoints]; // ... no interpolation in phase
-
     int pulse, spark;
     double t, x;
+
+    double **In = (double **)malloc( o.npulses * sizeof(double **) );
+    for (pulse = 0; pulse < o.npulses; pulse++)
+        In[pulse] = (double *)malloc( o.npoints * sizeof(double *) );
 
     for (pulse = 0; pulse < o.npulses; pulse++)
     {
@@ -252,7 +254,10 @@ int main( int argc, char *argv[] )
     }
 
     // Interpolate the phases
-    double stokesI[o.npulses][o.nphases];  // Stokes I
+    double **stokesI = (double **)malloc( o.npulses * sizeof(double **) );
+    for (pulse = 0; pulse < o.npulses; pulse++)
+        stokesI[pulse] = (double *)malloc( o.npoints * sizeof(double *) );
+
     double ph[o.npoints];
     for (p_idx = 0; p_idx < o.npoints; p_idx++)
     {
@@ -293,6 +298,13 @@ int main( int argc, char *argv[] )
     free( o.outfile );
     free( o.profile );
     free( profile_orig );
+    for (pulse = 0; pulse < o.npulses; pulse++)
+    {
+        free( In[pulse] );
+        free( stokesI[pulse] );
+    }
+    free( In );
+    free( stokesI );
 
     if (o.outfile != NULL)
         fclose( f );
