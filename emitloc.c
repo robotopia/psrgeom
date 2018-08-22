@@ -1198,7 +1198,7 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
     // checking if it has changed sign.
     point prev_pt, next_pt;
     copy_point( init_pt, &prev_pt );
-    double tstep = 0.01 * init_pt->r;
+    double tstep = 0.001 * init_pt->r;
     while (1)
     {
         // First time through, evaluate (V̂∙ẑ - ζ) at the initial point.
