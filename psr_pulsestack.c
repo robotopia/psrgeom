@@ -71,7 +71,7 @@ struct opts
 
 void usage();
 void parse_cmd_line( int argc, char *argv[], struct opts *o );
-void print_col_headers( FILE *f );
+void print_col_headers( FILE *f, struct opts *o );
 
 void set_default_options( struct opts *o );
 FILE *open_output_file( struct opts *o );
@@ -114,7 +114,7 @@ int main( int argc, char *argv[] )
 
     // Write the file and column headers
     print_psrg_header( f, argc, argv );
-    print_col_headers( f );
+    print_col_headers( f, &o );
 
     // Loop over the polar cap
     int linetype;   // either CLOSED_LINE or OPEN_LINE
@@ -216,81 +216,109 @@ int main( int argc, char *argv[] )
         accel_to_pol_angle( &psr, &A[p_idx], &phase[p_idx], &psi[p_idx] );
 
         // For each emission point, calculate the rotation phase at which the
-        // particle must have left the surface in order to arrive at the emission
-        // point at the correct phase for observing.
+        // particle must have left the surface in order to arrive at the
+        // emission point at the correct phase for observing.
         set_psr_angle_rad( &spark_phase[p_idx],
                 phase[p_idx].rad + dist[p_idx]/psr.rL );
+
+        // If the -i option was given, report the info about the emission
+        // points
+        if (o.no_interp)
+        {
+            p_deg = p_idx * 360.0 / o.npoints - 180.0;
+
+            fprintf( f, "%d %f %.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
+                    p_idx, p_deg, phase[p_idx].deg,
+                    emit_pts[p_idx].x[0],
+                    emit_pts[p_idx].x[1],
+                    emit_pts[p_idx].x[2],
+                    emit_pts[p_idx].r / psr.rL,
+                    psi[p_idx].deg,
+                    1.0/calc_curvature( &V[p_idx], &A[p_idx] ) );
+        }
     }
 
-    // Calculate Stokes I from the 1D carousel model
-    int pulse, spark;
-    double t, x;
-
-    double **In = (double **)malloc( o.npulses * sizeof(double *) );
-    for (pulse = 0; pulse < o.npulses; pulse++)
-        In[pulse] = (double *)malloc( o.npoints * sizeof(double) );
-
-    for (pulse = 0; pulse < o.npulses; pulse++)
+    // Only form the pulsestack if the -i option was not given
+    if (!o.no_interp)
     {
+        // Calculate Stokes I from the 1D carousel model
+        int pulse, spark;
+        double t, x;
+
+        double **In = (double **)malloc( o.npulses * sizeof(double *) );
+        for (pulse = 0; pulse < o.npulses; pulse++)
+            In[pulse] = (double *)malloc( o.npoints * sizeof(double) );
+
+        for (pulse = 0; pulse < o.npulses; pulse++)
+        {
+            for (p_idx = 0; p_idx < o.npoints; p_idx++)
+            {
+                t = pulse*psr.P + spark_phase[p_idx].deg/360.0;
+
+                p_deg = p_idx * 360.0 / (o.npoints-1) - 180.0; // -180 to 180
+                set_psr_angle_deg( &p, p_deg );
+
+                In[pulse][p_idx] = 0.0;
+                for (spark = 0; spark < o.nsparks; spark++)
+                {
+                    x = p.rad -
+                        2*PI*((double)spark/(double)o.nsparks + t/psr.csl.P4);
+                    while (x < -PI) x += 2.0*PI;
+                    while (x >= PI) x -= 2.0*PI;
+                    In[pulse][p_idx] += exp(-0.5*x*x/
+                            (psr.csl.s.rad*psr.csl.s.rad));
+                }
+
+            }
+        }
+
+        // Interpolate the phases
+        double **stokesI = (double **)malloc( o.npulses * sizeof(double *) );
+        for (pulse = 0; pulse < o.npulses; pulse++)
+            stokesI[pulse] = (double *)malloc( o.nphases * sizeof(double) );
+
+        double ph[o.npoints];
         for (p_idx = 0; p_idx < o.npoints; p_idx++)
         {
-            t = pulse*psr.P + spark_phase[p_idx].deg/360.0;
-
-            p_deg = p_idx * 360.0 / (o.npoints-1) - 180.0; // From -180 to 180
-            set_psr_angle_deg( &p, p_deg );
-
-            In[pulse][p_idx] = 0.0;
-            for (spark = 0; spark < o.nsparks; spark++)
-            {
-                x = p.rad -
-                    2*PI*((double)spark/(double)o.nsparks + t/psr.csl.P4);
-                while (x < -PI) x += 2.0*PI;
-                while (x >= PI) x -= 2.0*PI;
-                In[pulse][p_idx] += exp(-0.5*x*x/
-                                        (psr.csl.s.rad*psr.csl.s.rad));
-            }
-
+            ph[p_idx] = ret_phase[p_idx].deg;
         }
-    }
 
-    // Interpolate the phases
-    double **stokesI = (double **)malloc( o.npulses * sizeof(double *) );
-    for (pulse = 0; pulse < o.npulses; pulse++)
-        stokesI[pulse] = (double *)malloc( o.nphases * sizeof(double) );
-
-    double ph[o.npoints];
-    for (p_idx = 0; p_idx < o.npoints; p_idx++)
-    {
-        ph[p_idx] = ret_phase[p_idx].deg;
-    }
-
-    double newph[o.nphases];
-    double dp = 360.0 / (o.nphases-1);
-    for (p_idx = 0; p_idx < o.nphases; p_idx++)
-    {
-        newph[p_idx] = p_idx*dp - 180.0;
-    }
-
-    for (pulse = 0; pulse < o.npulses; pulse++)
-    {
-        // Interpolate!
-        interp( ph, In[pulse], o.npoints,
-                newph, stokesI[pulse], o.nphases );
-
-        // Print out the result
+        double newph[o.nphases];
+        double dp = 360.0 / (o.nphases-1);
         for (p_idx = 0; p_idx < o.nphases; p_idx++)
         {
-            // If requested, modulate with the supplied profile
-            if (o.profile)
-            {
-                stokesI[pulse][p_idx] *= profile[p_idx];
-            }
-
-            // Output results
-            fprintf( f, "%d %d %d %e\n",
-                    pulse, 0, p_idx, stokesI[pulse][p_idx] );
+            newph[p_idx] = p_idx*dp - 180.0;
         }
-        fprintf( f, "\n" );
+
+        for (pulse = 0; pulse < o.npulses; pulse++)
+        {
+            // Interpolate!
+            interp( ph, In[pulse], o.npoints,
+                    newph, stokesI[pulse], o.nphases );
+
+            // Print out the result
+            for (p_idx = 0; p_idx < o.nphases; p_idx++)
+            {
+                // If requested, modulate with the supplied profile
+                if (o.profile)
+                {
+                    stokesI[pulse][p_idx] *= profile[p_idx];
+                }
+
+                // Output results
+                fprintf( f, "%d %d %d %e\n",
+                        pulse, 0, p_idx, stokesI[pulse][p_idx] );
+            }
+            fprintf( f, "\n" );
+        }
+
+        for (pulse = 0; pulse < o.npulses; pulse++)
+        {
+            free( In[pulse] );
+            free( stokesI[pulse] );
+        }
+        free( In );
+        free( stokesI );
     }
 
     // Clean up
@@ -298,13 +326,6 @@ int main( int argc, char *argv[] )
     free( o.outfile );
     free( o.profile );
     free( profile_orig );
-    for (pulse = 0; pulse < o.npulses; pulse++)
-    {
-        free( In[pulse] );
-        free( stokesI[pulse] );
-    }
-    free( In );
-    free( stokesI );
 
     if (o.outfile != NULL)
         fclose( f );
@@ -413,6 +434,28 @@ double *read_profile( char *filename, int *n )
     return profile;
 }
 
+void phase_interp( double *ph, double *y, int n,
+        double *newy, int newn )
+/* Linear interpolation of an implicit function in ph and y,
+ * evaluated at newph. The result is saved out to newy.
+ *
+ * The order of the elements of ph and y is important. A point will always be
+ * interpolated between two adjacent points (where we treat the last point as
+ * being adjacent to the first--i.e. the phase wraps around).
+ *
+ * The only condition is that the first interpolation point is uniquely
+ * defined, i.e. that there is only one pair of adjacent "ph" points that it
+ * could be between. Actually, it doesn't have to be unique: the algorithm
+ * will simply find the first appropriate interval.
+ *
+ * The ph array is assumed to have units of degrees, and also that every
+ * element is in the range [-180:180].
+ */
+{
+    int i; // Generic counter
+
+    //
+}
 
 void interp( double *x, double *y, int n,
         double *newx, double *newy, int newn )
@@ -422,7 +465,8 @@ void interp( double *x, double *y, int n,
  * It is assumed that x and y have at least size n, and that newx and newy
  * have at least size newn.
  *
- * The array x does not have to be ordered.
+ * The array x does not have to be ordered, but is assumed to represent a
+ * function in x.
  */
 {
     int i, newi;
@@ -565,7 +609,8 @@ void usage()
             "               It is assumed that the numbers span all 360 deg "
                            "of rotation phase (from -180 to 180).\n" );
     printf( "  -h           Display this help and exit\n" );
-    printf( "  -i           Don't interpolate in pulse phase\n" );
+    printf( "  -i           Don't interpolate in pulse phase. Instead, print "
+                           "out information about the emission points.\n" );
     printf( "  -l  pulses   Number of pulses to output (default: 100)\n" );
     printf( "  -n  points   The number of footpoints to sample "
                            "(default: 361)\n" );
@@ -701,7 +746,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 }
 
 
-void print_col_headers( FILE *f )
+void print_col_headers( FILE *f, struct opts *o )
 /* The final output includes:
  *   1) pulse number
  *   2) frequency bin (always 0)
@@ -712,11 +757,29 @@ void print_col_headers( FILE *f )
  *   7) stokes V (always 0)
  *   8) polarisation angle
  *   9) polarisation angle error (always 0)
+ *
+ * If "no_interp" is selected, then the output includes:
+ *   1) emission point number
+ *   2) footpoint's azimuth (in deg)
+ *   3) observing phase (in deg)
+ *   4, 5, 6) Cartesian coordinates of the point
+ *   7) distance of the point from the origin, normalised to light cylinder
+ *   8) polarisation angle
+ *   9) radius of curvature of trajectory at the point
  */
 {
     // Print out a line to file handle f
-    //fprintf( f, "#  pulse_no  freq_bin  phase  I  Q  U  V  PA  PA_err\n" );
-    fprintf( f, "#  pulse_no  freq_bin  phase  I\n" );
+    if (!o->no_interp)
+    {
+        //fprintf( f, "#  pulse_no  freq_bin  phase  I  Q  U  V  "
+        //            "PA  PA_err\n" );
+        fprintf( f, "#  pulse_no  freq_bin  phase  I\n" );
+    }
+    else
+    {
+        fprintf( f, "#  emission_point_no  footpoint_az_deg  phase_deg  "
+                    "x  y  z  r_prime  PA_deg  rad_of_curv\n" );
+    }
 }
 
 
