@@ -226,9 +226,9 @@ int main( int argc, char *argv[] )
     int pulse, spark;
     double t, x;
 
-    double **In = (double **)malloc( o.npulses * sizeof(double **) );
+    double **In = (double **)malloc( o.npulses * sizeof(double *) );
     for (pulse = 0; pulse < o.npulses; pulse++)
-        In[pulse] = (double *)malloc( o.npoints * sizeof(double *) );
+        In[pulse] = (double *)malloc( o.npoints * sizeof(double) );
 
     for (pulse = 0; pulse < o.npulses; pulse++)
     {
@@ -254,9 +254,9 @@ int main( int argc, char *argv[] )
     }
 
     // Interpolate the phases
-    double **stokesI = (double **)malloc( o.npulses * sizeof(double **) );
+    double **stokesI = (double **)malloc( o.npulses * sizeof(double *) );
     for (pulse = 0; pulse < o.npulses; pulse++)
-        stokesI[pulse] = (double *)malloc( o.npoints * sizeof(double *) );
+        stokesI[pulse] = (double *)malloc( o.nphases * sizeof(double) );
 
     double ph[o.npoints];
     for (p_idx = 0; p_idx < o.npoints; p_idx++)
@@ -381,9 +381,10 @@ void setup_pulsar( struct opts *o, pulsar *psr )
 
 
 double *read_profile( char *filename, int *n )
-// Reads the (ascii) numbers found in the file named FILENAME, and stores
-// them in a newly allocated array of doubles, which must be freed by the
-// caller.
+/* Reads the (ascii) numbers found in the file named FILENAME, and stores
+ * them in a newly allocated array of doubles, which must be freed by the
+ * caller.
+ */
 {
     // Open the file for reading
     FILE *f = fopen( filename, "r" );
@@ -421,7 +422,7 @@ void interp( double *x, double *y, int n,
  * It is assumed that x and y have at least size n, and that newx and newy
  * have at least size newn.
  *
- * The array x does not have to be ordered
+ * The array x does not have to be ordered.
  */
 {
     int i, newi;
@@ -458,7 +459,9 @@ void interp( double *x, double *y, int n,
 
         // If we find an identical x point, no interpolation needed!
         if (x[il] == newx[newi])
+        {
             newy[newi] = y[il];
+        }
         else
         {
             newy[newi] = (y[ir] - y[il]) * (newx[newi] - x[il]) /
@@ -537,7 +540,7 @@ void usage()
                            "seconds\n" );
     printf( "  -a  alpha    The angle between the rotation and magetic axes "
                            "in degrees\n" );
-    printf( "  -b  zeta     The \"impact\" angle between the magnetic axis "
+    printf( "  -b  beta     The \"impact\" angle between the magnetic axis "
                            "and the line of sight in degrees (either -z or "
                            "-b is required)\n" );
     printf( "  -N  sparks   The number of sparks in the carousel. Must be "
