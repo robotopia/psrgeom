@@ -135,7 +135,7 @@ int main( int argc, char *argv[] )
     for (p_idx = 0; p_idx < o.npoints; p_idx++)
     {
         // Convert p_idx to an angle
-        p_deg = p_idx * 360.0 / o.npoints - 180.0; // Go from -180° to 180°
+        p_deg = p_idx * 360.0 / o.npoints - 180.0; // -180° ≤ p < 180°
         set_psr_angle_deg( &p, p_deg );
 
         // Convert (s,p) into a point in the magnetic frame
@@ -255,7 +255,7 @@ int main( int argc, char *argv[] )
             {
                 t = pulse*psr.P + spark_phase[p_idx].deg/360.0;
 
-                p_deg = p_idx * 360.0 / (o.npoints-1) - 180.0; // -180 to 180
+                p_deg = p_idx * 360.0 / o.npoints - 180.0; // -180 ≤ p < 180
                 set_psr_angle_deg( &p, p_deg );
 
                 In[pulse][p_idx] = 0.0;
@@ -284,7 +284,7 @@ int main( int argc, char *argv[] )
         }
 
         double newph[o.nphases];
-        double dp = 360.0 / (o.nphases-1);
+        double dp = 360.0 / o.nphases;
         for (p_idx = 0; p_idx < o.nphases; p_idx++)
         {
             newph[p_idx] = p_idx*dp - 180.0;
