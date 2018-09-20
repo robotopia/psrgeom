@@ -219,7 +219,18 @@ int main( int argc, char *argv[] )
         // particle must have left the surface in order to arrive at the
         // emission point at the correct phase for observing.
         set_psr_angle_rad( &spark_phase[p_idx],
-                phase[p_idx].rad + dist[p_idx]/psr.rL );
+                phase[p_idx].rad - dist[p_idx]/psr.rL );
+
+        // The spark_phase[] array must be continuous (i.e. not contain any 2π
+        // jumps) in order that the time, t, is not later miscalculated to
+        // belong to the "wrong pulse".
+        if (p_idx != 0)
+        {
+            while (spark_phase[p_idx].deg - spark_phase[p_idx-1].deg > 180.0)
+                spark_phase[p_idx].deg -= 360.0;
+            while (spark_phase[p_idx-1].deg - spark_phase[p_idx].deg > 180.0)
+                spark_phase[p_idx].deg += 360.0;
+        }
 
         // If the -i option was given, report the info about the emission
         // points
@@ -227,14 +238,14 @@ int main( int argc, char *argv[] )
         {
             p_deg = p_idx * 360.0 / o.npoints - 180.0;
 
-            fprintf( f, "%d %f %.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
+            fprintf( f, "%d %f %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
                     p_idx, p_deg, phase[p_idx].deg,
                     emit_pts[p_idx].x[0],
                     emit_pts[p_idx].x[1],
                     emit_pts[p_idx].x[2],
                     emit_pts[p_idx].r / psr.rL,
                     psi[p_idx].deg,
-                    1.0/calc_curvature( &V[p_idx], &A[p_idx] ) );
+                    1.0/calc_curvature( &V[p_idx], &A[p_idx] ), spark_phase[p_idx].deg );
         }
     }
 
@@ -253,7 +264,8 @@ int main( int argc, char *argv[] )
         {
             for (p_idx = 0; p_idx < o.npoints; p_idx++)
             {
-                t = pulse*psr.P + spark_phase[p_idx].deg/360.0;
+                t = psr.P*(pulse - spark_phase[p_idx].deg/360.0);
+//fprintf(stderr, "%.15e\n", t); // Use this to verify that t is continuous
 
                 p_deg = p_idx * 360.0 / o.npoints - 180.0; // -180 ≤ p < 180
                 set_psr_angle_deg( &p, p_deg );
@@ -262,7 +274,7 @@ int main( int argc, char *argv[] )
                 for (spark = 0; spark < o.nsparks; spark++)
                 {
                     x = p.rad -
-                        2*PI*((double)spark/(double)o.nsparks + t/psr.csl.P4);
+                        2.0*PI*((double)spark/(double)o.nsparks + t/psr.csl.P4);
                     while (x < -PI) x += 2.0*PI;
                     while (x >= PI) x -= 2.0*PI;
                     In[pulse][p_idx] += exp(-0.5*x*x/
@@ -560,7 +572,7 @@ void resample_array( double *in, int nin, double *out, int nout )
     // Switch to frequency domain
     fftw_execute( pf );
 
-    if (nout > (nin/2+1)) // i.e. need to upsample --> zero-pad
+    if (nout > nin) // i.e. need to upsample --> zero-pad
     {
         for (i = nin/2+1; i < nout; i++)
             F[i] = 0.0 + 0.0*I;
