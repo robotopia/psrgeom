@@ -82,6 +82,7 @@ void interp( double *x, double *y, int n,
         double *newx, double *newy, int newn );
 
 void resample_array( double *in, int nin, double *out, int nout );
+void unwrap_array( double *d, int nd, const double interval );
 
 int main( int argc, char *argv[] )
 {
@@ -193,6 +194,7 @@ int main( int argc, char *argv[] )
 
     psr_angle spark_phase[o.npoints]; // The phase when the particles left
                                       // the surface
+    double spark_phase_deg[o.npoints]; // Just the degrees of spark_phase
 
     for (p_idx = 0; p_idx < o.npoints; p_idx++)
     {
@@ -220,32 +222,29 @@ int main( int argc, char *argv[] )
         // emission point at the correct phase for observing.
         set_psr_angle_rad( &spark_phase[p_idx],
                 phase[p_idx].rad - dist[p_idx]/psr.rL );
+        spark_phase_deg[p_idx] = spark_phase[p_idx].deg;
+    }
 
-        // The spark_phase[] array must be continuous (i.e. not contain any 2π
-        // jumps) in order that the time, t, is not later miscalculated to
-        // belong to the "wrong pulse".
-        if (p_idx != 0)
-        {
-            while (spark_phase[p_idx].deg - spark_phase[p_idx-1].deg > 180.0)
-                spark_phase[p_idx].deg -= 360.0;
-            while (spark_phase[p_idx-1].deg - spark_phase[p_idx].deg > 180.0)
-                spark_phase[p_idx].deg += 360.0;
-        }
+    unwrap_array( spark_phase_deg, o.npoints, 360.0 );
 
+    for (p_idx = 0; p_idx < o.npoints; p_idx++)
+    {
         // If the -i option was given, report the info about the emission
         // points
         if (o.no_interp)
         {
             p_deg = p_idx * 360.0 / o.npoints - 180.0;
 
-            fprintf( f, "%d %f %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
+            fprintf( f, "%d %f %.15e %.15e %.15e %.15e %.15e %.15e %.15e "
+                        "%.15e\n",
                     p_idx, p_deg, phase[p_idx].deg,
                     emit_pts[p_idx].x[0],
                     emit_pts[p_idx].x[1],
                     emit_pts[p_idx].x[2],
                     emit_pts[p_idx].r / psr.rL,
                     psi[p_idx].deg,
-                    1.0/calc_curvature( &V[p_idx], &A[p_idx] ), spark_phase[p_idx].deg );
+                    1.0/calc_curvature( &V[p_idx], &A[p_idx] ),
+                    spark_phase_deg[p_idx] );
         }
     }
 
@@ -264,8 +263,7 @@ int main( int argc, char *argv[] )
         {
             for (p_idx = 0; p_idx < o.npoints; p_idx++)
             {
-                t = psr.P*(pulse - spark_phase[p_idx].deg/360.0);
-//fprintf(stderr, "%.15e\n", t); // Use this to verify that t is continuous
+                t = psr.P*(pulse - spark_phase_deg[p_idx]/360.0);
 
                 p_deg = p_idx * 360.0 / o.npoints - 180.0; // -180 ≤ p < 180
                 set_psr_angle_deg( &p, p_deg );
@@ -280,6 +278,7 @@ int main( int argc, char *argv[] )
                     In[pulse][p_idx] += exp(-0.5*x*x/
                             (psr.csl.s.rad*psr.csl.s.rad));
                 }
+//fprintf(stderr, "%.15e %.15e\n", t, In[pulse][p_idx]); // Use this to verify continuity
 
             }
         }
@@ -293,6 +292,7 @@ int main( int argc, char *argv[] )
         for (p_idx = 0; p_idx < o.npoints; p_idx++)
         {
             ph[p_idx] = ret_phase[p_idx].deg;
+fprintf(stderr, "%.15e\n", ph[p_idx]);
         }
 
         double newph[o.nphases];
@@ -444,29 +444,6 @@ double *read_profile( char *filename, int *n )
     while ((fscanf( f, "%lf", &d) != EOF))  profile[i++] = d;
 
     return profile;
-}
-
-void phase_interp( double *ph, double *y, int n,
-        double *newy, int newn )
-/* Linear interpolation of an implicit function in ph and y,
- * evaluated at newph. The result is saved out to newy.
- *
- * The order of the elements of ph and y is important. A point will always be
- * interpolated between two adjacent points (where we treat the last point as
- * being adjacent to the first--i.e. the phase wraps around).
- *
- * The only condition is that the first interpolation point is uniquely
- * defined, i.e. that there is only one pair of adjacent "ph" points that it
- * could be between. Actually, it doesn't have to be unique: the algorithm
- * will simply find the first appropriate interval.
- *
- * The ph array is assumed to have units of degrees, and also that every
- * element is in the range [-180:180].
- */
-{
-    int i; // Generic counter
-
-    //
 }
 
 void interp( double *x, double *y, int n,
@@ -795,3 +772,19 @@ void print_col_headers( FILE *f, struct opts *o )
 }
 
 
+void unwrap_array( double *d, int nd, const double interval )
+/* "Unwraps" the array D (of size ND) by adding/subtracting INTERVAL until all
+ * consecutive values are within INTERVAL/2.0 of each other.
+ *
+ * This function changes the D array in-place.
+ *
+ * INTERVAL is assumed to be a positive number.
+ */
+{
+    int i;
+    for (i = 1; i < nd; i++)
+    {
+        while (d[i] - d[i-1] >  interval/2.0)  d[i] -= interval;
+        while (d[i] - d[i-1] < -interval/2.0)  d[i] += interval;
+    }
+}
