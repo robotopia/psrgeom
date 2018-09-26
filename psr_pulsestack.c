@@ -78,8 +78,8 @@ FILE *open_output_file( struct opts *o );
 void setup_pulsar( struct opts *o, pulsar *psr );
 
 double *read_profile( char *filename, int *n );
-void interp( double *x, double *y, int n,
-        double *newx, double *newy, int newn );
+void phase_interp( double *x, double *y, int n,
+        double *newx, double *newy, int newn, double range );
 
 void resample_array( double *in, int nin, double *out, int nout );
 void unwrap_array( double *d, int nd, const double interval );
@@ -305,8 +305,8 @@ fprintf(stderr, "%.15e\n", ph[p_idx]);
         for (pulse = 0; pulse < o.npulses; pulse++)
         {
             // Interpolate!
-            interp( ph, In[pulse], o.npoints,
-                    newph, stokesI[pulse], o.nphases );
+            phase_interp( ph, In[pulse], o.npoints,
+                    newph, stokesI[pulse], o.nphases, 360.0 );
 
             // Print out the result
             for (p_idx = 0; p_idx < o.nphases; p_idx++)
@@ -446,13 +446,15 @@ double *read_profile( char *filename, int *n )
     return profile;
 }
 
-void interp( double *x, double *y, int n,
-        double *newx, double *newy, int newn )
+void phase_interp( double *x, double *y, int n,
+        double *newx, double *newy, int newn, double range )
 /* Linear interpolation of the function defined by the arrays x and y,
  * evaluated at newx. The result is saved out to newy.
  *
  * It is assumed that x and y have at least size n, and that newx and newy
  * have at least size newn.
+ *
+ * Values outside of the range are "wrapped" back into range.
  *
  * The array x does not have to be ordered, but is assumed to represent a
  * function in x.
@@ -461,6 +463,7 @@ void interp( double *x, double *y, int n,
     int i, newi;
     int i0, in; // indexes for lowest x, highest x
     int il, ir; // indexes for x's that straddle newx value
+    double xl, xr, yl, yr;
 
     // Get lowest and highest x values
     i0 = in = 0;
@@ -475,30 +478,44 @@ void interp( double *x, double *y, int n,
     for (newi = 0; newi < newn; newi++)
     {
         // Make sure we're within the boundaries
-        if (newx[newi] < x[i0] || newx[newi] > x[in])
-        {
-            newy[newi] = NAN;
-            continue;
-        }
+        while (newx[newi] < x[i0])          newx[newi] += range;
+        while (newx[newi] > x[i0] + range)  newx[newi] -= range;
 
         // Now go through the x's to find the straddling points
         il = i0;
         ir = in;
-        for (i = 0; i < n; i++)
+        if (newx[newi] > x[in]) // if the interpolation point falls
+                                // between the maximum value and the
+                                // wrapped minimum value, then this is the
+                                // special case when the interpolation
+                                // occurs over the "wrapping".
         {
-            if (x[i] <= newx[newi] && x[il] < x[i])  il = i;
-            if (x[i] >= newx[newi] && x[ir] > x[i])  ir = i;
+            xl = x[in];
+            xr = x[i0] + range;
+            yl = y[in];
+            yr = y[i0];
+        }
+        else
+        {
+            for (i = 0; i < n; i++)
+            {
+                if (x[i] <= newx[newi] && x[il] < x[i])  il = i;
+                if (x[i] >= newx[newi] && x[ir] > x[i])  ir = i;
+            }
+            xl = x[il];
+            xr = x[ir];
+            yl = y[il];
+            yr = y[ir];
         }
 
         // If we find an identical x point, no interpolation needed!
         if (x[il] == newx[newi])
         {
-            newy[newi] = y[il];
+            newy[newi] = yl;
         }
         else
         {
-            newy[newi] = (y[ir] - y[il]) * (newx[newi] - x[il]) /
-                         (x[ir] - x[il]) + y[il];
+            newy[newi] = (yr - yl)*(newx[newi] - xl)/(xr - xl) + yl;
         }
     }
 }
