@@ -292,8 +292,9 @@ int main( int argc, char *argv[] )
         for (p_idx = 0; p_idx < o.npoints; p_idx++)
         {
             ph[p_idx] = ret_phase[p_idx].deg;
-fprintf(stderr, "%.15e\n", ph[p_idx]);
         }
+        unwrap_array( ph, o.npoints, 360.0 );
+for (p_idx = 0; p_idx < o.npoints; p_idx++) fprintf(stderr, "%.15e\n", ph[p_idx]);
 
         double newph[o.nphases];
         double dp = 360.0 / o.nphases;
