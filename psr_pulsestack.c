@@ -251,86 +251,93 @@ int main( int argc, char *argv[] )
     // Only form the pulsestack if the -i option was not given
     if (!o.no_interp)
     {
+        // Total number of pixels in the pulsestack
+        int nsamples = o.npulses * o.npoints;
+
         // Calculate Stokes I from the 1D carousel model
         int pulse, spark;
-        double t, x;
+        double t, x; // The emission time and the emission "phase location"
 
-        double **In = (double **)malloc( o.npulses * sizeof(double *) );
-        for (pulse = 0; pulse < o.npulses; pulse++)
-            In[pulse] = (double *)malloc( o.npoints * sizeof(double) );
+        // Stokes I values at sampled points in magnetosphere
+        double *In = (double *)malloc( nsamples * sizeof(double) );
+        double *Inp = In; // Iterator through "In"
 
         for (pulse = 0; pulse < o.npulses; pulse++)
         {
             for (p_idx = 0; p_idx < o.npoints; p_idx++)
             {
+                // Calculate the emission time
                 t = psr.P*(pulse - spark_phase_deg[p_idx]/360.0);
 
                 p_deg = p_idx * 360.0 / o.npoints - 180.0; // -180 ≤ p < 180
                 set_psr_angle_deg( &p, p_deg );
 
-                In[pulse][p_idx] = 0.0;
+                // Accumulate contributions from each spark into this pixel
+                *Inp = 0.0;
                 for (spark = 0; spark < o.nsparks; spark++)
                 {
-                    x = p.rad -
-                        2.0*PI*((double)spark/(double)o.nsparks + t/psr.csl.P4);
+                    x = p.rad - 2.0*PI*
+                        ((double)spark/(double)o.nsparks + t/psr.csl.P4);
                     while (x < -PI) x += 2.0*PI;
                     while (x >= PI) x -= 2.0*PI;
-                    In[pulse][p_idx] += exp(-0.5*x*x/
-                            (psr.csl.s.rad*psr.csl.s.rad));
+                    *Inp += exp(-0.5*x*x / (psr.csl.s.rad*psr.csl.s.rad));
                 }
+                Inp++; // Go to the next pixel
 //fprintf(stderr, "%.15e %.15e\n", t, In[pulse][p_idx]); // Use this to verify continuity
 
             }
         }
 
-        // Interpolate the phases
-        double **stokesI = (double **)malloc( o.npulses * sizeof(double *) );
-        for (pulse = 0; pulse < o.npulses; pulse++)
-            stokesI[pulse] = (double *)malloc( o.nphases * sizeof(double) );
+        // Interpolate Stokes I at evenly sampled phases
+        int npixels = o.npulses * o.nphases;
+        double *oldph   = (double *)malloc( nsamples * sizeof(double) );
+        double *newph   = (double *)malloc( npixels  * sizeof(double) );
+        double *stokesI = (double *)malloc( npixels  * sizeof(double) );
 
-        double ph[o.npoints];
-        for (p_idx = 0; p_idx < o.npoints; p_idx++)
+        // Set up the old phases array
+        for (p_idx = 0; p_idx < nsamples; p_idx++)
         {
-            ph[p_idx] = ret_phase[p_idx].deg;
+            oldph[p_idx] = ret_phase[p_idx % o.npoints].deg;
         }
-        unwrap_array( ph, o.npoints, 360.0 );
-for (p_idx = 0; p_idx < o.npoints; p_idx++) fprintf(stderr, "%.15e\n", ph[p_idx]);
+        unwrap_array( oldph, nsamples, 360.0 );
+for (p_idx = 0; p_idx < nsamples; p_idx++) fprintf(stdout, "%.15e\n", oldph[p_idx]);
+exit(0);
 
-        double newph[o.nphases];
+        // Set up the new phases array
         double dp = 360.0 / o.nphases;
-        for (p_idx = 0; p_idx < o.nphases; p_idx++)
+        for (p_idx = 0; p_idx < npixels; p_idx++)
         {
+            // Starts at -180°, and doesn't wrap
             newph[p_idx] = p_idx*dp - 180.0;
         }
 
+        // Interpolate!
+        phase_interp( oldph, In, nsamples,
+                newph, stokesI, npixels, 360.0 );
+
+        int pixel;
         for (pulse = 0; pulse < o.npulses; pulse++)
         {
-            // Interpolate!
-            phase_interp( ph, In[pulse], o.npoints,
-                    newph, stokesI[pulse], o.nphases, 360.0 );
-
             // Print out the result
             for (p_idx = 0; p_idx < o.nphases; p_idx++)
             {
+                pixel = pulse*o.nphases + p_idx;
                 // If requested, modulate with the supplied profile
                 if (o.profile)
                 {
-                    stokesI[pulse][p_idx] *= profile[p_idx];
+                    stokesI[pixel] *= profile[p_idx];
                 }
 
                 // Output results
                 fprintf( f, "%d %d %d %e\n",
-                        pulse, 0, p_idx, stokesI[pulse][p_idx] );
+                        pulse, 0, p_idx, stokesI[pixel] );
             }
             fprintf( f, "\n" );
         }
 
-        for (pulse = 0; pulse < o.npulses; pulse++)
-        {
-            free( In[pulse] );
-            free( stokesI[pulse] );
-        }
         free( In );
+        free( oldph );
+        free( newph );
         free( stokesI );
     }
 
@@ -799,10 +806,11 @@ void unwrap_array( double *d, int nd, const double interval )
  * INTERVAL is assumed to be a positive number.
  */
 {
-    int i;
+    int i, m;
     for (i = 1; i < nd; i++)
     {
-        while (d[i] - d[i-1] >  interval/2.0)  d[i] -= interval;
-        while (d[i] - d[i-1] < -interval/2.0)  d[i] += interval;
+        m = (int)((d[i] - d[i-1])/interval + 0.5);
+        if (m > 0)  d[i] -= m*interval;
+        if (m < 0)  d[i] += m*interval;
     }
 }
