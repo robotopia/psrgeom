@@ -247,9 +247,7 @@ int main( int argc, char *argv[] )
                     spark_phase_deg[p_idx] );
         }
     }
-
-    // Only form the pulsestack if the -i option was not given
-    if (!o.no_interp)
+    else // Only form the pulsestack if the -i option was not given
     {
         // Total number of pixels in the pulsestack
         int nsamples = o.npulses * o.npoints;
@@ -283,7 +281,7 @@ int main( int argc, char *argv[] )
                     *Inp += exp(-0.5*x*x / (psr.csl.s.rad*psr.csl.s.rad));
                 }
                 Inp++; // Go to the next pixel
-//fprintf(stderr, "%.15e %.15e\n", t, In[pulse][p_idx]); // Use this to verify continuity
+//fprintf(stderr, "%.15e %.15e\n", t, In[pulse*o.npoints+p_idx]); // Use this to verify continuity
 
             }
         }
