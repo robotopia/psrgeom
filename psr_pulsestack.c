@@ -136,7 +136,7 @@ int main( int argc, char *argv[] )
     for (p_idx = 0; p_idx < o.npoints; p_idx++)
     {
         // Convert p_idx to an angle
-        p_deg = psr.spin * (180.0 - p_idx*360.0/o.npoints);
+        p_deg = psr.spin * (p_idx*360.0/o.npoints - 180.0);
         set_psr_angle_deg( &p, p_deg );
 
         // Convert (s,p) into a point in the magnetic frame
@@ -212,7 +212,7 @@ int main( int argc, char *argv[] )
             set_psr_angle_deg( &phase[p_idx], -V[p_idx].ph.deg );
         else
             copy_psr_angle( &(V[p_idx].ph), &phase[p_idx] );
-        set_psr_angle_deg( &ret_phase[p_idx], -(retarded_LoS[p_idx].ph.deg) );
+        copy_psr_angle( &retarded_LoS[p_idx].ph, &ret_phase[p_idx] );
 
         // Calculate the observed polarisation angle at emit_pt
         accel_to_pol_angle( &psr, &A[p_idx], &phase[p_idx], &psi[p_idx] );
@@ -233,7 +233,7 @@ int main( int argc, char *argv[] )
     {
         for (p_idx = 0; p_idx < o.npoints; p_idx++)
         {
-            p_deg = psr.spin * (180.0 - p_idx*360.0/o.npoints);
+            p_deg = psr.spin * (p_idx*360.0/o.npoints - 180.0);
 
             fprintf( f, "%d %f %.15e %.15e %.15e %.15e %.15e %.15e %.15e "
                         "%.15e\n",
@@ -267,7 +267,7 @@ int main( int argc, char *argv[] )
                 // Calculate the emission time
                 t = psr.P*(pulse - spark_phase_deg[p_idx]/360.0);
 
-                p_deg = p_idx * 360.0 / o.npoints - 180.0; // -180 ≤ p < 180
+                p_deg = psr.spin * (p_idx*360.0/o.npoints - 180.0);
                 set_psr_angle_deg( &p, p_deg );
 
                 // Accumulate contributions from each spark into this pixel
@@ -280,8 +280,8 @@ int main( int argc, char *argv[] )
                     while (x >= PI) x -= 2.0*PI;
                     *Inp += exp(-0.5*x*x / (psr.csl.s.rad*psr.csl.s.rad));
                 }
+//fprintf(stderr, "%.15e %.15e\n", t, *Inp); // Use this to verify continuity
                 Inp++; // Go to the next pixel
-//fprintf(stderr, "%.15e %.15e\n", t, In[pulse*o.npoints+p_idx]); // Use this to verify continuity
 
             }
         }
@@ -310,10 +310,12 @@ int main( int argc, char *argv[] )
         // Interpolate!
         phase_interp( oldph, In, nsamples,
                 newph, stokesI, npixels, 360.0 );
-for (p_idx = 0; p_idx < nsamples; p_idx++) fprintf(stdout, "%.15e %.15e\n", oldph[p_idx], In[p_idx]);
+//for (p_idx = 0; p_idx < nsamples; p_idx++) fprintf(stdout, "%.15e %.15e %.15e %.15e\n", oldph[p_idx], In[p_idx], newph[p_idx], stokesI[p_idx]);
+//for (p_idx = 0; p_idx < npixels;  p_idx++) fprintf(stdout, "%.15e\n", oldph[p_idx]);
+//for (p_idx = 0; p_idx < npixels;  p_idx++) fprintf(stdout, "%.15e\n", In[p_idx]);
 //for (p_idx = 0; p_idx < npixels;  p_idx++) fprintf(stdout, "%.15e\n", newph[p_idx]);
 //for (p_idx = 0; p_idx < npixels;  p_idx++) fprintf(stdout, "%.15e\n", stokesI[p_idx]);
-exit(0);
+//exit(0);
 
         int pixel;
         for (pulse = 0; pulse < o.npulses; pulse++)
@@ -485,10 +487,6 @@ void phase_interp( double *x, double *y, int n,
     // and then linearly interpolate
     for (newi = 0; newi < newn; newi++)
     {
-        // Make sure we're within the boundaries
-        while (newx[newi] < x[i0])          newx[newi] += range;
-        while (newx[newi] > x[i0] + range)  newx[newi] -= range;
-
         // Now go through the x's to find the straddling points
         il = i0;
         ir = in;
