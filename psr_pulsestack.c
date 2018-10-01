@@ -310,12 +310,6 @@ int main( int argc, char *argv[] )
         // Interpolate!
         phase_interp( oldph, In, nsamples,
                 newph, stokesI, npixels, 360.0 );
-//for (p_idx = 0; p_idx < nsamples; p_idx++) fprintf(stdout, "%.15e %.15e %.15e %.15e\n", oldph[p_idx], In[p_idx], newph[p_idx], stokesI[p_idx]);
-//for (p_idx = 0; p_idx < npixels;  p_idx++) fprintf(stdout, "%.15e\n", oldph[p_idx]);
-//for (p_idx = 0; p_idx < npixels;  p_idx++) fprintf(stdout, "%.15e\n", In[p_idx]);
-//for (p_idx = 0; p_idx < npixels;  p_idx++) fprintf(stdout, "%.15e\n", newph[p_idx]);
-//for (p_idx = 0; p_idx < npixels;  p_idx++) fprintf(stdout, "%.15e\n", stokesI[p_idx]);
-//exit(0);
 
         int pixel;
         for (pulse = 0; pulse < o.npulses; pulse++)
