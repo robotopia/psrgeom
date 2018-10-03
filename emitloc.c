@@ -79,7 +79,8 @@ double psr_cost_lofl( point *X, pulsar *psr )
         // In this case, far_pt is the point where the magnetic field line
         // penetrates the light cylinder
         point B;
-        calc_fields( &far_pt, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
+        calc_fields( &far_pt, psr, 0.0, &B, NULL,
+                NULL, NULL, NULL, NULL, NULL );
         double Bdr = B.x[0] * far_pt.ph.cos +
                      B.x[1] * far_pt.ph.sin;
 
@@ -149,7 +150,7 @@ double psr_cost_los( point *X, pulsar *psr, psr_angle *phase, int direction,
 
     // Calculate the vector field at X
     int nsols;
-    calc_fields( X, psr, v, NULL, &V1, &V2, NULL, NULL, &nsols );
+    calc_fields( X, psr, v, NULL, &V1, &V2, NULL, NULL, &nsols, NULL );
 
     // Check to make sure we actually have two solutions. If not, exit with an
     // error
@@ -907,7 +908,7 @@ void climb_and_emit( pulsar *psr, point *init_pt, double gamma,
     {
         // Calculate the necessary fields at this point
         calc_fields( &emit_pt, psr, SPEED_OF_LIGHT, NULL, &V, NULL, &A, NULL,
-                NULL );
+                NULL, NULL );
         set_point_xyz( &V, V.x[0], V.x[1], V.x[2],
                 POINT_SET_PH | POINT_SET_TH );
 
@@ -963,7 +964,7 @@ void climb_and_emit( pulsar *psr, point *init_pt, double gamma,
         }
 
         // Climb another rung on the field line ladder
-        Bstep( &emit_pt, psr, 0.01*emit_pt.r, DIR_OUTWARD, &emit_pt );
+        Bstep( &emit_pt, psr, 0.01*emit_pt.r, DIR_OUTWARD, &emit_pt, NULL );
         set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
                 POINT_SET_R | POINT_SET_RHOSQ );
     }
@@ -1040,7 +1041,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
     {
         // Calculate the necessary fields at this point
         calc_fields( &emit_pt, psr, SPEED_OF_LIGHT, NULL, &V, NULL, &A, NULL,
-                NULL );
+                NULL, NULL );
         set_point_xyz( &V, V.x[0], V.x[1], V.x[2],
                 POINT_SET_PH | POINT_SET_TH );
 
@@ -1070,7 +1071,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
             if (!is_prev_pt_visible && (step_dist > min_step_dist))
             {
                 step_dist /= 2.0;
-                Bstep( &prev_pt, psr, step_dist, DIR_OUTWARD, &emit_pt );
+                Bstep( &prev_pt, psr, step_dist, DIR_OUTWARD, &emit_pt, NULL );
                 set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
                         POINT_SET_R | POINT_SET_RHOSQ );
                 continue;
@@ -1134,7 +1135,7 @@ void fieldline_to_profile( pulsar *psr, point *init_pt, double freq_lo,
         // Climb another rung on the field line ladder
         copy_point( &emit_pt, &prev_pt );
         is_prev_pt_visible = is_emit_pt_visible;
-        Bstep( &prev_pt, psr, step_dist, DIR_OUTWARD, &emit_pt );
+        Bstep( &prev_pt, psr, step_dist, DIR_OUTWARD, &emit_pt, NULL );
         set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
                 POINT_SET_R | POINT_SET_RHOSQ );
     }
@@ -1169,6 +1170,7 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
  * Outputs:
  *   point  *emit_pt   : the next found emission point
  *   double *dist      : the total distance travelled from init_pt to emit_pt
+ *                       in the inertial frame
  *
  * Returns:
  *   The possible return values are:
@@ -1191,8 +1193,9 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
     int nsols;
     double VzZ_prev = NAN;
     double VzZ_next = NAN;
+    double ifdist;
 
-    *dist = 0.0; // keep track of total distance travelled
+    if (dist)  *dist = 0.0; // keep track of total distance travelled
 
     // Now step along the field line and re-evaluate (V̂∙ẑ - ζ) at each step,
     // checking if it has changed sign.
@@ -1206,7 +1209,7 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
         if (isnan( VzZ_prev )) // <-- proxy for "if first time through"
         {
             calc_fields( &prev_pt, psr, SPEED_OF_LIGHT,
-                 NULL, &V, NULL, NULL, NULL, &nsols );
+                 NULL, &V, NULL, NULL, NULL, &nsols, NULL );
 
             if (nsols == 0)
             {
@@ -1245,8 +1248,8 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
         }
 
         // Take a step along B
-        Bstep( &prev_pt, psr, tstep, direction, &next_pt );
-        *dist += tstep;
+        Bstep( &prev_pt, psr, tstep, direction, &next_pt, &ifdist );
+        if (dist)  *dist += ifdist;
         set_point_xyz( &next_pt, next_pt.x[0],
                                  next_pt.x[1],
                                  next_pt.x[2],
@@ -1265,7 +1268,7 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
 
         // Get velocity vector at the new point
         calc_fields( &next_pt, psr, SPEED_OF_LIGHT,
-                 NULL, &V, NULL, NULL, NULL, &nsols );
+                 NULL, &V, NULL, NULL, NULL, &nsols, NULL );
 
         // Make sure that a solution was found
         if (nsols == 0)
@@ -1313,14 +1316,15 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
         tstep /= 2.0;
 
         // Calculate the midpoint and the quantity (V̂∙ẑ - ζ) at the midpoint
-        Bstep( &prev_pt, psr, tstep, direction, &mid_pt );
+        Bstep( &prev_pt, psr, tstep, direction, &mid_pt, &ifdist );
         set_point_xyz( &mid_pt, mid_pt.x[0],
                                 mid_pt.x[1],
                                 mid_pt.x[2],
                                 POINT_SET_ALL );
 
         calc_fields( &mid_pt, psr, SPEED_OF_LIGHT,
-                 NULL, &V, NULL, NULL, NULL, NULL ); // (assume soln is found)
+                 NULL, &V, NULL, NULL, NULL, NULL, NULL );
+        // ^--- assuming soln is found
 
         VzZ_mid = acos(V.x[2]) - psr->ze.rad;
 
@@ -1352,7 +1356,7 @@ int find_next_line_emission_point( pulsar *psr, point *init_pt, int direction,
         {
             copy_point( &mid_pt, &prev_pt );
             VzZ_prev = VzZ_mid;
-            *dist += tstep;
+            if (dist)  *dist += ifdist;
         }
 
         // If requested, print out prev_pt

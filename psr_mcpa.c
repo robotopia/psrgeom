@@ -186,7 +186,7 @@ int main( int argc, char *argv[] )
 
             // Now find the emission points along this line!
             // Start 1 metre above the surface
-            Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt );
+            Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt, NULL );
             set_point_xyz( &init_pt, init_pt.x[0],
                                      init_pt.x[1],
                                      init_pt.x[2],
@@ -211,7 +211,7 @@ int main( int argc, char *argv[] )
                 // be seen. First, set the V to the velocity vector. While
                 // we're at it, get the acceleration vector and the curvature.
                 calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, &B, &V,
-                             NULL, &A, NULL, NULL );
+                             NULL, &A, NULL, NULL, NULL );
                 calc_retardation( &emit_pt, &psr, &V, &dph, &retarded_LoS );
                 kappa = calc_curvature( &V, &A );
 
@@ -265,7 +265,8 @@ int main( int argc, char *argv[] )
                 else
                 {
                     copy_point( &emit_pt, &init_pt );
-                    Bstep( &init_pt, &psr, 1000.0, DIR_OUTWARD, &init_pt );
+                    Bstep( &init_pt, &psr, 1000.0, DIR_OUTWARD, &init_pt,
+                            NULL );
                     set_point_xyz( &init_pt, init_pt.x[0],
                                              init_pt.x[1],
                                              init_pt.x[2],

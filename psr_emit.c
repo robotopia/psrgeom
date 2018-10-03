@@ -116,7 +116,7 @@ int main( int argc, char *argv[] )
     point V1, V2;
     point LoS;
 
-    calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, NULL, &V1, &V2, NULL, NULL, NULL );
+    calc_fields( &emit_pt, &psr, SPEED_OF_LIGHT, NULL, &V1, &V2, NULL, NULL, NULL, NULL );
     line_of_sight( &psr, ph, &LoS );
 
     fprintf( f, "# V   = ( %.15e, %.15e, %.15e )\n", V1.x[0], V1.x[1], V1.x[2] );

@@ -69,7 +69,7 @@ int main()
         }
 
         // Get the B and V fields at point X
-        calc_fields( &X, &psr, v, &B, &V1, &V2, &A1, &A2, &nsols );
+        calc_fields( &X, &psr, v, &B, &V1, &V2, &A1, &A2, &nsols, NULL );
 
         if (nsols != 2)
             continue;

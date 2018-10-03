@@ -22,7 +22,7 @@ void calc_fields( point *X, pulsar *psr, double v,
                   point *B1,
                   point *V1, point *V2,
                   point *A1, point *A2,
-                  int *nsols )
+                  int *nsols, double *dfact )
 /* This is a wrapper function for:
  *     calc_dipole_fields(), and
  *     calc_deutsch_fields().
@@ -33,10 +33,10 @@ void calc_fields( point *X, pulsar *psr, double v,
     switch (psr->field_type)
     {
         case DIPOLE:
-            calc_dipole_fields( X, psr, v, B1, V1, V2, A1, A2, nsols );
+            calc_dipole_fields( X, psr, v, B1, V1, V2, A1, A2, nsols, dfact );
             break;
         case DEUTSCH:
-            calc_deutsch_fields( X, psr, v, B1, V1, V2, A1, A2, nsols );
+            calc_deutsch_fields( X, psr, v, B1, V1, V2, A1, A2, nsols, dfact );
             break;
         default:
             fprintf( stderr, "error: calc_fields: unrecognised field type "
@@ -49,7 +49,7 @@ void calc_deutsch_fields( point *X, pulsar *psr, double v,
                   point *B1,
                   point *V1, point *V2,
                   point *A1, point *A2,
-                  int *nsols )
+                  int *nsols, double *dfact )
 /* This returns the normalised vectors corresponding to the magnetic field, B;
  * the velocity field, V; and the acceleration field, A. These are the fields
  * corresponding to a particle instantaneously at point X (observer frame)
@@ -85,6 +85,10 @@ void calc_deutsch_fields( point *X, pulsar *psr, double v,
  *   point  *V2     = the normalised velocity     of the particle (sol #2)
  *   point  *A1     = the normalised acceleration of the particle (sol #1)
  *   point  *A2     = the normalised acceleration of the particle (sol #2)
+ *   double *dfact  = the ratio of VBpos to v; i.e. the approximate amount
+ *                    a distance interval along the field line must be multi-
+ *                    plied by to get the inertial frame trajectory distance
+ *                    (ignored if set to NULL)
  */
 {
     // First, figure out how much of the following we need to calculate
@@ -265,6 +269,10 @@ void calc_deutsch_fields( point *X, pulsar *psr, double v,
     if (V1)  V1->r = Vpos_len;
     if (V2)  V2->r = Vneg_len;
 
+    // Calculate the scale factor for converting corotating frame "distances"
+    // to inertial frame distances
+    if (dfact)  *dfact = v / VBpos;
+
     // Return, if there's nothing more to calculate
     if (!calcA)
         return;
@@ -440,7 +448,7 @@ void calc_dipole_fields( point *X, pulsar *psr, double v,
                   point *B1,
                   point *V1, point *V2,
                   point *A1, point *A2,
-                  int *nsols )
+                  int *nsols, double *dfact )
 /* This function is identical to calc_fields(), only instead of returning the
  * Deutsch solution, it returns a simple dipole field. For an explanation of
  * this function's inputs and outputs, refer to calc_fields().
@@ -592,6 +600,8 @@ void calc_dipole_fields( point *X, pulsar *psr, double v,
     if (V1)  V1->r = Vpos_len;
     if (V2)  V2->r = Vneg_len;
 
+    if (dfact)  *dfact = v / VBpos;
+
     // Return, if there's nothing more to calculate
     if (!calcA)
         return;
@@ -740,7 +750,7 @@ double Bdotrxy( point *x, pulsar *psr )
  */
 {
     point B;
-    calc_fields( x, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
+    calc_fields( x, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL, NULL );
     double retval = B.x[0] * x->ph.cos +
                     B.x[1] * x->ph.sin;
     return retval;
@@ -806,7 +816,7 @@ int footpoint( point *start_pt, pulsar *psr, int direction, FILE *write_xyz,
                      xscale*x.x[0], xscale*x.x[1], xscale*x.x[2], tstep );
 
         // Take a single RK4 step along the magnetic field
-        Bstep( &old_x, psr, tstep, temp_drctn, &x );
+        Bstep( &old_x, psr, tstep, temp_drctn, &x, NULL );
 
         // Recalculate the various distances to the new point
         set_point_xyz( &x, x.x[0], x.x[1], x.x[2],
@@ -892,7 +902,7 @@ int cmp_extreme( point *x, pulsar *psr, double precision )
 {
     // Get the magnetic field
     point B;
-    calc_fields( x, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL );
+    calc_fields( x, psr, 0.0, &B, NULL, NULL, NULL, NULL, NULL, NULL );
 
     // Calling Bdotrxy() would re-calculate the magnetic field unnecessarily,
     // so duplicate the code here.
@@ -1025,7 +1035,7 @@ int farpoint( point *start_pt, pulsar *psr, FILE *write_xyz, int rL_norm,
         prev_direction = direction;
 
         // Take a single RK4 step along the magnetic field
-        Bstep( &old_x, psr, tstep, direction, &x );
+        Bstep( &old_x, psr, tstep, direction, &x, NULL );
         if (dist != NULL)
             *dist += (direction == init_direction ? tstep : -tstep);
 
@@ -1072,7 +1082,8 @@ int farpoint( point *start_pt, pulsar *psr, FILE *write_xyz, int rL_norm,
 }
 
 
-void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
+void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2,
+        double *ifdist )
 /* This follows a magnetic field from a given starting point according to one
  * step of the RK4 algorithm.
  *
@@ -1111,28 +1122,41 @@ void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 )
     int i; // Generic loop counter
 
     // First stage
-    calc_fields( x1, psr, 0.0, &slop1, NULL, NULL, NULL, NULL, NULL );
+    double dfact;
+    if (ifdist) // Calculate the inertial frame distance, if requested
+    {
+        point V;
+        calc_fields( x1, psr, SPEED_OF_LIGHT, &slop1, &V, NULL, NULL, NULL,
+                NULL, &dfact );
+        *ifdist = tstep * dfact;
+    }
+    else
+    {
+        calc_fields( x1, psr, 0.0, &slop1, NULL, NULL, NULL, NULL, NULL,
+                NULL );
+    }
     for (i = 0; i < NDEP; i++)
         xp1.x[i] = x1->x[i] + 0.5*sgn*slop1.x[i]*tstep;
 
     // Second stage
-    calc_fields( &xp1, psr, 0.0, &slop2, NULL, NULL, NULL, NULL, NULL );
+    calc_fields( &xp1, psr, 0.0, &slop2, NULL, NULL, NULL, NULL, NULL, NULL );
     for (i = 0; i < NDEP; i++)
         xp2.x[i] = x1->x[i] + 0.5*sgn*slop2.x[i]*tstep;
 
     // Third stage
-    calc_fields( &xp2, psr, 0.0, &slop3, NULL, NULL, NULL, NULL, NULL );
+    calc_fields( &xp2, psr, 0.0, &slop3, NULL, NULL, NULL, NULL, NULL, NULL );
     for (i = 0; i < NDEP; i++)
         xp1.x[i] = x1->x[i] + sgn*slop3.x[i]*tstep;
 
     // Last stage
-    calc_fields( &xp1, psr, 0.0, &slope, NULL, NULL, NULL, NULL, NULL );
+    calc_fields( &xp1, psr, 0.0, &slope, NULL, NULL, NULL, NULL, NULL, NULL );
     for (i = 0; i < NDEP; i++)
     {
         x2->x[i] = x1->x[i] +
             tstep*sgn*(    slope.x[i] +     slop1.x[i] +
                        2.0*slop2.x[i] + 2.0*slop3.x[i]) / 6.0;
     }
+
 }
 
 
@@ -1152,7 +1176,7 @@ void B_large_step( point *x1, pulsar *psr, double step, int direction,
     int i;
     copy_point( x1, x2 );
     for (i = 0; i < nsteps; i++)
-        Bstep( x2, psr, tstep, direction, x2 );
+        Bstep( x2, psr, tstep, direction, x2, NULL );
 }
 
 
@@ -1191,7 +1215,7 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
     point B, V1, V2, A1, A2;
     point *V = (direction == DIR_OUTWARD ? &V1 : &V2);
     point *A = (direction == DIR_OUTWARD ? &A1 : &A2);
-    calc_fields( x1, psr, v, &B, &V1, &V2, &A1, &A2, NULL );
+    calc_fields( x1, psr, v, &B, &V1, &V2, &A1, &A2, NULL, NULL );
 
     // Convert the supplied time step into a size step along B,
     // which is V dotted with B
@@ -1203,7 +1227,7 @@ void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,
     // dstep is a distance, so now we can just call Bstep() to step along the
     // magnetic field by the appropriate amount.
 
-    Bstep( x1, psr, dstep, direction, x2 );
+    Bstep( x1, psr, dstep, direction, x2, NULL );
 
     // Finally, re-rotate the point back to the correct rotation
     psr_angle rerotate;
@@ -1260,7 +1284,7 @@ int calc_pol_angle( pulsar *psr, psr_angle *phase, int direction,
     point *A = (direction == DIR_OUTWARD ? &A1 : &A2);
     int nsols;
     calc_fields( emit_pt, psr, SPEED_OF_LIGHT, NULL,
-                 NULL, NULL, &A1, &A2, &nsols );
+                 NULL, NULL, &A1, &A2, &nsols, NULL );
 
     if (nsols <= 0)
     {

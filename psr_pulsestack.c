@@ -157,7 +157,7 @@ int main( int argc, char *argv[] )
 
         // Now find the emission points along this line!
         // Start 1 metre above the surface
-        Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt );
+        Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt, NULL );
         set_point_xyz( &init_pt, init_pt.x[0],
                                  init_pt.x[1],
                                  init_pt.x[2],
@@ -199,7 +199,7 @@ int main( int argc, char *argv[] )
     for (p_idx = 0; p_idx < o.npoints; p_idx++)
     {
         calc_fields( &emit_pts[p_idx], &psr, SPEED_OF_LIGHT, &B[p_idx],
-                &V[p_idx], NULL, &A[p_idx], NULL, NULL );
+                &V[p_idx], NULL, &A[p_idx], NULL, NULL, NULL );
 
         calc_retardation( &emit_pts[p_idx], &psr, &V[p_idx], &dph[p_idx],
                 &retarded_LoS[p_idx] );
@@ -282,7 +282,6 @@ int main( int argc, char *argv[] )
                 }
 //fprintf(stderr, "%.15e %.15e\n", t, *Inp); // Use this to verify continuity
                 Inp++; // Go to the next pixel
-
             }
         }
 

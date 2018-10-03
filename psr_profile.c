@@ -164,7 +164,7 @@ int main( int argc, char *argv[] )
 
         // Now climb up the field line, emitting as we go
         // Start 1 metre above the surface
-        Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt );
+        Bstep( &foot_pt, &psr, 1.0, DIR_OUTWARD, &init_pt, NULL );
         set_point_xyz( &init_pt, init_pt.x[0],
                 init_pt.x[1],
                 init_pt.x[2],

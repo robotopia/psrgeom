@@ -29,7 +29,7 @@ void emit_pulsar_photon( pulsar *psr, point *pt, double freq, photon *pn )
 
     // Calculate the B, V, and A fields at the source location
     calc_fields( pt, psr, SPEED_OF_LIGHT,
-            &pn->B, &pn->V, NULL, &pn->A, NULL, NULL );
+            &pn->B, &pn->V, NULL, &pn->A, NULL, NULL, NULL );
     set_point_xyz( &pn->V, pn->V.x[0], pn->V.x[1], pn->V.x[2],
             POINT_SET_TH | POINT_SET_PH );
 
@@ -88,7 +88,7 @@ double weight_photon_by_line_density( point *init_pt, pulsar *psr )
 {
     point B;
     calc_fields( init_pt, psr, SPEED_OF_LIGHT,
-            &B, NULL, NULL, NULL, NULL, NULL );
+            &B, NULL, NULL, NULL, NULL, NULL, NULL );
 
     return B.r;
 }

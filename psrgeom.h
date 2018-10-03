@@ -1,7 +1,7 @@
 #ifndef PSRGEOM_H
 #define PSRGEOM_H
 
-#define PSRGEOM_VERSION "1.4a.4"
+#define PSRGEOM_VERSION "1.4a.5"
 
 #include <stdio.h>
 #include <math.h>
@@ -214,13 +214,16 @@ double spark_profile( pulsar *psr, double t, point *foot_pt );
 /**** Magnetic field functions ****/
 
 void calc_fields( point *X, pulsar *psr, double v, point *B1, point *V1,
-        point *V2, point *A1, point *A2, int *nsols );
+        point *V2, point *A1, point *A2, int *nsols, double *dfact );
 void calc_dipole_fields( point *X, pulsar *psr, double v, point *B1,
-        point *V1, point *V2, point *A1, point *A2, int *nsols );
+        point *V1, point *V2, point *A1, point *A2, int *nsols,
+        double *dfact );
 void calc_deutsch_fields( point *X, pulsar *psr, double v, point *B1,
-        point *V1, point *V2, point *A1, point *A2, int *nsols );
+        point *V1, point *V2, point *A1, point *A2, int *nsols,
+        double *dfact );
 
-void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2 );
+void Bstep( point *x1, pulsar *psr, double tstep, int direction, point *x2,
+        double *ifdist );
 void B_large_step( point *x1, pulsar *psr, double step, int direction,
         point *x2 );
 void traj_step( point *x1, double t, pulsar *psr, double tstep, int direction,

@@ -139,7 +139,7 @@ int main( int argc, char *argv[] )
             else
                 step = o.tstep;
 
-            Bstep( &emit_pt, &psr, step, DIR_OUTWARD, &emit_pt );
+            Bstep( &emit_pt, &psr, step, DIR_OUTWARD, &emit_pt, NULL );
             set_point_xyz( &emit_pt, emit_pt.x[0], emit_pt.x[1], emit_pt.x[2],
                     POINT_SET_ALL );
             dist += step;

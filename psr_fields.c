@@ -629,11 +629,11 @@ void print_all_tokens( FILE *f, struct tokens *tok, point *X, pulsar *psr,
     double v = SPEED_OF_LIGHT;
 
     if (tok->calcA)
-        calc_fields( X, psr, v, &B, &V1, &V2, &A1, &A2, &nsols );
+        calc_fields( X, psr, v, &B, &V1, &V2, &A1, &A2, &nsols, NULL );
     else if (tok->calcV)
-        calc_fields( X, psr, v, &B, &V1, &V2, NULL, NULL, &nsols );
+        calc_fields( X, psr, v, &B, &V1, &V2, NULL, NULL, &nsols, NULL );
     else if (tok->calcB)
-        calc_fields( X, psr, v, &B, NULL, NULL, NULL, NULL, &nsols );
+        calc_fields( X, psr, v, &B, NULL, NULL, NULL, NULL, &nsols, NULL );
 
     if (tok->calcA || tok->calcV || tok->calcB)
     {

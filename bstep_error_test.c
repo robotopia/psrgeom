@@ -65,10 +65,10 @@ int main()
         // Get a baseline measurement by taking several small steps
         copy_point( &init_pt, &end_pt1 );
         for (s = 0; s < nsteps; s++)
-            Bstep( &end_pt1, &psr, min_step, DIR_OUTWARD, &end_pt1 );
+            Bstep( &end_pt1, &psr, min_step, DIR_OUTWARD, &end_pt1, NULL );
 
         // Compare this to the point reached by taking one large step
-        Bstep( &init_pt, &psr, step, DIR_OUTWARD, &end_pt2 );
+        Bstep( &init_pt, &psr, step, DIR_OUTWARD, &end_pt2, NULL );
 
         // Calculate the distance between the two point (= the error)
         set_point_xyz( &diff, end_pt1.x[0] - end_pt2.x[0],
