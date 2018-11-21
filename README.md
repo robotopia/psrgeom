@@ -3,6 +3,8 @@
 
 This software is used in an academic paper treating the effect of pulsar emission geometry on subpulse drifting assuming the carousel model (a link to the paper will be placed here when available). Apart from instructions on how to install this software, this README only contains examples of usage that pertain directly to the paper itself.
 
+[![DOI](https://zenodo.org/badge/158472781.svg)](https://zenodo.org/badge/latestdoi/158472781)
+
 ### Installation
 
 This software has only been tested on Linux 4.18.12 (Arch Linux distro).
