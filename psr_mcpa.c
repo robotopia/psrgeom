@@ -301,7 +301,7 @@ int main( int argc, char *argv[] )
 
 void usage()
 {
-    printf( "usage: psr_visiblepoints [OPTIONS]\n\n" );
+    printf( "usage: psr_mcpa [OPTIONS]\n\n" );
     printf( "REQUIRED OPTIONS:\n" );
     printf( "  -a  alpha    The angle between the rotation and magetic axes "
                            "in degrees (required)\n" );
