@@ -305,7 +305,7 @@ void usage()
     printf( "REQUIRED OPTIONS:\n" );
     printf( "  -a  alpha    The angle between the rotation and magetic axes "
                            "in degrees (required)\n" );
-    printf( "  -b  zeta     The \"impact\" angle between the magnetic axis "
+    printf( "  -b  beta     The \"impact\" angle between the magnetic axis "
                            "and the line of sight in degrees (either -z or "
                            "-b is required)\n" );
     printf( "  -P  period   The rotation period of the pulsar, in seconds "
@@ -320,9 +320,6 @@ void usage()
                            "from s to S with n steps.\n"
             "                 s      ==> s:s:1\n"
             "                 s:S    ==> s:S:2\n" );
-    printf( "  -t  step     Step size for moving along magnetic field lines, "
-                           "as a fraction of the light cylinder radius "
-                           "(default: 0.01)\n" );
     printf( "  -z  zeta     The angle between the rotation axis and the line "
                            "of sight in degrees (either -z or -b is "
                            "required, but -z trumps -b)\n" );
@@ -335,6 +332,9 @@ void usage()
     printf( "  -L           Normalise distances to light cylinder radius\n" );
     printf( "  -o  outfile  The name of the output file to write to. If not "
                            "set, output will be written to stdout.\n" );
+    printf( "  -t  step     Step size for moving along magnetic field lines, "
+                           "as a fraction of the light cylinder radius "
+                           "(default: 0.01)\n" );
 }
 
 
