@@ -19,6 +19,7 @@ psr_jacksonbeam
 psr_lofl
 psr_jacksonbeamsingle
 psr_profile
+psr_pulsestack
 calc_fields_test
 transform_new_xz_test
 bstep_error_test
