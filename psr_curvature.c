@@ -320,7 +320,7 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
 {
     // Collect the command line arguments
     int c;
-    while ((c = getopt( argc, argv, "1a:b:dhLo:p:P:s:S:z:")) != -1)
+    while ((c = getopt( argc, argv, "1a:b:dhLo:p:P:t:z:")) != -1)
     {
         switch (c)
         {
@@ -353,11 +353,6 @@ void parse_cmd_line( int argc, char *argv[], struct opts *o )
                 break;
             case 'P':
                 o->P_sec = atof(optarg);
-                break;
-            case 's':
-                parse_range( optarg, &(o->s_start),
-                                     &(o->s_stop),
-                                     &(o->s_nstep) );
                 break;
             case 'z':
                 o->ze_deg = atof(optarg);
